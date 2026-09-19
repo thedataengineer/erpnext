@@ -1,0 +1,364 @@
+// The command bar (⌘K): one wide box to search anything and do anything. Follows Frappe's theme
+// variables, so light/dark mode and the ADHD-mode palette apply automatically.
+
+.erp-bar-backdrop {
+	--ea-accent: var(--adhd-primary, var(--primary, #2490ef));
+	--ea-bg: var(--card-bg, #fff);
+	--ea-bg-soft: var(--control-bg, var(--bg-color, #f4f5f6));
+	--ea-text: var(--text-color, #1f272e);
+	--ea-muted: var(--text-muted, #6c7680);
+	--ea-border: var(--border-color, rgba(0, 0, 0, 0.12));
+	--ea-danger: var(--red-500, #e24c4c);
+	--ea-warn: var(--yellow-600, #b8860b);
+	--ea-ok: var(--green-500, #2f9e5a);
+
+	position: fixed;
+	inset: 0;
+	z-index: 1060;
+	display: flex;
+	justify-content: center;
+	align-items: flex-start;
+	padding: 9vh 16px 16px;
+	background: rgba(15, 23, 42, 0.5);
+	backdrop-filter: blur(3px);
+
+	&[hidden] {
+		display: none;
+	}
+}
+
+.erp-bar {
+	width: min(1100px, 100%);
+	max-height: calc(100vh - 12vh);
+	display: flex;
+	flex-direction: column;
+	background: var(--ea-bg);
+	color: var(--ea-text);
+	border: 1px solid var(--ea-border);
+	border-radius: 18px;
+	box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+	overflow: hidden;
+	animation: erp-bar-in 0.14s ease-out;
+}
+
+.erp-bar-input {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	padding: 16px 22px;
+	border-bottom: 1px solid var(--ea-border);
+
+	.erp-bar-icon svg {
+		width: 24px;
+		height: 24px;
+		stroke: var(--ea-muted);
+		fill: none;
+	}
+}
+
+.erp-bar-field {
+	position: relative;
+	flex: 1;
+	min-width: 0;
+	height: 44px;
+
+	input,
+	.erp-bar-ghost {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 44px;
+		margin: 0;
+		padding: 0;
+		border: 0;
+		box-shadow: none;
+		background: transparent;
+		font: inherit;
+		font-size: 24px;
+		line-height: 44px;
+		letter-spacing: normal;
+	}
+
+	input {
+		z-index: 1;
+		color: var(--ea-text);
+		outline: none;
+
+		&::placeholder {
+			color: var(--ea-muted);
+			opacity: 0.8;
+		}
+	}
+
+	.erp-bar-ghost {
+		pointer-events: none;
+		white-space: pre;
+		overflow: hidden;
+
+		.typed {
+			visibility: hidden;
+		}
+
+		.rest {
+			color: var(--ea-muted);
+			opacity: 0.65;
+		}
+	}
+}
+
+.erp-bar-mic {
+	flex: none;
+	width: 44px;
+	height: 44px;
+	border-radius: 50%;
+	border: 1px solid var(--ea-border);
+	background: transparent;
+	color: var(--ea-muted);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+
+	&[hidden] {
+		display: none;
+	}
+
+	&:hover,
+	&:focus-visible {
+		color: var(--ea-accent);
+		border-color: var(--ea-accent);
+	}
+
+	.icon {
+		width: 20px;
+		height: 20px;
+		stroke: currentColor;
+		fill: none;
+	}
+
+	&.is-listening {
+		color: #fff;
+		background: var(--ea-danger);
+		border-color: var(--ea-danger);
+		animation: erp-bar-pulse 1.2s infinite;
+	}
+}
+
+.erp-bar kbd {
+	display: inline-block;
+	min-width: 20px;
+	padding: 1px 6px;
+	margin-right: 3px;
+	border: 1px solid var(--ea-border);
+	border-bottom-width: 2px;
+	border-radius: 5px;
+	background: var(--ea-bg-soft);
+	color: var(--ea-muted);
+	font: inherit;
+	font-size: 11px;
+	text-align: center;
+}
+
+.erp-bar-note {
+	padding: 8px 22px;
+	font-size: 12.5px;
+	background: color-mix(in srgb, var(--ea-warn) 14%, transparent);
+	border-bottom: 1px solid var(--ea-border);
+
+	&[hidden] {
+		display: none;
+	}
+}
+
+.erp-bar-body {
+	flex: 1;
+	overflow-y: auto;
+	min-height: 120px;
+}
+
+.erp-bar-section {
+	padding: 6px 0 4px;
+}
+
+.erp-bar-label {
+	padding: 6px 22px 4px;
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--ea-muted);
+}
+
+.erp-bar-row {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 10px 22px;
+	cursor: pointer;
+
+	.ic svg {
+		width: 16px;
+		height: 16px;
+		stroke: var(--ea-muted);
+		fill: none;
+	}
+
+	.t {
+		flex: none;
+		max-width: 46%;
+		font-size: 15px;
+		font-weight: 500;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.h {
+		flex: 1;
+		min-width: 0;
+		font-size: 13px;
+		color: var(--ea-muted);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.go {
+		opacity: 0;
+		color: var(--ea-muted);
+		font-size: 13px;
+	}
+
+	&.is-active {
+		background: color-mix(in srgb, var(--ea-accent) 12%, transparent);
+		box-shadow: inset 3px 0 0 var(--ea-accent);
+
+		.ic svg {
+			stroke: var(--ea-accent);
+		}
+
+		.go {
+			opacity: 0.8;
+		}
+	}
+}
+
+.erp-bar-empty {
+	padding: 40px 22px;
+	text-align: center;
+	color: var(--ea-muted);
+	font-size: 14px;
+}
+
+// the short conversation under the box
+.erp-bar-convo {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	padding: 18px 22px;
+
+	.erp-assistant-msg {
+		max-width: 100%;
+		font-size: 16px;
+		line-height: 1.5;
+	}
+
+	.erp-assistant-card,
+	.erp-assistant-items {
+		max-width: 640px;
+	}
+}
+
+.erp-bar-you {
+	align-self: flex-end;
+	max-width: 80%;
+	padding: 8px 14px;
+	border-radius: 14px 14px 4px 14px;
+	background: var(--ea-accent);
+	color: #fff;
+	font-size: 14px;
+	word-break: break-word;
+}
+
+.erp-bar-foot {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	padding: 10px 22px;
+	border-top: 1px solid var(--ea-border);
+	font-size: 12px;
+	color: var(--ea-muted);
+
+	.erp-bar-foot-mode {
+		flex: 1;
+	}
+}
+
+@keyframes erp-bar-in {
+	from {
+		opacity: 0;
+		transform: translateY(-8px) scale(0.99);
+	}
+}
+
+@keyframes erp-bar-pulse {
+	0% {
+		box-shadow: 0 0 0 0 color-mix(in srgb, var(--ea-danger) 50%, transparent);
+	}
+	100% {
+		box-shadow: 0 0 0 12px transparent;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.erp-bar,
+	.erp-bar-mic.is-listening {
+		animation: none;
+	}
+}
+
+@media (max-width: 768px) {
+	.erp-bar-backdrop {
+		padding: 8px;
+	}
+
+	.erp-bar {
+		max-height: calc(100vh - 16px);
+	}
+
+	.erp-bar-input {
+		padding: 12px 14px;
+		gap: 10px;
+	}
+
+	.erp-bar-field,
+	.erp-bar-field input,
+	.erp-bar-field .erp-bar-ghost {
+		height: 40px;
+		font-size: 18px;
+		line-height: 40px;
+	}
+
+	.erp-bar-esc,
+	.erp-bar-foot span:not(.erp-bar-foot-mode) {
+		display: none;
+	}
+
+	.erp-bar-row {
+		padding: 12px 14px;
+
+		.h {
+			display: none;
+		}
+	}
+
+	.erp-bar-label {
+		padding-left: 14px;
+	}
+}
+
+@media print {
+	.erp-bar-backdrop {
+		display: none !important;
+	}
+}

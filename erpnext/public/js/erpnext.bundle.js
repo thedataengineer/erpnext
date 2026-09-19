@@ -50,4 +50,9 @@ import "./adhd/form_focus";        // Form simplification & tooltips
 import "./adhd/task_kanban";       // Task Kanban board
 import "./adhd/adhd_notifications"; // Enhanced notifications
 
+// Assistant: local-LLM chat that fills in forms from plain sentences
+import "./assistant/assistant_view";
+import "./assistant/assistant_chat";
+import "./assistant/assistant_bar";
+
 // import { sum } from 'frappe/public/utils/util.js'
