@@ -43,4 +43,11 @@ import "./financial_statements.js";
 import "./sales_trends_filters.js";
 import "./purchase_trends_filters.js";
 
+// ADHD-Friendly Mode — load in dependency order
+import "./adhd/adhd_mode";         // Core toggle (must be first)
+import "./adhd/focus_panel";       // Focus panel + Pomodoro timer
+import "./adhd/form_focus";        // Form simplification & tooltips
+import "./adhd/task_kanban";       // Task Kanban board
+import "./adhd/adhd_notifications"; // Enhanced notifications
+
 // import { sum } from 'frappe/public/utils/util.js'

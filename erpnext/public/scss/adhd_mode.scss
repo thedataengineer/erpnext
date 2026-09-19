@@ -1,0 +1,1490 @@
+// =============================================================================
+// ADHD-Friendly Mode for ERPNext
+// Activated when body has class "adhd-mode" (data-adhd-mode="on")
+// =============================================================================
+
+// Import Google Font for better readability
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+// Design tokens for ADHD mode
+body.adhd-mode {
+	--adhd-primary: #2D7D9A;
+	--adhd-primary-light: #4BA3C3;
+	--adhd-primary-dark: #1A5C73;
+	--adhd-accent: #7C4DFF;
+	--adhd-bg: #F8F7F4;
+	--adhd-bg-card: #FFFFFF;
+	--adhd-text: #1A1A2E;
+	--adhd-text-muted: #6B7280;
+	--adhd-border: rgba(0, 0, 0, 0.08);
+	--adhd-border-strong: rgba(0, 0, 0, 0.15);
+	--adhd-success: #10B981;
+	--adhd-warning: #F59E0B;
+	--adhd-danger: #EF4444;
+	--adhd-urgent: #DC2626;
+	--adhd-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
+	--adhd-shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.06);
+	--adhd-shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
+	--adhd-radius: 10px;
+	--adhd-radius-sm: 6px;
+	--adhd-radius-lg: 16px;
+	--adhd-font: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+	--adhd-transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+// =============================================================================
+// BASE STYLES — Applied in ADHD mode across the board
+// =============================================================================
+
+body.adhd-mode {
+	font-family: var(--adhd-font) !important;
+	font-size: 14.5px;
+	line-height: 1.65;
+	background: var(--adhd-bg) !important;
+	color: var(--adhd-text);
+
+	// Slightly warmer, less stark background
+	--bg-color: var(--adhd-bg);
+	--card-bg: var(--adhd-bg-card);
+	--body-bg: var(--adhd-bg);
+
+	// Smooth all transitions
+	*, *::before, *::after {
+		transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+	}
+}
+
+// =============================================================================
+// NAVBAR: Add Focus Mode toggle button
+// =============================================================================
+
+body.adhd-mode {
+	.adhd-nav-item {
+		display: flex !important;
+		align-items: center;
+	}
+
+	.adhd-mode-toggle-btn {
+		display: flex;
+		align-items: center;
+		gap: 5px;
+		padding: 5px 12px;
+		border-radius: 20px;
+		font-size: 12px;
+		font-weight: 600;
+		font-family: var(--adhd-font);
+		color: var(--adhd-text-muted);
+		text-decoration: none;
+		transition: var(--adhd-transition);
+		border: 1.5px solid transparent;
+
+		&:hover {
+			background: rgba(45, 125, 154, 0.1);
+			color: var(--adhd-primary);
+			border-color: rgba(45, 125, 154, 0.2);
+		}
+
+		&.active {
+			background: linear-gradient(135deg, rgba(45, 125, 154, 0.12), rgba(124, 77, 255, 0.08));
+			border-color: var(--adhd-primary);
+			color: var(--adhd-primary);
+		}
+
+		.adhd-toggle-icon {
+			font-size: 14px;
+		}
+
+		.adhd-toggle-label {
+			letter-spacing: 0.3px;
+		}
+	}
+}
+
+// Also style the toggle button when ADHD mode is OFF (outside body.adhd-mode)
+.adhd-mode-toggle-btn {
+	display: flex;
+	align-items: center;
+	gap: 5px;
+	padding: 5px 12px;
+	border-radius: 20px;
+	font-size: 12px;
+	font-weight: 500;
+	color: #6B7280;
+	text-decoration: none;
+	border: 1.5px solid transparent;
+
+	&:hover {
+		background: rgba(0, 0, 0, 0.05);
+		text-decoration: none;
+	}
+}
+
+// =============================================================================
+// SIDEBAR: Reduce visual noise
+// =============================================================================
+
+body.adhd-mode {
+	.layout-side-section,
+	.sidebar-wrapper,
+	.desk-sidebar {
+		border-right: 1px solid var(--adhd-border) !important;
+		background: var(--adhd-bg-card) !important;
+	}
+
+	// Make sidebar items bigger and more readable
+	.sidebar-menu-item,
+	.sidebar-item {
+		font-size: 13.5px !important;
+		font-weight: 500;
+		border-radius: var(--adhd-radius-sm);
+		margin: 1px 4px;
+		padding: 8px 12px !important;
+		transition: var(--adhd-transition);
+
+		&:hover {
+			background: rgba(45, 125, 154, 0.08) !important;
+			color: var(--adhd-primary) !important;
+		}
+
+		&.selected, &.active {
+			background: rgba(45, 125, 154, 0.12) !important;
+			color: var(--adhd-primary) !important;
+			font-weight: 600;
+			border-left: 3px solid var(--adhd-primary) !important;
+		}
+	}
+}
+
+// =============================================================================
+// FORMS: Progressive disclosure & readability
+// =============================================================================
+
+body.adhd-mode {
+	// Make form labels clearer
+	.frappe-control label,
+	.control-label {
+		font-size: 11.5px !important;
+		font-weight: 600 !important;
+		letter-spacing: 0.4px;
+		color: var(--adhd-text-muted) !important;
+		text-transform: uppercase;
+		margin-bottom: 4px;
+	}
+
+	// Bigger, more touchable inputs
+	.frappe-control input[type="text"],
+	.frappe-control input[type="email"],
+	.frappe-control input[type="number"],
+	.frappe-control input[type="tel"],
+	.frappe-control textarea,
+	.frappe-control select,
+	.form-control {
+		font-size: 14px !important;
+		padding: 8px 12px !important;
+		border-radius: var(--adhd-radius-sm) !important;
+		border: 1.5px solid var(--adhd-border-strong) !important;
+		transition: var(--adhd-transition);
+		font-family: var(--adhd-font) !important;
+
+		&:focus {
+			border-color: var(--adhd-primary) !important;
+			box-shadow: 0 0 0 3px rgba(45, 125, 154, 0.15) !important;
+			outline: none;
+		}
+	}
+
+	// Section breaks — make them more visible
+	.section-body {
+		background: rgba(0, 0, 0, 0.015) !important;
+		border-radius: var(--adhd-radius) !important;
+		padding: 12px !important;
+		margin-bottom: 12px !important;
+		border: 1px solid var(--adhd-border) !important;
+	}
+
+	.form-section-heading,
+	.section-head {
+		font-size: 13px !important;
+		font-weight: 700 !important;
+		color: var(--adhd-text) !important;
+		padding: 8px 4px !important;
+		border-bottom: 2px solid var(--adhd-primary) !important;
+		margin-bottom: 12px !important;
+	}
+
+	// Read-only fields — de-emphasize
+	.frappe-control[data-fieldtype="Read Only"],
+	.frappe-control .read-only,
+	.control-value {
+		color: var(--adhd-text-muted) !important;
+		font-size: 13.5px !important;
+	}
+
+	// Make buttons much clearer
+	.btn-primary {
+		background: var(--adhd-primary) !important;
+		border-color: var(--adhd-primary) !important;
+		border-radius: var(--adhd-radius-sm) !important;
+		font-weight: 600 !important;
+		padding: 8px 20px !important;
+		font-family: var(--adhd-font) !important;
+		box-shadow: 0 2px 4px rgba(45, 125, 154, 0.3) !important;
+		transition: var(--adhd-transition);
+
+		&:hover {
+			background: var(--adhd-primary-dark) !important;
+			border-color: var(--adhd-primary-dark) !important;
+			transform: translateY(-1px);
+			box-shadow: 0 4px 8px rgba(45, 125, 154, 0.4) !important;
+		}
+
+		&:active {
+			transform: translateY(0);
+		}
+	}
+
+	.btn-default {
+		border-radius: var(--adhd-radius-sm) !important;
+		font-weight: 500 !important;
+		font-family: var(--adhd-font) !important;
+	}
+
+	// Unsaved indicator — pulsing glow
+	.dirty-state .btn-primary,
+	.form-dirty .btn-primary {
+		animation: adhd-pulse 2s ease-in-out infinite;
+	}
+
+	// Tabs — cleaner
+	.form-tabs-list .nav-link {
+		font-size: 13px !important;
+		font-weight: 600 !important;
+		font-family: var(--adhd-font) !important;
+		padding: 8px 16px !important;
+		border-radius: var(--adhd-radius-sm) var(--adhd-radius-sm) 0 0 !important;
+		color: var(--adhd-text-muted) !important;
+
+		&.active {
+			color: var(--adhd-primary) !important;
+			border-bottom-color: var(--adhd-primary) !important;
+			background: rgba(45, 125, 154, 0.05) !important;
+		}
+	}
+}
+
+// =============================================================================
+// ADHD BREADCRUMB (added by form_focus.js)
+// =============================================================================
+
+.adhd-breadcrumb {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 16px;
+	background: linear-gradient(135deg, rgba(45, 125, 154, 0.06), rgba(124, 77, 255, 0.04));
+	border-bottom: 1px solid var(--adhd-border, rgba(0,0,0,0.08));
+	font-family: var(--adhd-font, 'Inter', sans-serif);
+	font-size: 12.5px;
+	font-weight: 500;
+	border-left: 4px solid var(--adhd-bc-color, #2D7D9A);
+	animation: adhd-slide-in 0.2s ease;
+
+	.adhd-bc-icon {
+		font-size: 14px;
+	}
+
+	.adhd-bc-doctype {
+		font-weight: 700;
+		color: var(--adhd-bc-color, #2D7D9A);
+	}
+
+	.adhd-bc-sep {
+		color: #9CA3AF;
+		font-size: 14px;
+	}
+
+	.adhd-bc-docname {
+		color: #374151;
+	}
+
+	.adhd-bc-badge {
+		font-size: 10px;
+		font-weight: 700;
+		padding: 2px 8px;
+		border-radius: 99px;
+		letter-spacing: 0.5px;
+
+		&.submitted {
+			background: rgba(16, 185, 129, 0.12);
+			color: #065F46;
+		}
+
+		&.cancelled {
+			background: rgba(239, 68, 68, 0.12);
+			color: #991B1B;
+		}
+
+		&.draft {
+			background: rgba(107, 114, 128, 0.12);
+			color: #374151;
+
+			&.new {
+				background: rgba(245, 158, 11, 0.12);
+				color: #92400E;
+			}
+		}
+	}
+}
+
+// =============================================================================
+// FIELD HELP TOOLTIPS
+// =============================================================================
+
+.adhd-field-help {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 14px;
+	height: 14px;
+	margin-left: 5px;
+	color: #9CA3AF;
+	cursor: help;
+	vertical-align: middle;
+	transition: color 0.15s ease;
+	position: relative;
+
+	&:hover {
+		color: var(--adhd-primary, #2D7D9A);
+
+		&::after {
+			content: attr(title);
+			position: absolute;
+			bottom: calc(100% + 6px);
+			left: 50%;
+			transform: translateX(-50%);
+			background: #1A1A2E;
+			color: white;
+			padding: 6px 10px;
+			border-radius: 6px;
+			font-size: 11.5px;
+			font-weight: 400;
+			white-space: nowrap;
+			max-width: 220px;
+			white-space: pre-wrap;
+			text-align: left;
+			z-index: 9999;
+			box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+			pointer-events: none;
+			font-family: var(--adhd-font, 'Inter', sans-serif);
+			line-height: 1.4;
+			letter-spacing: 0;
+			text-transform: none;
+			font-weight: normal;
+		}
+	}
+
+	svg {
+		width: 12px;
+		height: 12px;
+	}
+}
+
+// =============================================================================
+// FOCUS PANEL
+// =============================================================================
+
+.adhd-focus-panel {
+	position: fixed;
+	right: 0;
+	top: 50px;
+	width: 320px;
+	height: calc(100vh - 50px);
+	background: white;
+	box-shadow: -4px 0 24px rgba(0, 0, 0, 0.12);
+	z-index: 1040;
+	display: flex;
+	flex-direction: column;
+	font-family: var(--adhd-font, 'Inter', sans-serif);
+	transform: translateX(100%);
+	transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+	border-left: 1px solid rgba(0, 0, 0, 0.08);
+
+	&.visible {
+		transform: translateX(0);
+	}
+
+	.afp-toggle-tab {
+		position: absolute;
+		left: -44px;
+		top: 50%;
+		transform: translateY(-50%);
+		width: 40px;
+		height: 48px;
+		background: white;
+		border: 1px solid rgba(0, 0, 0, 0.1);
+		border-right: none;
+		border-radius: 8px 0 0 8px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		cursor: pointer;
+		font-size: 18px;
+		box-shadow: -3px 0 10px rgba(0,0,0,0.08);
+		transition: transform 0.15s ease;
+
+		&:hover {
+			transform: translateY(-50%) scale(1.1);
+		}
+	}
+
+	.afp-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 14px 16px;
+		border-bottom: 1px solid rgba(0, 0, 0, 0.07);
+		background: linear-gradient(135deg, #f8f7ff, #f0f9ff);
+
+		.afp-title {
+			font-size: 14px;
+			font-weight: 700;
+			color: #1A1A2E;
+		}
+
+		.afp-header-actions {
+			display: flex;
+			gap: 4px;
+		}
+	}
+
+	.afp-btn-icon {
+		background: none;
+		border: none;
+		cursor: pointer;
+		padding: 4px 8px;
+		border-radius: 6px;
+		font-size: 14px;
+		color: #6B7280;
+		transition: all 0.15s ease;
+
+		&:hover {
+			background: rgba(0, 0, 0, 0.06);
+			color: #374151;
+		}
+	}
+
+	.afp-body {
+		flex: 1;
+		overflow-y: auto;
+		padding: 12px;
+
+		&::-webkit-scrollbar {
+			width: 4px;
+		}
+		&::-webkit-scrollbar-thumb {
+			background: rgba(0, 0, 0, 0.15);
+			border-radius: 4px;
+		}
+	}
+
+	.afp-section {
+		margin-bottom: 16px;
+		background: #FAFAFA;
+		border-radius: 10px;
+		padding: 12px;
+		border: 1px solid rgba(0, 0, 0, 0.06);
+
+		.afp-section-title {
+			font-size: 11px;
+			font-weight: 700;
+			letter-spacing: 0.8px;
+			color: #6B7280;
+			text-transform: uppercase;
+			margin-bottom: 10px;
+		}
+	}
+
+	// Pomodoro Timer
+	.afp-timer-section {
+		background: linear-gradient(135deg, #1A1A2E, #2D3561);
+		color: white;
+		border-color: transparent;
+
+		.afp-section-title {
+			color: rgba(255, 255, 255, 0.7);
+		}
+	}
+
+	.afp-timer-display {
+		position: relative;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		margin: 8px auto;
+		width: 120px;
+		height: 120px;
+	}
+
+	.afp-timer-ring {
+		width: 120px;
+		height: 120px;
+		transform: rotate(-90deg);
+
+		.afp-ring-bg {
+			fill: none;
+			stroke: rgba(255, 255, 255, 0.1);
+			stroke-width: 6;
+		}
+
+		.afp-ring-progress {
+			fill: none;
+			stroke: #7C4DFF;
+			stroke-width: 6;
+			stroke-linecap: round;
+			transition: stroke-dashoffset 1s linear;
+		}
+	}
+
+	.afp-timer-time {
+		position: absolute;
+		font-size: 26px;
+		font-weight: 700;
+		color: white;
+		letter-spacing: -1px;
+		font-variant-numeric: tabular-nums;
+	}
+
+	.afp-timer-label {
+		text-align: center;
+		font-size: 12px;
+		color: rgba(255, 255, 255, 0.7);
+		margin-bottom: 10px;
+	}
+
+	.afp-timer-controls {
+		display: flex;
+		gap: 8px;
+		justify-content: center;
+		margin-bottom: 8px;
+	}
+
+	.afp-timer-presets {
+		display: flex;
+		gap: 6px;
+		justify-content: center;
+		flex-wrap: wrap;
+
+		.afp-preset {
+			background: rgba(255, 255, 255, 0.1);
+			border: 1px solid rgba(255, 255, 255, 0.2);
+			color: rgba(255, 255, 255, 0.8);
+			padding: 3px 10px;
+			border-radius: 99px;
+			font-size: 11px;
+			cursor: pointer;
+			transition: all 0.15s ease;
+
+			&:hover {
+				background: rgba(255, 255, 255, 0.2);
+				color: white;
+			}
+		}
+	}
+
+	.afp-btn {
+		padding: 7px 16px;
+		border-radius: 8px;
+		font-size: 12.5px;
+		font-weight: 600;
+		cursor: pointer;
+		border: none;
+		transition: all 0.15s ease;
+		font-family: var(--adhd-font, 'Inter', sans-serif);
+
+		&.afp-btn-primary {
+			background: #7C4DFF;
+			color: white;
+
+			&:hover {
+				background: #6A3DE8;
+				transform: translateY(-1px);
+				box-shadow: 0 4px 12px rgba(124, 77, 255, 0.4);
+			}
+		}
+
+		&.afp-btn-ghost {
+			background: rgba(255, 255, 255, 0.15);
+			color: rgba(255, 255, 255, 0.8);
+			border: 1px solid rgba(255, 255, 255, 0.2);
+
+			&:hover {
+				background: rgba(255, 255, 255, 0.25);
+			}
+		}
+
+		&.afp-btn-sm {
+			padding: 4px 10px;
+			font-size: 11px;
+			border-radius: 6px;
+			background: none;
+			color: #6B7280;
+			border: 1px solid rgba(0, 0, 0, 0.1);
+			font-weight: 500;
+
+			&:hover {
+				background: rgba(0, 0, 0, 0.04);
+			}
+		}
+
+		&.afp-btn-done {
+			&:hover {
+				background: rgba(16, 185, 129, 0.1);
+				color: #065F46;
+				border-color: #10B981;
+			}
+		}
+
+		&.afp-btn-working {
+			&:hover {
+				background: rgba(59, 130, 246, 0.1);
+				color: #1E3A8A;
+				border-color: #3B82F6;
+			}
+		}
+	}
+
+	.afp-loading, .afp-empty {
+		text-align: center;
+		color: #9CA3AF;
+		font-size: 12.5px;
+		padding: 12px 0;
+	}
+
+	.afp-task-list {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		max-height: 280px;
+		overflow-y: auto;
+
+		&::-webkit-scrollbar {
+			width: 3px;
+		}
+		&::-webkit-scrollbar-thumb {
+			background: rgba(0, 0, 0, 0.1);
+			border-radius: 3px;
+		}
+	}
+
+	.afp-task-card {
+		background: white;
+		border: 1px solid rgba(0, 0, 0, 0.07);
+		border-radius: 8px;
+		padding: 10px;
+		transition: all 0.2s ease;
+
+		&:hover {
+			box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+			border-color: rgba(0,0,0,0.12);
+		}
+
+		&.afp-task-overdue {
+			border-left: 3px solid #EF4444;
+			background: #FFF5F5;
+		}
+
+		&.afp-task-urgent {
+			border-left: 3px solid #F59E0B;
+		}
+
+		&.afp-task-done-anim {
+			animation: adhd-task-complete 0.5s ease forwards;
+		}
+
+		&.afp-task-working-anim {
+			animation: adhd-task-working 0.3s ease;
+		}
+
+		.afp-task-header {
+			display: flex;
+			align-items: flex-start;
+			gap: 6px;
+			margin-bottom: 4px;
+		}
+
+		.afp-priority-dot {
+			font-size: 10px;
+			flex-shrink: 0;
+			margin-top: 2px;
+		}
+
+		.afp-task-subject {
+			font-size: 13px;
+			font-weight: 600;
+			color: #1F2937;
+			text-decoration: none;
+			line-height: 1.4;
+
+			&:hover {
+				color: var(--adhd-primary, #2D7D9A);
+			}
+		}
+
+		.afp-task-project {
+			font-size: 11px;
+			color: #6B7280;
+			margin-bottom: 4px;
+		}
+
+		.afp-due {
+			font-size: 11px;
+			color: #6B7280;
+			margin-bottom: 6px;
+			display: block;
+
+			&.overdue {
+				color: #EF4444;
+				font-weight: 700;
+			}
+
+			&.due-soon {
+				color: #F59E0B;
+				font-weight: 600;
+			}
+		}
+
+		.afp-progress-bar {
+			height: 4px;
+			background: rgba(0, 0, 0, 0.07);
+			border-radius: 4px;
+			margin-bottom: 8px;
+			overflow: hidden;
+
+			.afp-progress-fill {
+				height: 100%;
+				background: linear-gradient(90deg, #3B82F6, #7C4DFF);
+				border-radius: 4px;
+				transition: width 0.5s ease;
+			}
+		}
+
+		.afp-task-actions {
+			display: flex;
+			gap: 6px;
+			margin-top: 6px;
+		}
+	}
+
+	.afp-quick-note {
+		width: 100%;
+		min-height: 80px;
+		border: 1.5px solid rgba(0, 0, 0, 0.1);
+		border-radius: 8px;
+		padding: 8px 10px;
+		font-family: var(--adhd-font, 'Inter', sans-serif);
+		font-size: 13px;
+		color: #374151;
+		resize: vertical;
+		outline: none;
+		transition: border-color 0.15s ease;
+
+		&:focus {
+			border-color: var(--adhd-primary, #2D7D9A);
+			box-shadow: 0 0 0 3px rgba(45, 125, 154, 0.12);
+		}
+
+		&::placeholder {
+			color: #D1D5DB;
+			font-style: italic;
+		}
+	}
+}
+
+// =============================================================================
+// TASK KANBAN BOARD
+// =============================================================================
+
+.adhd-kanban-wrapper {
+	font-family: var(--adhd-font, 'Inter', sans-serif);
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+}
+
+.adhd-kanban-toolbar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 12px 16px;
+	background: white;
+	border-bottom: 1px solid rgba(0, 0, 0, 0.07);
+	flex-shrink: 0;
+
+	.adhd-kanban-title {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		font-size: 18px;
+		font-weight: 700;
+		color: #1A1A2E;
+
+		.adhd-kanban-icon {
+			font-size: 22px;
+		}
+	}
+
+	.adhd-kanban-actions {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+	}
+
+	.adhd-kanban-search {
+		padding: 7px 12px;
+		border: 1.5px solid rgba(0, 0, 0, 0.12);
+		border-radius: 8px;
+		font-size: 13px;
+		font-family: var(--adhd-font, 'Inter', sans-serif);
+		width: 200px;
+		outline: none;
+		transition: border-color 0.15s ease;
+
+		&:focus {
+			border-color: #2D7D9A;
+			box-shadow: 0 0 0 3px rgba(45, 125, 154, 0.1);
+		}
+	}
+
+	.adhd-kanban-filter {
+		padding: 7px 10px;
+		border: 1.5px solid rgba(0, 0, 0, 0.12);
+		border-radius: 8px;
+		font-size: 13px;
+		font-family: var(--adhd-font, 'Inter', sans-serif);
+		outline: none;
+		cursor: pointer;
+	}
+}
+
+.adhd-btn {
+	padding: 7px 16px;
+	border-radius: 8px;
+	font-size: 13px;
+	font-weight: 600;
+	cursor: pointer;
+	border: none;
+	font-family: var(--adhd-font, 'Inter', sans-serif);
+	transition: all 0.15s ease;
+
+	&.adhd-btn-primary {
+		background: #2D7D9A;
+		color: white;
+
+		&:hover {
+			background: #1A5C73;
+			transform: translateY(-1px);
+			box-shadow: 0 4px 12px rgba(45, 125, 154, 0.35);
+		}
+	}
+
+	&.adhd-btn-ghost {
+		background: transparent;
+		color: #6B7280;
+		border: 1.5px solid rgba(0, 0, 0, 0.15);
+
+		&:hover {
+			background: rgba(0, 0, 0, 0.04);
+			color: #374151;
+		}
+	}
+}
+
+.adhd-kanban-board {
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	gap: 12px;
+	padding: 16px;
+	flex: 1;
+	overflow-x: auto;
+	overflow-y: hidden;
+
+	@media (max-width: 900px) {
+		grid-template-columns: repeat(2, 1fr);
+	}
+
+	@media (max-width: 600px) {
+		grid-template-columns: 1fr;
+	}
+}
+
+.adhd-kanban-col {
+	display: flex;
+	flex-direction: column;
+	background: #F8F7F4;
+	border-radius: 12px;
+	border: 1px solid rgba(0, 0, 0, 0.06);
+	overflow: hidden;
+	min-height: 300px;
+
+	.adhd-kanban-col-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 12px 14px;
+		border-bottom: 2px solid var(--col-color, #64748b);
+		background: white;
+
+		.adhd-kanban-col-title {
+			font-size: 13px;
+			font-weight: 700;
+			color: var(--col-color, #374151);
+		}
+
+		.adhd-kanban-col-count {
+			background: rgba(0, 0, 0, 0.07);
+			color: #6B7280;
+			font-size: 11px;
+			font-weight: 700;
+			padding: 2px 8px;
+			border-radius: 99px;
+		}
+	}
+
+	.adhd-kanban-cards {
+		flex: 1;
+		padding: 8px;
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		overflow-y: auto;
+		min-height: 100px;
+		transition: background 0.15s ease;
+
+		&.drag-over {
+			background: rgba(45, 125, 154, 0.06);
+			border: 2px dashed rgba(45, 125, 154, 0.3);
+			border-radius: 8px;
+		}
+
+		&::-webkit-scrollbar {
+			width: 4px;
+		}
+		&::-webkit-scrollbar-thumb {
+			background: rgba(0, 0, 0, 0.12);
+			border-radius: 4px;
+		}
+
+		.adhd-kanban-empty {
+			text-align: center;
+			color: #D1D5DB;
+			font-size: 12px;
+			padding: 24px 8px;
+		}
+
+		.adhd-kanban-loading {
+			text-align: center;
+			color: #9CA3AF;
+			font-size: 12px;
+			padding: 20px;
+		}
+	}
+
+	.adhd-kanban-add-card {
+		background: none;
+		border: none;
+		cursor: pointer;
+		padding: 8px 14px;
+		font-size: 12px;
+		color: #9CA3AF;
+		text-align: left;
+		transition: all 0.15s ease;
+		border-top: 1px solid rgba(0, 0, 0, 0.05);
+
+		&:hover {
+			color: var(--col-color, #2D7D9A);
+			background: rgba(0, 0, 0, 0.02);
+		}
+	}
+}
+
+.adhd-kanban-card {
+	background: white;
+	border-radius: 8px;
+	padding: 10px 12px;
+	border: 1px solid rgba(0, 0, 0, 0.07);
+	cursor: grab;
+	transition: all 0.15s ease;
+	position: relative;
+
+	&:hover {
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+		border-color: rgba(0, 0, 0, 0.12);
+		transform: translateY(-1px);
+	}
+
+	&.dragging {
+		opacity: 0.5;
+		cursor: grabbing;
+		transform: rotate(2deg) scale(1.02);
+		box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+	}
+
+	&.adhd-card-completing {
+		animation: adhd-task-complete 0.6s ease forwards;
+	}
+
+	// Priority borders
+	&.priority-urgent {
+		border-left: 3px solid #DC2626;
+	}
+
+	&.priority-high {
+		border-left: 3px solid #F59E0B;
+	}
+
+	&.priority-medium {
+		border-left: 3px solid #3B82F6;
+	}
+
+	&.priority-low {
+		border-left: 3px solid #10B981;
+	}
+
+	.adhd-card-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		margin-bottom: 5px;
+
+		.adhd-card-priority {
+			font-size: 11px;
+		}
+
+		.adhd-card-drag-handle {
+			color: #D1D5DB;
+			font-size: 14px;
+			cursor: grab;
+		}
+	}
+
+	.adhd-card-subject {
+		font-size: 13px;
+		font-weight: 600;
+		color: #1F2937;
+		line-height: 1.4;
+		margin-bottom: 4px;
+
+		a {
+			color: inherit;
+			text-decoration: none;
+
+			&:hover {
+				color: #2D7D9A;
+			}
+		}
+	}
+
+	.adhd-card-project {
+		font-size: 11px;
+		color: #9CA3AF;
+		margin-bottom: 4px;
+	}
+
+	.adhd-card-due {
+		font-size: 11px;
+		color: #6B7280;
+		margin-bottom: 6px;
+
+		&.overdue {
+			color: #EF4444;
+			font-weight: 700;
+		}
+
+		&.due-soon {
+			color: #F59E0B;
+			font-weight: 600;
+		}
+	}
+
+	.adhd-card-progress {
+		height: 3px;
+		background: rgba(0, 0, 0, 0.06);
+		border-radius: 3px;
+		margin-bottom: 8px;
+		position: relative;
+		overflow: hidden;
+
+		.adhd-card-progress-fill {
+			height: 100%;
+			background: linear-gradient(90deg, #3B82F6, #7C4DFF);
+			border-radius: 3px;
+			transition: width 0.5s ease;
+		}
+
+		.adhd-card-progress-label {
+			position: absolute;
+			right: 0;
+			top: -14px;
+			font-size: 10px;
+			color: #9CA3AF;
+		}
+	}
+
+	.adhd-card-actions {
+		display: flex;
+		gap: 6px;
+		opacity: 0;
+		transition: opacity 0.15s ease;
+	}
+
+	&:hover .adhd-card-actions {
+		opacity: 1;
+	}
+
+	.adhd-card-btn {
+		padding: 3px 8px;
+		border-radius: 5px;
+		font-size: 11px;
+		cursor: pointer;
+		border: 1px solid rgba(0, 0, 0, 0.1);
+		background: none;
+		color: #6B7280;
+		font-weight: 500;
+		transition: all 0.12s ease;
+
+		&:hover {
+			background: rgba(0, 0, 0, 0.05);
+		}
+
+		&[data-action="done"]:hover {
+			background: rgba(16, 185, 129, 0.1);
+			color: #065F46;
+			border-color: #10B981;
+		}
+
+		&[data-action="open"]:hover {
+			background: rgba(59, 130, 246, 0.1);
+			color: #1E3A8A;
+			border-color: #3B82F6;
+		}
+	}
+}
+
+// =============================================================================
+// QUICK ADD FORM (Kanban)
+// =============================================================================
+
+.adhd-quick-add-form {
+	position: fixed;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	background: rgba(0, 0, 0, 0.4);
+	backdrop-filter: blur(4px);
+	z-index: 1100;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 20px;
+	animation: adhd-fade-in 0.2s ease;
+
+	.adhd-quick-add-inner {
+		background: white;
+		border-radius: 16px;
+		padding: 24px;
+		width: 100%;
+		max-width: 500px;
+		box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+	}
+
+	.adhd-quick-add-title {
+		font-size: 16px;
+		font-weight: 700;
+		color: #1A1A2E;
+		margin-bottom: 16px;
+	}
+
+	.adhd-qa-input, .adhd-qa-select {
+		width: 100%;
+		padding: 10px 14px;
+		border: 1.5px solid rgba(0, 0, 0, 0.12);
+		border-radius: 8px;
+		font-size: 14px;
+		font-family: var(--adhd-font, 'Inter', sans-serif);
+		color: #1F2937;
+		outline: none;
+		margin-bottom: 10px;
+		transition: border-color 0.15s ease;
+
+		&:focus {
+			border-color: #2D7D9A;
+			box-shadow: 0 0 0 3px rgba(45, 125, 154, 0.12);
+		}
+
+		&.adhd-qa-date {
+			width: auto;
+		}
+	}
+
+	.adhd-qa-row {
+		display: flex;
+		gap: 10px;
+		flex-wrap: wrap;
+
+		.adhd-qa-select, .adhd-qa-date {
+			flex: 1;
+			min-width: 120px;
+		}
+	}
+
+	.adhd-qa-actions {
+		display: flex;
+		gap: 10px;
+		margin-top: 16px;
+		justify-content: flex-end;
+	}
+}
+
+// =============================================================================
+// NOTIFICATION ENHANCEMENTS
+// =============================================================================
+
+body.adhd-mode {
+	.adhd-notif-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 10px 14px;
+		border-bottom: 1px solid rgba(0, 0, 0, 0.07);
+		background: #F8F7F4;
+
+		.adhd-notif-header-title {
+			font-size: 13px;
+			font-weight: 700;
+			color: #1A1A2E;
+		}
+
+		.adhd-notif-clear-all {
+			font-size: 11px;
+			color: #6B7280;
+			cursor: pointer;
+			background: none;
+			border: none;
+			text-decoration: underline;
+		}
+	}
+
+	.adhd-snooze-group {
+		display: flex;
+		align-items: center;
+		gap: 5px;
+		padding: 4px 0;
+		margin-top: 4px;
+
+		.adhd-snooze-label {
+			font-size: 10px;
+			color: #9CA3AF;
+		}
+
+		.adhd-snooze-btn {
+			background: rgba(0, 0, 0, 0.05);
+			border: 1px solid rgba(0, 0, 0, 0.1);
+			border-radius: 99px;
+			padding: 2px 8px;
+			font-size: 10px;
+			cursor: pointer;
+			color: #6B7280;
+			transition: all 0.12s ease;
+
+			&:hover {
+				background: rgba(45, 125, 154, 0.1);
+				color: #2D7D9A;
+				border-color: rgba(45, 125, 154, 0.2);
+			}
+		}
+	}
+}
+
+// =============================================================================
+// LIST VIEW IMPROVEMENTS in ADHD Mode
+// =============================================================================
+
+body.adhd-mode {
+	// Bigger, more readable list rows
+	.list-row {
+		padding: 10px 16px !important;
+		font-size: 13.5px !important;
+		line-height: 1.5 !important;
+		border-radius: 6px !important;
+		margin: 1px 4px !important;
+		transition: background 0.12s ease !important;
+
+		&:hover {
+			background: rgba(45, 125, 154, 0.04) !important;
+		}
+	}
+
+	// Make status indicators clearer
+	.indicator {
+		border-radius: 99px !important;
+		font-size: 11px !important;
+		font-weight: 600 !important;
+		padding: 2px 10px !important;
+		letter-spacing: 0.3px;
+	}
+
+	// Bigger, clearer column headers
+	.list-row-head {
+		font-size: 11.5px !important;
+		font-weight: 700 !important;
+		letter-spacing: 0.5px !important;
+		color: #6B7280 !important;
+		text-transform: uppercase !important;
+	}
+
+	// Make search bar more prominent
+	.list-filters input,
+	.input-search-wrapper input {
+		font-size: 14px !important;
+		padding: 9px 14px !important;
+		border-radius: 8px !important;
+		border: 1.5px solid rgba(0, 0, 0, 0.12) !important;
+
+		&:focus {
+			border-color: var(--adhd-primary, #2D7D9A) !important;
+			box-shadow: 0 0 0 3px rgba(45, 125, 154, 0.1) !important;
+		}
+	}
+}
+
+// =============================================================================
+// DASHBOARD improvements
+// =============================================================================
+
+body.adhd-mode {
+	.dashboard-head,
+	.widget-head {
+		font-size: 14px !important;
+		font-weight: 700 !important;
+		color: #1A1A2E !important;
+	}
+
+	.widget {
+		border-radius: var(--adhd-radius, 10px) !important;
+		border: 1px solid var(--adhd-border, rgba(0, 0, 0, 0.08)) !important;
+		box-shadow: var(--adhd-shadow-sm) !important;
+		overflow: hidden !important;
+		transition: box-shadow 0.2s ease !important;
+
+		&:hover {
+			box-shadow: var(--adhd-shadow-md) !important;
+		}
+	}
+}
+
+// =============================================================================
+// KEYFRAME ANIMATIONS
+// =============================================================================
+
+@keyframes adhd-pulse {
+	0%, 100% { box-shadow: 0 2px 4px rgba(45, 125, 154, 0.3); }
+	50% { box-shadow: 0 4px 16px rgba(45, 125, 154, 0.6); }
+}
+
+@keyframes adhd-task-complete {
+	0% { transform: scale(1); opacity: 1; background: white; }
+	50% { transform: scale(1.05); background: rgba(16, 185, 129, 0.1); }
+	100% { transform: scale(0.9); opacity: 0; max-height: 0; padding: 0; margin: 0; }
+}
+
+@keyframes adhd-task-working {
+	0% { transform: scale(1); }
+	50% { transform: scale(1.02); background: rgba(59, 130, 246, 0.05); }
+	100% { transform: scale(1); }
+}
+
+@keyframes adhd-slide-in {
+	from { transform: translateY(-8px); opacity: 0; }
+	to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes adhd-fade-in {
+	from { opacity: 0; }
+	to { opacity: 1; }
+}
+
+// =============================================================================
+// DARK MODE SUPPORT for ADHD mode
+// =============================================================================
+
+@media (prefers-color-scheme: dark) {
+	body.adhd-mode {
+		--adhd-bg: #0F1117;
+		--adhd-bg-card: #1A1F2E;
+		--adhd-text: #E5E7EB;
+		--adhd-text-muted: #9CA3AF;
+		--adhd-border: rgba(255, 255, 255, 0.08);
+		--adhd-border-strong: rgba(255, 255, 255, 0.15);
+
+		.adhd-kanban-card,
+		.afp-task-card,
+		.adhd-quick-add-inner {
+			background: #1A1F2E;
+			border-color: rgba(255, 255, 255, 0.08);
+			color: #E5E7EB;
+		}
+
+		.adhd-kanban-col {
+			background: #111827;
+		}
+
+		.adhd-kanban-col-header {
+			background: #1A1F2E;
+		}
+
+		.adhd-breadcrumb {
+			background: rgba(45, 125, 154, 0.1);
+		}
+
+		.adhd-focus-panel {
+			background: #1A1F2E;
+
+			.afp-section {
+				background: rgba(255, 255, 255, 0.04);
+			}
+		}
+	}
+}
+
+// =============================================================================
+// RESPONSIVE ADJUSTMENTS
+// =============================================================================
+
+@media (max-width: 768px) {
+	.adhd-focus-panel {
+		width: 100%;
+		top: auto;
+		bottom: 0;
+		height: 60vh;
+		transform: translateY(100%);
+
+		&.visible {
+			transform: translateY(0);
+		}
+
+		.afp-toggle-tab {
+			left: 50%;
+			top: -20px;
+			transform: translateX(-50%);
+			border-radius: 8px 8px 0 0;
+			border-right: 1px solid rgba(0, 0, 0, 0.1);
+			border-bottom: none;
+			width: 48px;
+			height: 24px;
+		}
+	}
+
+	.adhd-kanban-board {
+		grid-template-columns: repeat(2, minmax(240px, 1fr));
+	}
+}
