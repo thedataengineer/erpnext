@@ -7,7 +7,6 @@ frappe.provide("erpnext.adhd");
 // Field explanations dictionary — plain English for common ERPNext fields
 const FIELD_HELP = {
 	"company": "The legal entity this record belongs to",
-	"cost_center": "A department or project code used for accounting",
 	"currency": "The currency for money amounts in this document",
 	"exchange_rate": "How much 1 unit of foreign currency equals in your base currency",
 	"fiscal_year": "The accounting year period (often April–March or Jan–Dec)",
