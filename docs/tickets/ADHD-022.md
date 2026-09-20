@@ -170,3 +170,171 @@ S — Single form script, two async `frappe.call` fetches, pure HTML injection. 
 
 ## Phase
 Phase 7 — Module-by-Module Expansion
+
+---
+
+## LLM Implementation Guide
+
+### Codebase Context
+
+```
+Project: ERPNext on Frappe framework. JavaScript frontend, Python backend.
+- Client scripts: frappe.ui.form.on("DocType", { hook(frm) {} })
+- ADHD mode guard: if (!frappe.boot.adhd_mode) return;
+- Async API: frappe.call({ method, args, callback }) or await frappe.call(...)
+- Child tables: frappe.model.add_child(frm.doc, childDoctype, fieldname)
+- DOM sync: frm.refresh_field(fieldname)
+- Persistence: localStorage.setItem/getItem/removeItem
+- Include files: hooks.py under app_include_js or doctype_js
+- CSS: erpnext/public/scss/adhd_mode.scss with CSS custom properties
+- Python API: @frappe.whitelist(), called via dotted module path
+- List queries: frappe.db.get_list / frappe.client.get_list return arrays of dicts
+- Dialogs: new frappe.ui.Dialog({ title, fields, primary_action })
+- Currency format: frappe.format(value, { fieldtype: "Currency" })
+
+Specifics for this ticket:
+- Two async frappe.call calls: get_value for credit_limit/payment_terms/outstanding_amount on Customer;
+  get_list on Contact via Dynamic Link filter {link_doctype: "Customer", link_name: frm.doc.name}
+- Inject HTML panel using $(html).insertBefore(frm.layout.wrapper.find(".form-layout").first())
+- Credit utilisation = outstanding_amount / credit_limit * 100
+- Colour thresholds: >= 100% red, >= 80% amber, else green
+```
+
+---
+
+### Claude Prompt
+
+```text
+You are implementing ADHD-022: Customer "Essentials Only" Tab for ERPNext's ADHD Mode.
+
+Context:
+Project: ERPNext on Frappe framework. JavaScript frontend, Python backend.
+- Client scripts: frappe.ui.form.on("DocType", { hook(frm) {} })
+- ADHD mode guard: if (!frappe.boot.adhd_mode) return;
+- Async API: frappe.call({ method, args, callback }) or await frappe.call(...)
+- List queries: frappe.client.get_list returns arrays of dicts
+- CSS: erpnext/public/scss/adhd_mode.scss with CSS custom properties
+- Currency format: frappe.format(value, { fieldtype: "Currency" })
+
+Task:
+Create selling/doctype/customer/adhd_customer.js that injects an "Essentials" panel on the Customer form.
+
+Requirements:
+1. Hook into frappe.ui.form.on("Customer", { refresh(frm) {} }) with ADHD mode guard.
+2. Make two parallel async frappe.call requests:
+   a. frappe.call with method "frappe.client.get_value", args: {doctype:"Customer", name:frm.doc.name,
+      fieldname:["credit_limit","payment_terms","outstanding_amount"]}
+   b. frappe.call with method "frappe.client.get_list", args: {doctype:"Contact",
+      filters:[["Dynamic Link","link_doctype","=","Customer"],["Dynamic Link","link_name","=",frm.doc.name]],
+      fields:["name","full_name","email_id","phone"]}
+3. Once both resolve, build an HTML panel with:
+   - Credit limit, payment terms, outstanding amount (formatted as Currency)
+   - Credit utilisation bar: outstanding/credit_limit*100, coloured green/<80%, amber/80-99%, red/>=100%
+   - Primary contact name, email, phone
+4. Inject the panel using insertBefore on ".form-layout" so it appears above the standard tabs.
+5. Guard against re-injection if the panel already exists (#adhd-customer-essentials).
+
+Think through: how to run two frappe.call requests in parallel and wait for both before rendering.
+Produce the complete file with inline comments.
+```
+
+---
+
+### GPT-4o Prompt
+
+```text
+## Task: ADHD-022 — Customer "Essentials Only" Tab
+
+### Codebase Context
+Project: ERPNext on Frappe framework. JavaScript frontend, Python backend.
+- Client scripts: frappe.ui.form.on("DocType", { hook(frm) {} })
+- ADHD mode guard: if (!frappe.boot.adhd_mode) return;
+- Async API: await frappe.call({ method, args }) returns { message }
+- List queries: frappe.client.get_list returns array of dicts
+- Currency format: frappe.format(value, { fieldtype: "Currency" })
+- CSS: erpnext/public/scss/adhd_mode.scss with CSS custom properties
+
+### Requirements
+- [ ] Create `selling/doctype/customer/adhd_customer.js`
+- [ ] Hook: `frappe.ui.form.on("Customer", { refresh(frm) {} })`
+- [ ] Guard: `if (!frappe.boot.adhd_mode) return;`
+- [ ] Parallel async calls: get_value (credit_limit, payment_terms, outstanding_amount) + get_list (Contact via Dynamic Link)
+- [ ] HTML panel injected above `.form-layout` using `insertBefore`
+- [ ] Credit utilisation colour: >= 100% → red, >= 80% → amber, < 80% → green
+- [ ] Panel ID `#adhd-customer-essentials` prevents duplicate injection
+- [ ] Currency values formatted with `frappe.format`
+- [ ] Handle case where credit_limit is 0 (avoid division by zero — show "No limit set")
+
+### Output
+Complete file contents for `adhd_customer.js` with inline comments.
+```
+
+---
+
+### Gemini 1.5 Pro Prompt
+
+```text
+Implement ADHD-022: Customer "Essentials Only" Tab for ERPNext ADHD Mode. Follow these steps.
+
+Codebase context:
+Project: ERPNext on Frappe framework. JavaScript frontend, Python backend.
+- Client scripts: frappe.ui.form.on("DocType", { hook(frm) {} })
+- ADHD mode guard: if (!frappe.boot.adhd_mode) return;
+- Async API: await frappe.call({ method, args }) returns { message }
+- List queries: frappe.client.get_list returns array of dicts
+- Currency format: frappe.format(value, { fieldtype: "Currency" })
+
+Step 1 — Setup:
+  Create selling/doctype/customer/adhd_customer.js.
+  Register frappe.ui.form.on("Customer", { refresh(frm) {} }).
+  Add ADHD mode guard as first statement. Add duplicate-panel guard checking for #adhd-customer-essentials.
+
+Step 2 — Data fetch:
+  Use Promise.all([frappe.call(...), frappe.call(...)]) to fetch in parallel:
+  - get_value: doctype=Customer, name=frm.doc.name, fieldname=["credit_limit","payment_terms","outstanding_amount"]
+  - get_list: doctype=Contact, filters on Dynamic Link for this customer, fields=["full_name","email_id","phone"]
+
+Step 3 — Render panel:
+  Build HTML string containing: credit limit, payment terms, outstanding amount (frappe.format as Currency).
+  Compute utilisation = outstanding / credit_limit * 100. Assign class: red if >=100, amber if >=80, green otherwise.
+  If credit_limit === 0, display "No limit set" instead of a percentage bar.
+  Include primary contact (first result from get_list or "No contact found").
+
+Step 4 — Inject:
+  $('<div id="adhd-customer-essentials">'+html+'</div>').insertBefore(frm.layout.wrapper.find(".form-layout").first())
+
+Step 5 — Verify:
+  - Panel only injected once per form load.
+  - No division by zero when credit_limit is 0.
+  - Currency values use frappe.format, not raw numbers.
+
+Output the complete file.
+```
+
+---
+
+### Prompt Chain
+
+This is an **S (small) ticket** — implement with a single prompt. Use any one of the three prompts above, then run the self-validation prompt below on the output.
+
+---
+
+### Self-Validation Prompt
+
+```text
+Review the following code for ADHD-022 (Customer "Essentials Only" Tab).
+
+Check each item and respond PASS or FAIL + reason:
+
+1. File is selling/doctype/customer/adhd_customer.js
+2. frappe.ui.form.on("Customer", { refresh(frm) {} }) is registered
+3. ADHD mode guard is the first statement in the handler
+4. Two separate frappe.call requests are made (get_value for financials + get_list for Contact)
+5. Both calls complete before the panel is rendered (Promise.all or sequential awaits)
+6. Credit utilisation colour logic: >=100% red, >=80% amber, else green
+7. Division-by-zero guard when credit_limit === 0
+8. Panel has id="adhd-customer-essentials" and duplicate injection is prevented
+9. Currency values use frappe.format(value, { fieldtype: "Currency" })
+
+[Paste generated code here]
+```

@@ -97,3 +97,166 @@ S — Entirely additive; delegates all logic to pre-built ADHD-006 and ADHD-008 
 
 ## Phase
 Phase 7 — Module-by-Module Expansion
+
+---
+
+## LLM Implementation Guide
+
+### Codebase Context
+
+```
+Project: ERPNext on Frappe framework. JavaScript frontend, Python backend.
+- Client scripts: frappe.ui.form.on("DocType", { hook(frm) {} })
+- ADHD mode guard: if (!frappe.boot.adhd_mode) return;
+- Async API: frappe.call({ method, args, callback }) or await frappe.call(...)
+- Child tables: frappe.model.add_child(frm.doc, childDoctype, fieldname)
+- DOM sync: frm.refresh_field(fieldname)
+- Persistence: localStorage.setItem/getItem/removeItem
+- Include files: hooks.py under app_include_js or doctype_js
+- CSS: erpnext/public/scss/adhd_mode.scss with CSS custom properties
+- Python API: @frappe.whitelist(), called via dotted module path
+- List queries: frappe.db.get_list / frappe.client.get_list return arrays of dicts
+- Dialogs: new frappe.ui.Dialog({ title, fields, primary_action })
+- Currency format: frappe.format(value, { fieldtype: "Currency" })
+
+Prerequisite context:
+- ADHD-006 introduced adhd_list_view.js with a registerHeatmapDoctype(doctype, dateField) helper.
+- ADHD-008 introduced adhd_deadline_banner.js with renderDeadlineBanner(frm, dateValue, labelText).
+```
+
+---
+
+### Claude Prompt
+
+```text
+You are implementing ADHD-021: Quotation Expiry Ambient Warning for ERPNext's ADHD Mode.
+
+Context:
+Project: ERPNext on Frappe framework. JavaScript frontend, Python backend.
+- Client scripts: frappe.ui.form.on("DocType", { hook(frm) {} })
+- ADHD mode guard: if (!frappe.boot.adhd_mode) return;
+- Async API: frappe.call({ method, args, callback }) or await frappe.call(...)
+- Child tables: frappe.model.add_child(frm.doc, childDoctype, fieldname)
+- DOM sync: frm.refresh_field(fieldname)
+- Persistence: localStorage.setItem/getItem/removeItem
+- Include files: hooks.py under app_include_js or doctype_js
+- CSS: erpnext/public/scss/adhd_mode.scss with CSS custom properties
+- Python API: @frappe.whitelist(), called via dotted module path
+- List queries: frappe.db.get_list / frappe.client.get_list return arrays of dicts
+- Dialogs: new frappe.ui.Dialog({ title, fields, primary_action })
+- Currency format: frappe.format(value, { fieldtype: "Currency" })
+- ADHD-006 introduced registerHeatmapDoctype(doctype, dateField) in adhd_list_view.js
+- ADHD-008 introduced renderDeadlineBanner(frm, dateValue, labelText) in adhd_deadline_banner.js
+
+Task:
+1. In adhd_list_view.js, call registerHeatmapDoctype("Quotation", "valid_till") so the list view
+   heat-colours rows by proximity to expiry.
+2. Create selling/doctype/quotation/adhd_quotation.js with:
+   - frappe.ui.form.on("Quotation", { refresh(frm) { ... } })
+   - ADHD mode guard at the top of the handler
+   - Call renderDeadlineBanner(frm, frm.doc.valid_till, "Quotation expires") imported from adhd_deadline_banner.js
+
+Think step by step:
+- Where exactly in adhd_list_view.js should the registerHeatmapDoctype call be placed (after existing registrations)?
+- What import/require pattern does this codebase use for shared ADHD helpers?
+- What edge cases exist if valid_till is null or the doc is already submitted?
+
+Produce the final code for both files with inline comments explaining each decision.
+```
+
+---
+
+### GPT-4o Prompt
+
+```text
+## Task: ADHD-021 — Quotation Expiry Ambient Warning
+
+### Codebase Context
+Project: ERPNext on Frappe framework. JavaScript frontend, Python backend.
+- Client scripts: frappe.ui.form.on("DocType", { hook(frm) {} })
+- ADHD mode guard: if (!frappe.boot.adhd_mode) return;
+- Async API: frappe.call({ method, args, callback }) or await frappe.call(...)
+- DOM sync: frm.refresh_field(fieldname)
+- Include files: hooks.py under app_include_js or doctype_js
+- CSS: erpnext/public/scss/adhd_mode.scss with CSS custom properties
+- ADHD-006: registerHeatmapDoctype(doctype, dateField) lives in adhd_list_view.js
+- ADHD-008: renderDeadlineBanner(frm, dateValue, labelText) lives in adhd_deadline_banner.js
+
+### Requirements
+- [ ] Add `registerHeatmapDoctype("Quotation", "valid_till")` call inside `adhd_list_view.js`
+- [ ] Create new file `selling/doctype/quotation/adhd_quotation.js`
+- [ ] Register `frappe.ui.form.on("Quotation", { refresh(frm) {} })`
+- [ ] Guard with `if (!frappe.boot.adhd_mode) return;`
+- [ ] Call `renderDeadlineBanner(frm, frm.doc.valid_till, "Quotation expires")`
+- [ ] Handle null/empty `valid_till` gracefully (skip banner if not set)
+- [ ] Do not re-render banner if it already exists in DOM
+
+### Constraints
+- No new dependencies; reuse existing ADHD helpers only
+- Follow existing file naming conventions in erpnext/selling/doctype/
+- Single-prompt implementation (S ticket)
+
+### Output
+Provide complete file contents for both modified/created files with inline comments.
+```
+
+---
+
+### Gemini 1.5 Pro Prompt
+
+```text
+You are implementing ADHD-021 (Quotation Expiry Ambient Warning) for ERPNext ADHD Mode. Follow these steps exactly.
+
+Codebase context:
+Project: ERPNext on Frappe framework. JavaScript frontend, Python backend.
+- Client scripts: frappe.ui.form.on("DocType", { hook(frm) {} })
+- ADHD mode guard: if (!frappe.boot.adhd_mode) return;
+- Async API: frappe.call({ method, args, callback }) or await frappe.call(...)
+- DOM sync: frm.refresh_field(fieldname)
+- Include files: hooks.py under app_include_js or doctype_js
+- CSS: erpnext/public/scss/adhd_mode.scss with CSS custom properties
+- registerHeatmapDoctype(doctype, dateField) is defined in adhd_list_view.js (ADHD-006)
+- renderDeadlineBanner(frm, dateValue, labelText) is defined in adhd_deadline_banner.js (ADHD-008)
+
+Step 1 — Edit adhd_list_view.js:
+  Add the line `registerHeatmapDoctype("Quotation", "valid_till");` after the existing registerHeatmapDoctype calls.
+
+Step 2 — Create selling/doctype/quotation/adhd_quotation.js:
+  a. At the top, add a reference comment linking to adhd_deadline_banner.js.
+  b. Register frappe.ui.form.on("Quotation", { refresh(frm) {} }).
+  c. First line of the handler: if (!frappe.boot.adhd_mode) return;
+  d. Guard: if (!frm.doc.valid_till) return;
+  e. Call renderDeadlineBanner(frm, frm.doc.valid_till, "Quotation expires").
+
+Step 3 — Verify:
+  - Confirm no duplicate banner can be injected (check for existing element before render).
+  - Confirm the file path matches ERPNext conventions: erpnext/selling/doctype/quotation/adhd_quotation.js.
+
+Output the complete contents of both files.
+```
+
+---
+
+### Prompt Chain
+
+This is an **S (small) ticket** — implement with a single prompt. Use any one of the three prompts above, then run the self-validation prompt below on the output.
+
+---
+
+### Self-Validation Prompt
+
+```text
+Review the following code generated for ADHD-021 (Quotation Expiry Ambient Warning).
+
+Check for each item and respond with PASS or FAIL + reason:
+
+1. adhd_list_view.js contains registerHeatmapDoctype("Quotation", "valid_till")
+2. adhd_quotation.js registers frappe.ui.form.on("Quotation", { refresh(frm) {} })
+3. ADHD mode guard `if (!frappe.boot.adhd_mode) return;` is the first statement in the handler
+4. renderDeadlineBanner is called with (frm, frm.doc.valid_till, "Quotation expires")
+5. Null/empty valid_till is handled — banner is skipped if the field is not set
+6. No new external libraries are introduced
+7. File path is erpnext/selling/doctype/quotation/adhd_quotation.js
+
+[Paste generated code here]
+```

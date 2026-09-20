@@ -99,3 +99,260 @@ M — Three data sources with different query shapes, a Python endpoint, localSt
 
 ## Phase
 Phase 2 — Core Workflow Clarity
+
+---
+
+## LLM Implementation Guide
+
+### Codebase Context for the Model
+
+```text
+Project: ERPNext (Frappe framework), JavaScript frontend + Python backend.
+Key patterns:
+- All client scripts use `frappe.ui.form.on("DocType", { hook(frm) {} })`.
+- ADHD mode is active when `frappe.boot.adhd_mode === true`.
+- `frappe.call({ method, args, callback })` is the standard async API call.
+- `frappe.model.add_child(frm.doc, childDoctype, fieldname)` adds child table rows.
+- `frm.refresh_field(fieldname)` syncs model → DOM for a field.
+- `localStorage.setItem / getItem / removeItem` is used for client-side persistence.
+- All JS files are included via `hooks.py` under `app_include_js` or `doctype_js`.
+- CSS lives in `erpnext/public/scss/adhd_mode.scss` using CSS custom properties (vars).
+- Python whitelisted methods use `@frappe.whitelist()` and are called via dotted module path.
+- frappe.db.get_list / frappe.client.get_list return arrays of dicts.
+- Frappe dialogs: `new frappe.ui.Dialog({ title, fields, primary_action })`.
+```
+
+---
+
+### Prompt Chain (M ticket — 2 steps)
+
+**Step 1 — Scaffold: Page/Workspace structure + panel layout**
+
+```text
+You are implementing ADHD-002 for ERPNext: "Smart Inbox — Your Day At a Glance". In this step, scaffold the page/workspace and render the three panel containers. Do NOT fetch real data yet.
+
+--- CODEBASE CONTEXT ---
+- ERPNext on Frappe. ADHD mode: `frappe.boot.adhd_mode === true`.
+- New Frappe Page: defined in Python under `erpnext/{module}/page/{page_name}/` with `{page_name}.py`, `{page_name}.js`, `{page_name}.json`.
+- Alternatively, use a Workspace with a custom page slot.
+- `frappe.call({ method, args, callback })` for API calls.
+- `localStorage.getItem/setItem` for Resume panel persistence.
+- CSS: `erpnext/public/scss/adhd_mode.scss`.
+--- END CONTEXT ---
+
+FILES TO CREATE:
+1. `erpnext/public/js/adhd/adhd_smart_inbox.js` — main JS
+2. `erpnext/public/scss/adhd_mode.scss` additions — `.adhd-inbox-panel`, `.adhd-inbox-row`
+
+WHAT TO BUILD:
+- Create a `renderSmartInbox(wrapper)` function that injects three panel `<div>` elements into the given wrapper:
+  - Panel 1: `.adhd-panel-overdue` — title "⚠️ Overdue & Due Today"
+  - Panel 2: `.adhd-panel-awaiting` — title "⏳ Awaiting Your Action"
+  - Panel 3: `.adhd-panel-resume` — title "▶ Resume Where You Left Off"
+- Each panel has a `.adhd-panel-body` div where rows will be injected.
+- Add a loading skeleton (three grey bars) inside each panel body as placeholder.
+- Wire the page/workspace entry point to call `renderSmartInbox` when ADHD mode is on.
+- In CSS: panels in a responsive flex/grid layout, mobile-first.
+
+Stop here — data fetching is Step 2.
+```
+
+**Step 2 — Wire Logic: Data fetching + Resume persistence**
+
+```text
+Continuing ADHD-002. The three panel containers are rendered. Now fetch real data and populate them.
+
+--- CODEBASE CONTEXT ---
+- `frappe.call({ method: "frappe.client.get_list", args: { doctype, filters, fields, order_by, limit }, callback })` fetches lists.
+- Doctypes to query: Task, ToDo, Sales Order, Purchase Order, Sales Invoice, Leave Application.
+- For "Overdue/Due Today": filter by `due_date <= today` and `status != "Closed"/"Completed"`.
+- For "Awaiting Action": filter `workflow_state` for states that block on the current user.
+- Resume panel: read `localStorage.getItem("adhd_resume_docs")` — a JSON array of `{ doctype, docname, title, timestamp }` objects. Write on every form open via a separate hook in `adhd_mode.js`.
+- `frappe.utils.get_form_link(doctype, name)` generates a clickable form link.
+--- END CONTEXT ---
+
+FILES TO MODIFY:
+- `erpnext/public/js/adhd/adhd_smart_inbox.js`
+
+WHAT TO ADD:
+- `fetchOverdueDocs()` — calls `frappe.client.get_list` for Task (due_date, status) and Sales Invoice (due_date, outstanding_amount > 0). Renders each as a `.adhd-inbox-row` with a link and due-date badge.
+- `fetchAwaitingAction()` — calls `frappe.client.get_list` for Sales Order and Purchase Order filtered by `workflow_state IN ("Pending Approval", "To Receive")`. Renders similarly.
+- `loadResumeDocs()` — reads `localStorage.getItem("adhd_resume_docs")`, parses JSON, renders last 5 entries with timestamps. Provides a "Clear" button that calls `localStorage.removeItem("adhd_resume_docs")`.
+- Call all three functions after `renderSmartInbox` completes. Replace loading skeletons with real rows.
+
+ACCEPTANCE CRITERIA:
+- [ ] Panel 1 shows Tasks and Sales Invoices overdue or due today.
+- [ ] Panel 2 shows Sales Orders and Purchase Orders awaiting action.
+- [ ] Panel 3 reads from `localStorage` key `adhd_resume_docs` and shows last 5 entries.
+- [ ] "Clear" button on Resume panel calls `localStorage.removeItem("adhd_resume_docs")`.
+- [ ] Each row links to the document via `frappe.utils.get_form_link`.
+- [ ] All panels show "Nothing here 🎉" when empty.
+- [ ] Feature is inert when `frappe.boot.adhd_mode !== true`.
+- [ ] Page/workspace registered and accessible from the nav.
+```
+
+---
+
+### Prompt for Claude (Anthropic)
+
+```text
+I'm building ADHD-002 "Smart Inbox — Your Day At a Glance" for ERPNext. This is a new page/workspace that shows three panels to help ADHD users orient themselves at the start of their day.
+
+Codebase context:
+- ERPNext on Frappe framework. ADHD mode: `frappe.boot.adhd_mode === true`.
+- `frappe.call({ method: "frappe.client.get_list", args: { doctype, filters, fields, limit }, callback })` for data.
+- `localStorage.getItem/setItem/removeItem` for client-side persistence.
+- `frappe.utils.get_form_link(doctype, name)` for document links.
+- CSS: `erpnext/public/scss/adhd_mode.scss`.
+- JS included via `hooks.py` → `app_include_js`.
+
+Please implement:
+
+**`erpnext/public/js/adhd/adhd_smart_inbox.js`** containing:
+- `renderSmartInbox(wrapper)` — creates three panels inside wrapper:
+  1. "⚠️ Overdue & Due Today" — fetches Tasks with `due_date <= today` and status not Closed/Completed, plus Sales Invoices with `due_date <= today` and `outstanding_amount > 0`. Use `frappe.client.get_list`.
+  2. "⏳ Awaiting Your Action" — fetches Sales Orders and Purchase Orders with `workflow_state IN ("Pending Approval", "To Receive")`.
+  3. "▶ Resume Where You Left Off" — reads `localStorage.getItem("adhd_resume_docs")` (JSON array of `{ doctype, docname, title, timestamp }`), shows last 5 with timestamps and a "Clear" button.
+- Each row is a `.adhd-inbox-row` div with a clickable link from `frappe.utils.get_form_link` and a status badge.
+- Empty state: show "Nothing here 🎉" per panel.
+
+**`erpnext/public/scss/adhd_mode.scss` additions:**
+- `.adhd-smart-inbox` wrapper: responsive flex/grid, 3 columns on desktop, single column mobile.
+- `.adhd-inbox-panel`: card style with header and body.
+- `.adhd-inbox-row`: flex row with link on left, badge on right.
+
+**`erpnext/hooks.py`:** add `adhd_smart_inbox.js` to `app_include_js`.
+
+Think about: how to avoid the page feeling overwhelming — panels should load with a skeleton before data arrives. Walk me through your approach before writing code, then produce the complete implementation.
+
+Verify before finishing:
+- [ ] All three panels present with correct data sources
+- [ ] Resume panel uses localStorage key `adhd_resume_docs`
+- [ ] Empty states handled gracefully
+- [ ] Fully inert when ADHD mode is off
+```
+
+---
+
+### Prompt for GPT-4o (OpenAI)
+
+```text
+## Task
+Implement ADHD-002: Smart Inbox "Your Day At a Glance" for ERPNext/Frappe.
+
+## Codebase Context
+- Frappe client API: `frappe.call({ method: "frappe.client.get_list", args: { doctype, filters, fields, limit }, callback })`.
+- ADHD mode guard: `frappe.boot.adhd_mode === true`.
+- localStorage persistence: `localStorage.getItem/setItem/removeItem("adhd_resume_docs")`.
+- Resume data shape: JSON array of `{ doctype, docname, title, timestamp }`.
+- Document links: `frappe.utils.get_form_link(doctype, name)`.
+- CSS: `erpnext/public/scss/adhd_mode.scss`.
+
+## Files to Create/Modify
+1. **CREATE** `erpnext/public/js/adhd/adhd_smart_inbox.js`
+2. **MODIFY** `erpnext/public/scss/adhd_mode.scss`
+3. **MODIFY** `erpnext/hooks.py` — add to `app_include_js`
+
+## Panel Specifications
+
+### Panel 1 — Overdue & Due Today
+- Sources: Task (`due_date`, `status`), Sales Invoice (`due_date`, `outstanding_amount`)
+- Filters: `due_date <= frappe.datetime.get_today()`, status not in ["Closed", "Completed"]
+- Fields to show: name, subject/title, due_date
+
+### Panel 2 — Awaiting Your Action
+- Sources: Sales Order, Purchase Order
+- Filters: `workflow_state in ["Pending Approval", "To Receive"]`
+- Fields: name, customer/supplier, workflow_state
+
+### Panel 3 — Resume Where You Left Off
+- Read from `localStorage.getItem("adhd_resume_docs")` → parse JSON
+- Show last 5 entries with relative timestamps
+- "Clear" button: `localStorage.removeItem("adhd_resume_docs")`
+
+## Acceptance Checklist
+- [ ] Three panels render correctly with data from correct sources
+- [ ] Panel 1 uses Task + Sales Invoice with due_date filter
+- [ ] Panel 2 uses Sales Order + Purchase Order with workflow_state filter
+- [ ] Panel 3 reads localStorage key `adhd_resume_docs`, shows last 5
+- [ ] "Clear" button removes localStorage key
+- [ ] Each panel shows "Nothing here 🎉" when empty
+- [ ] Loading skeleton shown before data arrives
+- [ ] Feature fully inert when `frappe.boot.adhd_mode` is false
+- [ ] hooks.py updated
+```
+
+---
+
+### Prompt for Gemini 1.5 Pro (Google)
+
+```text
+Implement ADHD-002: Smart Inbox "Your Day At a Glance" for ERPNext. Follow each step.
+
+## Context
+- ERPNext on Frappe. ADHD guard: `if (!frappe.boot.adhd_mode) return;`
+- List API: `frappe.call({ method: "frappe.client.get_list", args: { doctype, filters, fields, limit_page_length: 10 }, callback })`
+- Links: `frappe.utils.get_form_link(doctype, name)` returns an `<a>` tag string.
+- Resume localStorage key: `"adhd_resume_docs"` — stores JSON array of `{ doctype, docname, title, timestamp }`.
+- CSS: `erpnext/public/scss/adhd_mode.scss`.
+
+## Step-by-Step
+
+### Step 1: Create `erpnext/public/js/adhd/adhd_smart_inbox.js`
+
+1. Export `function renderSmartInbox(wrapper)`.
+2. Inject `<div class="adhd-smart-inbox">` into wrapper with three child divs: `.adhd-panel-overdue`, `.adhd-panel-awaiting`, `.adhd-panel-resume`. Each has a `<h4>` title and a `.adhd-panel-body`.
+3. Show loading skeleton (3 grey bars via CSS class `.adhd-skeleton`) in each panel body.
+
+### Step 2: Implement `fetchOverdueDocs(panelEl)`
+- Call `frappe.client.get_list` for Task: fields `["name","subject","due_date","status"]`, filters `[["due_date","<=",frappe.datetime.get_today()],["status","not in",["Closed","Completed"]]]`.
+- Also call for Sales Invoice: fields `["name","customer","due_date","outstanding_amount"]`, filters `[["due_date","<=",today],["outstanding_amount",">",0]]`.
+- Merge results; render each as `.adhd-inbox-row`; replace skeleton. Show "Nothing here 🎉" if empty.
+
+### Step 3: Implement `fetchAwaitingAction(panelEl)`
+- Call `frappe.client.get_list` for Sales Order and Purchase Order, filter `workflow_state in ["Pending Approval","To Receive"]`.
+- Render rows similarly.
+
+### Step 4: Implement `loadResumeDocs(panelEl)`
+- Read `localStorage.getItem("adhd_resume_docs")`; parse JSON (handle null/malformed gracefully).
+- Render last 5 entries as `.adhd-inbox-row` with `frappe.utils.get_form_link` and relative timestamp.
+- Add "Clear" button: on click `localStorage.removeItem("adhd_resume_docs")` then re-render empty state.
+
+### Step 5: Add CSS to `adhd_mode.scss`
+- `.adhd-smart-inbox`: CSS grid, 3 columns ≥992px, 1 column below.
+- `.adhd-inbox-panel`: card with border, padding, header background.
+- `.adhd-inbox-row`: flex, space-between, `gap: 8px`.
+- `.adhd-skeleton`: grey animated shimmer.
+
+### Step 6: Update `hooks.py`
+Add `"erpnext/public/js/adhd/adhd_smart_inbox.js"` to `app_include_js`.
+
+## Verify Before Submitting
+- [ ] Three panels render with correct data sources
+- [ ] Panel 1: Task + Sales Invoice, due_date filter
+- [ ] Panel 2: Sales Order + Purchase Order, workflow_state filter
+- [ ] Panel 3: localStorage `adhd_resume_docs`, last 5, Clear button
+- [ ] Empty states show "Nothing here 🎉"
+- [ ] Skeleton shown before data loads
+- [ ] ADHD guard present
+- [ ] CSS added, hooks.py updated
+```
+
+---
+
+### Self-Validation Prompt
+
+```text
+Review the ADHD-002 implementation and answer:
+
+1. Does Panel 1 fetch from both Task AND Sales Invoice — not just one?
+2. Does Panel 2 filter `workflow_state` rather than just `status`?
+3. Does the Resume panel handle `localStorage.getItem("adhd_resume_docs")` returning `null` without throwing?
+4. Does the "Clear" button call `localStorage.removeItem` with the exact key `"adhd_resume_docs"`?
+5. Are loading skeletons replaced (not just hidden) when real data arrives?
+6. Does each panel display an empty-state message when its data array is length 0?
+7. Is there an ADHD mode guard at the entry point that prevents any rendering when `frappe.boot.adhd_mode` is falsy?
+8. Is `adhd_smart_inbox.js` added to `hooks.py`?
+
+Fix any issues before delivering.
+```

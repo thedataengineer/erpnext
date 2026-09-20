@@ -101,3 +101,231 @@ S — Client-side only; no new server endpoints; hooks into an existing Frappe p
 
 ## Phase
 Phase 2 — Core Workflow Clarity
+
+---
+
+## LLM Implementation Guide
+
+### Codebase Context for the Model
+
+```text
+Project: ERPNext (Frappe framework), JavaScript frontend + Python backend.
+Key patterns:
+- All client scripts use `frappe.ui.form.on("DocType", { hook(frm) {} })`.
+- ADHD mode is active when `frappe.boot.adhd_mode === true`.
+- `frappe.call({ method, args, callback })` is the standard async API call.
+- `frappe.model.add_child(frm.doc, childDoctype, fieldname)` adds child table rows.
+- `frm.refresh_field(fieldname)` syncs model → DOM for a field.
+- `localStorage.setItem / getItem / removeItem` is used for client-side persistence.
+- All JS files are included via `hooks.py` under `app_include_js` or `doctype_js`.
+- CSS lives in `erpnext/public/scss/adhd_mode.scss` using CSS custom properties (vars).
+- Python whitelisted methods use `@frappe.whitelist()` and are called via dotted module path.
+- frappe.db.get_list / frappe.client.get_list return arrays of dicts.
+- Frappe dialogs: `new frappe.ui.Dialog({ title, fields, primary_action })`.
+```
+
+---
+
+### Single-prompt implementation (S ticket)
+
+This ticket is simple enough for a single prompt. One JS file, no backend changes.
+
+---
+
+### Prompt for Claude (Anthropic)
+
+```text
+I'm building ADHD-003 "Mandatory Field Wizard — Guided Save" for ERPNext. The feature intercepts a save attempt, finds missing required fields, focuses them one at a time, and auto-saves when all are filled.
+
+Codebase context:
+- ERPNext on Frappe. ADHD mode: `frappe.boot.adhd_mode === true`.
+- `frappe.validated` is set to `false` client-side to cancel a save from a `validate` hook.
+- `frm.scroll_to_field(fieldname)` scrolls to and focuses a field.
+- `frm.get_field(fieldname)` returns the field object; `.df.reqd` is truthy if required.
+- `frm.doc[fieldname]` is the current value (falsy if empty).
+- `FIELD_HELP` dict in `form_focus.js` maps fieldname → helpful hint string (assume it already exists as `window.ADHD_FIELD_HELP`).
+- `frm.save()` triggers a save programmatically.
+- Client hook for save interception: `frappe.ui.form.on("*", { validate(frm) {} })` — the wildcard `"*"` catches all doctypes.
+
+Single file to create: `erpnext/public/js/adhd/adhd_form_wizard.js`.
+
+Please implement:
+
+1. **`getMissingRequiredFields(frm)`** — returns an array of fieldnames where `frm.get_field(f).df.reqd && !frm.doc[f]`. Skip hidden fields and child table fields.
+
+2. **`focusNextMissingField(frm, fields, index)`** — scrolls to `fields[index]`, shows a floating banner `<div class="adhd-field-wizard-banner">` near the field with:
+   - The field label.
+   - A hint from `window.ADHD_FIELD_HELP[fieldname]` (or generic "This field is required").
+   - Text: "Missing field X of Y".
+   - A "Next missing field →" button that calls `focusNextMissingField(frm, fields, index + 1)`.
+   - A "Skip for now" button that dismisses the banner.
+
+3. **Validate hook on wildcard**: `frappe.ui.form.on("*", { validate(frm) { ... } })`:
+   - Guard: `if (!frappe.boot.adhd_mode) return;`
+   - Call `getMissingRequiredFields(frm)`.
+   - If missing fields exist: set `frappe.validated = false`, call `focusNextMissingField(frm, missingFields, 0)`.
+   - Add a one-time `after_save` hook that, when all required fields are now filled, removes the banner.
+
+4. **Auto-save**: when the user fills the last required field and clicks "Next →" (which finds no more missing fields), automatically call `frm.save()`.
+
+5. **CSS** (add to `adhd_mode.scss`): `.adhd-field-wizard-banner` — positioned absolutely near the active field, z-index above form, with a close (×) button.
+
+Also add `adhd_form_wizard.js` to `hooks.py` → `app_include_js`.
+
+Think through: how do you position the banner near the focused field without knowing its exact DOM position ahead of time? Use `$(frm.get_field(fieldname).wrapper).offset()` as the anchor.
+
+Verify before finishing:
+- [ ] `getMissingRequiredFields` skips hidden and child-table fields
+- [ ] Banner shows "Missing field X of Y" with correct count
+- [ ] "Next missing field →" advances to the next field
+- [ ] Auto-save fires when last missing field is filled
+- [ ] Feature is inert when `frappe.boot.adhd_mode !== true`
+- [ ] `adhd_form_wizard.js` in hooks.py
+```
+
+---
+
+### Prompt for GPT-4o (OpenAI)
+
+```text
+## Task
+Implement ADHD-003: Mandatory Field Wizard — Guided Save for ERPNext/Frappe.
+
+## Codebase Context
+- Frappe validate hook: `frappe.ui.form.on("*", { validate(frm) {} })` — wildcard catches all doctypes.
+- Cancel save: set `frappe.validated = false` inside the validate hook.
+- Field access: `frm.get_field(fieldname)` → `.df.reqd`, `.df.hidden`, `.df.fieldtype`.
+- Current value: `frm.doc[fieldname]`.
+- Scroll + focus: `frm.scroll_to_field(fieldname)`.
+- Field hints: `window.ADHD_FIELD_HELP[fieldname]` (string or undefined).
+- Programmatic save: `frm.save()`.
+- ADHD mode: `frappe.boot.adhd_mode === true`.
+
+## File to Create
+`erpnext/public/js/adhd/adhd_form_wizard.js`
+
+## Implementation Requirements
+
+### getMissingRequiredFields(frm)
+- Iterate `frm.meta.fields` array.
+- Include field if: `df.reqd === 1` AND `!frm.doc[df.fieldname]` AND `!df.hidden` AND `df.fieldtype !== "Table"`.
+- Return array of fieldname strings.
+
+### focusNextMissingField(frm, fields, index)
+- If `index >= fields.length`: call `frm.save()` and return.
+- Call `frm.scroll_to_field(fields[index])`.
+- Remove any existing `.adhd-field-wizard-banner`.
+- Inject `.adhd-field-wizard-banner` div anchored near `$(frm.get_field(fields[index]).wrapper)`.
+- Banner content: field label, hint from `window.ADHD_FIELD_HELP`, "Field index+1 of fields.length", "Next →" button, "Skip" button.
+- "Next →" click: call `focusNextMissingField(frm, fields, index + 1)`.
+- "Skip" click: remove banner, do not save.
+
+### Validate Hook
+```js
+frappe.ui.form.on("*", {
+  validate(frm) {
+    if (!frappe.boot.adhd_mode) return;
+    const missing = getMissingRequiredFields(frm);
+    if (missing.length) {
+      frappe.validated = false;
+      focusNextMissingField(frm, missing, 0);
+    }
+  }
+});
+```
+
+### CSS addition to adhd_mode.scss
+`.adhd-field-wizard-banner`: absolute position, box-shadow, z-index: 1000, close button.
+
+## Acceptance Checklist
+- [ ] getMissingRequiredFields skips hidden fields and Table fieldtype
+- [ ] Banner shows "Field X of Y" with correct count
+- [ ] "Next →" advances correctly; auto-saves when no more missing fields
+- [ ] "Skip" dismisses banner without saving
+- [ ] frappe.validated = false cancels the save
+- [ ] ADHD guard present in validate hook
+- [ ] CSS in adhd_mode.scss
+- [ ] adhd_form_wizard.js in hooks.py
+```
+
+---
+
+### Prompt for Gemini 1.5 Pro (Google)
+
+```text
+Implement ADHD-003: Mandatory Field Wizard — Guided Save for ERPNext. Follow each step.
+
+## Context
+- Frappe wildcard validate hook: `frappe.ui.form.on("*", { validate(frm) {} })`.
+- Cancel save: `frappe.validated = false` inside validate.
+- `frm.meta.fields` — array of field descriptors with `fieldname`, `reqd`, `hidden`, `fieldtype`, `label`.
+- `frm.doc[fieldname]` — current field value.
+- `frm.scroll_to_field(fieldname)` — scrolls to and focuses field.
+- `window.ADHD_FIELD_HELP` — map of fieldname → hint string.
+- `frm.save()` — triggers programmatic save.
+- File: `erpnext/public/js/adhd/adhd_form_wizard.js`.
+
+## Step-by-Step
+
+### Step 1: Define `getMissingRequiredFields(frm)`
+- Filter `frm.meta.fields` for: `df.reqd === 1` AND `!frm.doc[df.fieldname]` AND `!df.hidden` AND `df.fieldtype !== "Table"`.
+- Return array of `df.fieldname` strings.
+
+### Step 2: Define `focusNextMissingField(frm, fields, index)`
+- If `index >= fields.length`: call `frm.save()` and `return`.
+- Call `frm.scroll_to_field(fields[index])`.
+- Remove any existing `$('.adhd-field-wizard-banner')`.
+- Create banner HTML with: field label (`frm.get_field(fields[index]).df.label`), hint from `window.ADHD_FIELD_HELP[fields[index]] || "This field is required"`, count text `"Field ${index+1} of ${fields.length}"`.
+- Add "Next missing field →" button: on click, call `focusNextMissingField(frm, fields, index + 1)`.
+- Add "Skip for now" button: on click, remove banner.
+- Append banner to `$(frm.get_field(fields[index]).wrapper)`.
+
+### Step 3: Register Validate Hook
+```js
+frappe.ui.form.on("*", {
+  validate(frm) {
+    if (!frappe.boot.adhd_mode) return;
+    const missing = getMissingRequiredFields(frm);
+    if (missing.length) {
+      frappe.validated = false;
+      focusNextMissingField(frm, missing, 0);
+    }
+  }
+});
+```
+
+### Step 4: CSS in `adhd_mode.scss`
+Add `.adhd-field-wizard-banner` styles: position relative, border-left with `--adhd-warning` var, padding, background white, z-index 100.
+
+### Step 5: Update `hooks.py`
+Add `"erpnext/public/js/adhd/adhd_form_wizard.js"` to `app_include_js`.
+
+## Verify Before Submitting
+- [ ] getMissingRequiredFields skips hidden and Table fields
+- [ ] Banner shows correct field count ("X of Y")
+- [ ] Hint falls back to "This field is required" if ADHD_FIELD_HELP has no entry
+- [ ] Auto-save fires when index >= fields.length
+- [ ] Skip button removes banner without triggering save
+- [ ] frappe.validated = false when missing fields found
+- [ ] ADHD guard in validate hook
+- [ ] adhd_form_wizard.js in hooks.py
+```
+
+---
+
+### Self-Validation Prompt
+
+```text
+Review the ADHD-003 implementation and answer:
+
+1. Does `getMissingRequiredFields` correctly exclude fields with `df.fieldtype === "Table"` and `df.hidden === 1`?
+2. When the user clicks "Next →" on the last missing field, does the code call `frm.save()` rather than showing an error?
+3. Is there a guard to remove any existing `.adhd-field-wizard-banner` before injecting a new one (preventing banner duplication)?
+4. Does the banner display "Field X of Y" where X is 1-indexed (not 0-indexed)?
+5. Is `frappe.validated = false` set before calling `focusNextMissingField` (ensuring the save is actually cancelled)?
+6. Is the entire feature behind `if (!frappe.boot.adhd_mode) return;`?
+7. Does the "Skip for now" button remove the banner WITHOUT triggering any save?
+8. Is `adhd_form_wizard.js` added to `hooks.py`?
+
+Fix any issues before delivering.
+```
