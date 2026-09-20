@@ -1551,3 +1551,181 @@ body.adhd-mode {
 		grid-template-columns: repeat(2, minmax(240px, 1fr));
 	}
 }
+
+// =============================================================================
+// SMART INBOX: Your Day At a Glance
+// =============================================================================
+
+body.adhd-mode {
+	.adhd-smart-inbox {
+		display: grid;
+		grid-template-columns: 1fr;
+		gap: 16px;
+		padding: 16px 0;
+	}
+
+	@media (min-width: 992px) {
+		.adhd-smart-inbox {
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+		}
+	}
+
+	.adhd-inbox-panel {
+		min-width: 0;
+		background: var(--adhd-bg-card);
+		border: 1px solid var(--adhd-border);
+		border-radius: var(--adhd-radius);
+		box-shadow: var(--adhd-shadow-sm);
+		overflow: hidden;
+	}
+
+	.adhd-panel-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 10px;
+		padding: 14px 16px;
+		background: linear-gradient(135deg, rgba(45, 125, 154, 0.08), rgba(124, 77, 255, 0.06));
+		border-bottom: 1px solid var(--adhd-border);
+
+		h3 {
+			margin: 0;
+			font-size: 15px;
+			font-weight: 700;
+			color: var(--adhd-text);
+		}
+	}
+
+	.adhd-panel-body {
+		padding: 10px;
+	}
+
+	.adhd-inbox-list {
+		list-style: none;
+		padding: 0;
+		margin: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+
+	.adhd-inbox-row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 10px;
+		padding: 10px;
+		border: 1px solid var(--adhd-border);
+		border-radius: var(--adhd-radius-sm);
+		background: #FAFAFA;
+		min-width: 0;
+	}
+
+	.adhd-inbox-row-main {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		min-width: 0;
+		flex: 1 1 auto;
+		flex-wrap: wrap;
+	}
+
+	.adhd-inbox-link {
+		font-weight: 600;
+		color: var(--adhd-primary);
+		min-width: 0;
+		overflow-wrap: anywhere;
+
+		&:hover,
+		&:focus {
+			color: var(--adhd-primary-dark);
+			text-decoration: underline;
+		}
+	}
+
+	.adhd-doctype-pill,
+	.adhd-inbox-badge,
+	.adhd-inbox-time {
+		display: inline-flex;
+		align-items: center;
+		white-space: nowrap;
+		border-radius: 999px;
+		font-size: 11px;
+		font-weight: 700;
+		line-height: 1;
+		padding: 5px 8px;
+	}
+
+	.adhd-doctype-pill {
+		background: rgba(45, 125, 154, 0.1);
+		color: var(--adhd-primary-dark);
+	}
+
+	.adhd-inbox-badge {
+		flex: 0 0 auto;
+		background: rgba(107, 114, 128, 0.12);
+		color: var(--adhd-text-muted);
+	}
+
+	.adhd-badge-danger {
+		background: rgba(239, 68, 68, 0.12);
+		color: var(--adhd-danger);
+	}
+
+	.adhd-badge-warning {
+		background: rgba(245, 158, 11, 0.16);
+		color: #92400E;
+	}
+
+	.adhd-badge-action {
+		background: rgba(124, 77, 255, 0.12);
+		color: var(--adhd-accent);
+	}
+
+	.adhd-inbox-meta {
+		color: var(--adhd-text-muted);
+		font-size: 12px;
+		min-width: 0;
+		overflow-wrap: anywhere;
+	}
+
+	.adhd-inbox-time {
+		background: rgba(16, 185, 129, 0.12);
+		color: #047857;
+		font-weight: 600;
+	}
+
+	.adhd-inbox-empty {
+		padding: 18px 12px;
+		border: 1px dashed var(--adhd-border-strong);
+		border-radius: var(--adhd-radius-sm);
+		color: var(--adhd-text-muted);
+		text-align: center;
+		background: #FAFAFA;
+		font-weight: 500;
+	}
+
+	.adhd-inbox-error {
+		border-color: rgba(239, 68, 68, 0.28);
+		color: var(--adhd-danger);
+		background: rgba(239, 68, 68, 0.06);
+	}
+
+	.adhd-skeleton {
+		height: 38px;
+		border-radius: var(--adhd-radius-sm);
+		margin-bottom: 8px;
+		background: linear-gradient(90deg, rgba(0, 0, 0, 0.06) 25%, rgba(0, 0, 0, 0.11) 37%, rgba(0, 0, 0, 0.06) 63%);
+		background-size: 400% 100%;
+		animation: adhd-skeleton-shimmer 1.3s ease infinite;
+	}
+}
+
+@keyframes adhd-skeleton-shimmer {
+	0% {
+		background-position: 100% 50%;
+	}
+	100% {
+		background-position: 0 50%;
+	}
+}

@@ -1,0 +1,23 @@
+{
+ "content": null,
+ "creation": "2026-09-20 00:00:00.000000",
+ "docstatus": 0,
+ "doctype": "Page",
+ "idx": 0,
+ "modified": "2026-09-20 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Setup",
+ "name": "adhd-inbox",
+ "owner": "Administrator",
+ "page_name": "adhd-inbox",
+ "roles": [
+  {
+   "role": "Desk User"
+  }
+ ],
+ "script": null,
+ "standard": "Yes",
+ "style": null,
+ "system_page": 0,
+ "title": "ADHD Inbox"
+}
