@@ -1,4 +1,4 @@
-# ADHD-001: Workflow Wizard — Document Chain Navigator
+# ADHD-001: Workflow Wizard — Document Chain Navigator — DONE
 
 ## Summary
 A persistent progress bar rendered on key transactional documents (Sales Order, Purchase Invoice, etc.) that shows every step in the document chain, marks completed steps, highlights the current one, and offers a pre-filled "Create Next Step" button — eliminating the cognitive load of remembering what comes next.
@@ -93,15 +93,15 @@ Working memory | attention switching | initiation
 9. Open a **Payment Entry** linked to a Sales Invoice. Confirm the bar renders with all prior steps marked ✓ and no "Create Next Step" button (no pending steps remain).
 
 ## Acceptance Criteria
-- [ ] Chain navigator bar appears on all seven doctypes listed in `CHAIN_MAP` when ADHD mode is active.
-- [ ] Completed steps (docstatus = 1 and link field populated) display a ✓ and the `adhd-step--done` style.
-- [ ] Current document step is visually distinct (bold + underline) with `adhd-step--current`.
-- [ ] Pending steps are rendered in muted colour with `adhd-step--pending`.
-- [ ] "Create Next Step" button appears when at least one pending step exists; it is absent when all steps are complete.
-- [ ] Clicking "Create Next Step" opens the correct next doctype with all transferable fields pre-filled (customer/supplier, company, currency, items).
-- [ ] Navigator bar is absent on all doctypes when ADHD mode is disabled.
-- [ ] No duplicate bars appear after multiple saves on the same form.
-- [ ] No JavaScript console errors on any of the seven target doctypes.
+- [x] Chain navigator bar appears on all seven doctypes listed in `CHAIN_MAP` when ADHD mode is active.
+- [x] Completed steps (docstatus = 1 and link field populated) display a ✓ and the `adhd-step--done` style.
+- [x] Current document step is visually distinct (bold + underline) with `adhd-step--current`.
+- [x] Pending steps are rendered in muted colour with `adhd-step--pending`.
+- [x] "Create Next Step" button appears when at least one pending step exists; it is absent when all steps are complete.
+- [x] Clicking "Create Next Step" opens the correct next doctype with all transferable fields pre-filled (customer/supplier, company, currency, items).
+- [x] Navigator bar is absent on all doctypes when ADHD mode is disabled.
+- [x] No duplicate bars appear after multiple saves on the same form.
+- [x] No JavaScript console errors on any of the seven target doctypes.
 
 ## Dependencies
 - **Blocks:** ADHD-023 (Sales Order Interruption Restore), ADHD-031 (Bank Recon Progress Saver)

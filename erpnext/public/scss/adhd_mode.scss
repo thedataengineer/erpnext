@@ -156,6 +156,69 @@ body.adhd-mode {
 }
 
 // =============================================================================
+// WORKFLOW CHAIN NAVIGATOR: Document lifecycle progress
+// =============================================================================
+
+body.adhd-mode {
+	.adhd-chain-nav {
+		display: flex;
+		gap: 0.75rem;
+		align-items: center;
+		justify-content: space-between;
+		padding: 8px 12px;
+		margin: 0 0 10px;
+		background: var(--fg-color, var(--adhd-bg-card));
+		border: 1px solid var(--border-color, var(--adhd-border));
+		border-radius: var(--adhd-radius-sm);
+		box-shadow: var(--adhd-shadow-sm);
+		font-size: 0.8rem;
+	}
+
+	.adhd-chain-steps {
+		display: flex;
+		gap: 0.5rem;
+		align-items: center;
+		flex-wrap: wrap;
+		min-width: 0;
+	}
+
+	.adhd-chain-step {
+		display: inline-flex;
+		align-items: center;
+		white-space: nowrap;
+
+		&:not(:last-child)::after {
+			content: "›";
+			margin-left: 0.5rem;
+			color: var(--text-muted, var(--adhd-text-muted));
+			font-weight: 500;
+		}
+	}
+
+	.adhd-step--done {
+		color: var(--green-500, var(--adhd-success));
+		font-weight: 500;
+	}
+
+	.adhd-step--current {
+		color: var(--adhd-text);
+		font-weight: 700;
+		text-decoration: underline;
+		text-underline-offset: 3px;
+	}
+
+	.adhd-step--pending {
+		color: var(--text-muted, var(--adhd-text-muted));
+	}
+
+	.adhd-chain-next {
+		flex: 0 0 auto;
+		white-space: nowrap;
+		font-weight: 600;
+	}
+}
+
+// =============================================================================
 // FORMS: Progressive disclosure & readability
 // =============================================================================
 

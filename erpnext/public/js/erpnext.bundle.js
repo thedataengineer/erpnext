@@ -49,6 +49,7 @@ import "./adhd/focus_panel";       // Focus panel + Pomodoro timer
 import "./adhd/form_focus";        // Form simplification & tooltips
 import "./adhd/task_kanban";       // Task Kanban board
 import "./adhd/adhd_notifications"; // Enhanced notifications
+import "./adhd/adhd_chain_navigator"; // Workflow document chain navigator
 
 // Assistant: local-LLM chat that fills in forms from plain sentences
 import "./assistant/assistant_view";
