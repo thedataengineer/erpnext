@@ -20,8 +20,9 @@ erpnext.adhd.ADHDMode = class ADHDMode {
 			this._apply(true, false);
 		}
 
-		document.addEventListener("keydown", (e) => {
-			if (e.altKey && (e.key === "a" || e.key === "A") && !e.ctrlKey && !e.metaKey) {
+			document.addEventListener("keydown", (e) => {
+				const isADHDShortcut = e.altKey && (e.key === "a" || e.key === "A" || e.code === "KeyA");
+				if (isADHDShortcut && !e.ctrlKey && !e.metaKey) {
 				const tag = document.activeElement && document.activeElement.tagName;
 				if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
 				e.preventDefault();
@@ -44,6 +45,7 @@ erpnext.adhd.ADHDMode = class ADHDMode {
 
 	_apply(state, notify = true) {
 		this.active = state;
+		frappe.boot.adhd_mode = state;
 		localStorage.setItem(erpnext.adhd.STORAGE_KEY, state ? "on" : "off");
 
 		if (state) {

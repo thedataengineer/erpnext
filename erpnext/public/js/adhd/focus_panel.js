@@ -32,6 +32,19 @@ erpnext.adhd.FocusPanel = class FocusPanel {
 			</div>
 
 			<div class="afp-body">
+				<!-- ADHD Mode Switch -->
+				<div class="afp-section afp-mode-section">
+					<div class="afp-mode-copy">
+						<div class="afp-section-title">🧠 ADHD Mode</div>
+						<div class="afp-mode-description">Show focus-friendly tools and workflow guidance.</div>
+					</div>
+					<label class="afp-switch" for="afp-adhd-mode-switch">
+						<input type="checkbox" id="afp-adhd-mode-switch" />
+						<span class="afp-switch-slider"></span>
+						<span class="sr-only">${__("Toggle ADHD Mode")}</span>
+					</label>
+				</div>
+
 				<!-- Pomodoro Timer -->
 				<div class="afp-section afp-timer-section">
 					<div class="afp-section-title">⏱ Focus Timer</div>
@@ -82,12 +95,21 @@ erpnext.adhd.FocusPanel = class FocusPanel {
 		// Restore quick note
 		const saved = localStorage.getItem("adhd_quick_note") || "";
 		document.getElementById("afp-quick-note").value = saved;
+		this._syncModeSwitch();
 	}
 
 	_bindEvents() {
 		document.getElementById("afp-close")?.addEventListener("click", () => this.hide());
 		document.getElementById("afp-refresh")?.addEventListener("click", () => this._loadTasks());
 		document.getElementById("afp-toggle-tab")?.addEventListener("click", () => this.toggle());
+		document.getElementById("afp-adhd-mode-switch")?.addEventListener("change", (e) => {
+			if (e.target.checked) {
+				erpnext.adhd.enable();
+			} else {
+				erpnext.adhd.disable();
+			}
+			this._syncModeSwitch();
+		});
 
 		document.getElementById("afp-timer-start")?.addEventListener("click", () => this._timerToggle());
 		document.getElementById("afp-timer-reset")?.addEventListener("click", () => this._timerReset());
@@ -105,6 +127,14 @@ erpnext.adhd.FocusPanel = class FocusPanel {
 		document.getElementById("afp-quick-note")?.addEventListener("input", (e) => {
 			localStorage.setItem("adhd_quick_note", e.target.value);
 		});
+
+		erpnext.adhd.onStateChange && erpnext.adhd.onStateChange(() => this._syncModeSwitch());
+	}
+
+	_syncModeSwitch() {
+		const switchEl = document.getElementById("afp-adhd-mode-switch");
+		if (!switchEl || !erpnext.adhd || !erpnext.adhd.isActive) return;
+		switchEl.checked = erpnext.adhd.isActive();
 	}
 
 	async _loadTasks() {

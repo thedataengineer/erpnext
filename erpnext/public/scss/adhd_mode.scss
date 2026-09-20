@@ -567,6 +567,72 @@ body.adhd-mode {
 		}
 	}
 
+	.afp-mode-section {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+		background: linear-gradient(135deg, rgba(45, 125, 154, 0.08), rgba(124, 77, 255, 0.08));
+		border-color: rgba(45, 125, 154, 0.16);
+
+		.afp-section-title {
+			margin-bottom: 4px;
+			color: var(--adhd-primary);
+		}
+	}
+
+	.afp-mode-description {
+		font-size: 12px;
+		line-height: 1.4;
+		color: var(--adhd-text-muted);
+	}
+
+	.afp-switch {
+		position: relative;
+		display: inline-flex;
+		width: 46px;
+		height: 26px;
+		flex: 0 0 auto;
+		margin: 0;
+		cursor: pointer;
+	}
+
+	.afp-switch input {
+		opacity: 0;
+		width: 0;
+		height: 0;
+	}
+
+	.afp-switch-slider {
+		position: absolute;
+		inset: 0;
+		background: var(--adhd-text-muted);
+		border-radius: 999px;
+		transition: var(--adhd-transition);
+		box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+
+		&::before {
+			content: "";
+			position: absolute;
+			width: 20px;
+			height: 20px;
+			left: 3px;
+			top: 3px;
+			background: var(--adhd-bg-card);
+			border-radius: 50%;
+			transition: var(--adhd-transition);
+			box-shadow: var(--adhd-shadow-sm);
+		}
+	}
+
+	.afp-switch input:checked + .afp-switch-slider {
+		background: var(--adhd-primary);
+	}
+
+	.afp-switch input:checked + .afp-switch-slider::before {
+		transform: translateX(20px);
+	}
+
 	// Pomodoro Timer
 	.afp-timer-section {
 		background: linear-gradient(135deg, #1A1A2E, #2D3561);
