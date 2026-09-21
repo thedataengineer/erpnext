@@ -298,7 +298,10 @@ frappe.ui.form.on("*", {
 		});
 		delete frm._adhdSaveStart;
 	},
-	after_submit(frm) {
+	// Frappe never fires a client "after_submit". Form.savesubmit() runs script_manager.trigger("on_submit")
+	// once, after the server accepted the submit (not for a failed one, a plain save or an update), so that is
+	// the hook. showDoneWell itself checks the mode and the "done_well" setting when it runs.
+	on_submit(frm) {
 		erpnext.adhd.showDoneWell(__("{0} {1} submitted.", [frm.doc.doctype, frm.doc.name]));
 	},
 });

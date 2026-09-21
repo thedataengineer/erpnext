@@ -17,8 +17,10 @@
 	};
 
 	FocusPanel.prototype._timerComplete = function () {
+		// The focus panel returns { mode: "work" | "break", minutes } for the session that just ran out: pass it on
+		// so a listener can tell a finished break from a finished work session.
 		const result = originalTimerComplete.call(this);
-		document.dispatchEvent(new CustomEvent("focuspanel:timercomplete"));
+		document.dispatchEvent(new CustomEvent("focuspanel:timercomplete", { detail: result ?? null }));
 		return result;
 	};
 })();

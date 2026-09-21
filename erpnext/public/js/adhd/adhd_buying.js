@@ -14,18 +14,25 @@ const PURCHASE_ORDER_STEPS = [
 // (docstatus 0) until that approval submits it, so this is a draft-time state.
 const PENDING_APPROVAL_STATE = /(Approval|Pending)/i;
 
+// Mirrors the status rules in erpnext/controllers/status_updater.py for a submitted Purchase Order:
+// receiving and billing are tracked separately, so an order that is fully billed can still be waiting for its goods
+// ("To Receive"), and the order is only finished once both percentages reach 100 ("Completed").
 function getPurchaseOrderStep(doc) {
 	// a cancelled order is out of the lifecycle: it is neither "Created" nor any later step
 	if (doc.docstatus === 2 || doc.status === "Cancelled") return null;
-	if (doc.status === "Closed" || flt(doc.per_billed) >= 100) return "closed";
+	if (doc.status === "Closed") return "closed";
 	if (doc.docstatus === 0) {
 		return PENDING_APPROVAL_STATE.test(doc.workflow_state || "") ? "approved" : "created";
 	}
 	if (doc.docstatus === 1 && ["Pending Approval", "Waiting for Approval"].includes(doc.workflow_state)) {
 		return "approved";
 	}
-	if (doc.docstatus === 1 && flt(doc.per_received) < 100) return "receipt_pending";
-	if (doc.docstatus === 1 && flt(doc.per_billed) < 100) return "invoice_pending";
+	if (doc.docstatus === 1) {
+		// "Delivered" is a drop-ship order whose goods the supplier already delivered: nothing left to receive
+		if (doc.status !== "Delivered" && flt(doc.per_received) < 100) return "receipt_pending";
+		if (flt(doc.per_billed) < 100) return "invoice_pending";
+		return "closed";
+	}
 	return "created";
 }
 
@@ -34,14 +41,14 @@ async function addWaitingOn($panel, frm) {
 	const result = await frappe.db.get_value(
 		"Workflow Action",
 		{ reference_doctype: "Purchase Order", reference_name: frm.doc.name, status: "Open" },
-		"user",
+		"user"
 	);
 	const user = result?.message?.user;
 	if (user && $panel.closest("body").length) {
 		$panel.append(
 			$("<p>")
 				.addClass("adhd-waiting-on")
-				.text(__("Waiting on: {0}", [user])),
+				.text(__("Waiting on: {0}", [user]))
 		);
 	}
 }
@@ -62,15 +69,17 @@ function initPurchaseOrderStatusPanel(frm) {
 							index < currentIndex
 								? "adhd-step--done"
 								: index === currentIndex
-									? "adhd-step--active"
-									: ""
-						}">${step.label}</div>`,
+								? "adhd-step--active"
+								: ""
+						}">${step.label}</div>`
 				).join("")}
 			</div>
 		</div>
 	`);
 
-	if (current === "receipt_pending") {
+	// like the standard form, offer no "Create" action while the order is on hold
+	const onHold = frm.doc.status === "On Hold";
+	if (!onHold && current === "receipt_pending") {
 		$panel.append(
 			$("<button>")
 				.addClass("btn btn-primary btn-sm adhd-next-action")
@@ -79,10 +88,10 @@ function initPurchaseOrderStatusPanel(frm) {
 					frappe.model.open_mapped_doc({
 						method: "erpnext.buying.doctype.purchase_order.mapper.make_purchase_receipt",
 						frm,
-					}),
-				),
+					})
+				)
 		);
-	} else if (current === "invoice_pending") {
+	} else if (!onHold && current === "invoice_pending") {
 		$panel.append(
 			$("<button>")
 				.addClass("btn btn-primary btn-sm adhd-next-action")
@@ -91,8 +100,8 @@ function initPurchaseOrderStatusPanel(frm) {
 					frappe.model.open_mapped_doc({
 						method: "erpnext.buying.doctype.purchase_order.mapper.make_purchase_invoice",
 						frm,
-					}),
-				),
+					})
+				)
 		);
 	}
 

@@ -608,13 +608,31 @@ frappe.provide("erpnext.adhd");
 	});
 
 	// ADHD-049
+	// A stage is clickable only when Opportunity already has a standard action for it: Proposal is
+	// "Create > Quotation" (make_quotation) and Closed Lost is the "Set as Lost" dialog (declare_enquiry_lost, which
+	// needs lost reasons and refuses while a Quotation is active). ERPNext sets the rest itself: Converted when a
+	// Sales Order is submitted, Replied from the conversation, Open by "Reopen", so those stages are display-only.
 	const OPPORTUNITY_STAGES = [
 		{ label: __("Prospect"), status: "Open" },
 		{ label: __("Qualified"), status: "Replied" },
-		{ label: __("Proposal"), status: "Quotation" },
+		{ label: __("Proposal"), status: "Quotation", action: "quotation" },
 		{ label: __("Closed Won"), status: "Converted", terminal: "won" },
-		{ label: __("Closed Lost"), status: "Lost", terminal: "lost" },
+		{ label: __("Closed Lost"), status: "Lost", terminal: "lost", action: "lost" },
 	];
+	function opportunityStageAction(frm, stage, state) {
+		// the standard form offers neither before the first save, nor once the Opportunity is Lost
+		if (!stage.action || frm.is_new?.() || frm.doc.status === "Lost") return null;
+		if (stage.action === "lost") return frm.perm?.[0]?.write ? "lost" : null;
+		// a quotation moves the Opportunity forward, so it is not offered from a later stage
+		return state === "pending" ? "quotation" : null;
+	}
+	function runOpportunityStageAction(frm, action) {
+		if (frm.is_new?.() || frm.doc.status === "Lost") return false;
+		if (action === "lost") frm.trigger("set_as_lost_dialog");
+		else if (action === "quotation") frm.trigger("create_quotation");
+		else return false;
+		return true;
+	}
 	function renderOpportunityPipeline(frm) {
 		remove(frm, ".adhd-pipeline");
 		if (!adhdOn()) return;
@@ -626,25 +644,27 @@ frappe.provide("erpnext.adhd");
 					: current >= 0 && index < current
 					? "done"
 					: "pending";
+			const action = opportunityStageAction(frm, stage, state);
+			const attributes = action
+				? `data-action="${action}"`
+				: `disabled aria-disabled="true"${
+						index === current ? "" : ` title="${esc(__("ERPNext updates this stage itself."))}"`
+				  }`;
 			return `<button type="button" class="adhd-pipeline-stage adhd-pipeline-stage--${state}" data-status="${
 				stage.status
-			}">${state === "done" ? "✓ " : ""}${esc(stage.label)}</button>`;
+			}" ${attributes}>${state === "done" ? "✓ " : ""}${esc(stage.label)}</button>`;
 		}).join("<span>›</span>");
 		const $node = panel(frm, "adhd-pipeline", buttons);
-		$node.find("[data-status]").on("click", function () {
-			const status = this.dataset.status;
-			if (status === frm.doc.status) return;
-			const label = $(this).text().replace("✓ ", "");
-			frappe.confirm(__("Move this Opportunity to {0}?", [label]), async () => {
-				await frm.set_value("status", status);
-				await frm.save();
-			});
+		$node.find("button[data-action]").on("click", function () {
+			runOpportunityStageAction(frm, this.dataset.action);
 		});
 	}
 	frappe.ui.form.on("Opportunity", {
 		refresh: renderOpportunityPipeline,
 		status: renderOpportunityPipeline,
 	});
+	erpnext.adhd.opportunityStageAction = opportunityStageAction;
+	erpnext.adhd.runOpportunityStageAction = runOpportunityStageAction;
 
 	// ADHD-050
 	async function renderTaskBlockers(frm) {

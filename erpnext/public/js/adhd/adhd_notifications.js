@@ -4,11 +4,25 @@
 
 frappe.provide("erpnext.adhd");
 
+const CLICK_EVENT = "click.adhd_notifications";
+
 erpnext.adhd.Notifications = class ADHDNotifications {
 	constructor() {
 		this.snoozed = this._loadSnoozed();
+		this._snoozeTimer = null;
+		this.start();
+	}
+
+	// The mode can be switched off after this object exists, so what it runs is started and stopped with the mode.
+	start() {
 		this._patchNotificationBell();
 		this._startSnoozeChecker();
+	}
+
+	stop() {
+		$(document).off(CLICK_EVENT);
+		clearInterval(this._snoozeTimer);
+		this._snoozeTimer = null;
 	}
 
 	_loadSnoozed() {
@@ -25,8 +39,13 @@ erpnext.adhd.Notifications = class ADHDNotifications {
 	}
 
 	_startSnoozeChecker() {
+		clearInterval(this._snoozeTimer);
 		// Check every minute if any snoozed notifications should reappear
-		setInterval(() => {
+		this._snoozeTimer = setInterval(() => {
+			if (!frappe.boot.adhd_mode) {
+				this.stop();
+				return;
+			}
 			const now = Date.now();
 			let changed = false;
 			Object.keys(this.snoozed).forEach((key) => {
@@ -51,10 +70,14 @@ erpnext.adhd.Notifications = class ADHDNotifications {
 	}
 
 	_patchNotificationBell() {
-		// Add ADHD grouping to the notification dropdown when it opens
-		$(document).on("click", ".notification-list, [data-toggle='notifications']", () => {
-			setTimeout(() => this._enhanceNotificationPanel(), 200);
-		});
+		// Add ADHD grouping to the notification dropdown when it opens. Namespaced and re-bound, so starting twice
+		// never doubles it and stop() takes off this handler only.
+		$(document)
+			.off(CLICK_EVENT)
+			.on(CLICK_EVENT, ".notification-list, [data-toggle='notifications']", () => {
+				if (!frappe.boot.adhd_mode) return;
+				setTimeout(() => this._enhanceNotificationPanel(), 200);
+			});
 	}
 
 	_enhanceNotificationPanel() {
@@ -102,8 +125,12 @@ erpnext.adhd.Notifications = class ADHDNotifications {
 
 let notifInstance = null;
 
-erpnext.adhd.onStateChange && erpnext.adhd.onStateChange((active) => {
-	if (active && !notifInstance) {
-		notifInstance = new erpnext.adhd.Notifications();
-	}
-});
+erpnext.adhd.onStateChange &&
+	erpnext.adhd.onStateChange((active) => {
+		if (active) {
+			if (!notifInstance) notifInstance = new erpnext.adhd.Notifications();
+			else notifInstance.start();
+		} else if (notifInstance) {
+			notifInstance.stop();
+		}
+	});
