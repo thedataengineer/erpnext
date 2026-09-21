@@ -2,7 +2,7 @@
 
 ## Current implementation record
 
-- **Status:** Implemented.
+- **Status:** Not needed. Frappe's reply composer already keeps a draft per document; the first implementation targeted elements that do not exist and was removed. See `docs/adhd_mode_features.md`.
 - **Implementation:** Issue reply draft persistence in `erpnext/public/js/adhd/adhd_tickets_041_061.js`.
 - **Verification:** `node --test erpnext/tests/adhd_tickets_041_061.test.js` provides structural and helper coverage; site behavior remains unverified.
 - **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
