@@ -52,6 +52,7 @@ import "./adhd/adhd_notifications"; // Enhanced notifications
 import "./adhd/adhd_chain_navigator"; // Workflow document chain navigator
 import "./adhd/adhd_smart_inbox"; // Daily priorities and resume panel
 import "./adhd/adhd_form_wizard"; // Guided mandatory-field save
+import "./adhd/adhd_help"; // Keyboard shortcut reference
 
 // Assistant: local-LLM chat that fills in forms from plain sentences
 import "./assistant/assistant_view";
