@@ -6,6 +6,34 @@
 // Import Google Font for better readability
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
+body.adhd-mode {
+	.adhd-wizard-banner {
+		background: var(--yellow-highlight, #fffbe6);
+		border-left: 4px solid var(--yellow-500, #eab308);
+		padding: 10px 16px;
+		border-radius: 4px;
+		margin-bottom: 8px;
+	}
+
+	.adhd-wizard-hint {
+		color: var(--text-muted);
+		font-size: 0.85rem;
+		margin-top: 4px;
+	}
+
+	.adhd-wizard-progress {
+		width: 100%;
+		height: 4px;
+		accent-color: var(--primary);
+	}
+
+	.adhd-wizard-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+	}
+}
+
 // Design tokens for ADHD mode
 body.adhd-mode {
 	--adhd-primary: #2D7D9A;

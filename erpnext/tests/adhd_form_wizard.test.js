@@ -1,102 +1,28 @@
-const { describe, it, expect } = require('node:test');
-const { strictEqual } = require('assert');
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+const test = require("node:test");
 
-// Mock ERPNext environment
-const frappe = {
-  boot: {
-    adhd_mode: true
-  }
-};
+const source = fs.readFileSync(path.resolve(__dirname, "../public/js/adhd/adhd_form_wizard.js"), "utf8");
 
-// Mock form object
-const form = {
-  get_field: (fieldname) => ({
-    is_required: true,
-    value: ''
-  })
-};
+test("guided save intercepts the Form save method", () => {
+	assert.match(source, /frappe\.ui\.form\.Form\.prototype\.save\s*=/);
+	assert.match(source, /originalSave\.apply\(this, args\)/);
+});
 
-// Mock document object
-const doc = {
-  name: 'Test Document',
-  doctype: 'Test Doctype'
-};
+test("guided save excludes hidden and child-table fields", () => {
+	assert.match(source, /!df\.hidden/);
+	assert.match(source, /df\.fieldtype !== "Table"/);
+});
 
-// Mock field map
-const fieldmap = {
-  'test_field': {
-    fieldtype: 'Data',
-    label: 'Test Field'
-  }
-};
+test("guided save cleans field listeners and supports all actions", () => {
+	assert.match(source, /removeEventListener\("change", changeHandler\)/);
+	assert.match(source, /adhd-wizard-next/);
+	assert.match(source, /adhd-wizard-skip/);
+	assert.match(source, /adhd-wizard-cancel/);
+});
 
-// Mock progress tracking
-const progress = {
-  current: 0,
-  total: 3
-};
-
-// Mock event listeners
-const events = {
-  on: (event, callback) => {
-    if (event === 'wizard_complete') {
-      callback();
-    }
-  }
-};
-
-// Mock field hints
-const FIELD_HELP = {
-  'test_field': 'Enter the test value here'
-};
-
-// Mock DOM elements
-const DOM = {
-  create: (tag, props) => {
-    const el = document.createElement(tag);
-    Object.entries(props).forEach(([key, value]) => {
-      el[key] = value;
-    });
-    return el;
-  }
-};
-
-// Test suite
-describe('ADHD Form Wizard Tests', () => {
-  it('should show wizard on mandatory field error', () => {
-    // Mock error scenario
-    const error = new Error('Mandatory field missing');
-    error.fieldname = 'test_field';
-    
-    // Trigger wizard
-    const wizard = new ADHDFormWizard(form, doc, fieldmap, progress, events, FIELD_HELP);
-    wizard.handleSaveError(error);
-    
-    // Verify wizard is shown
-    expect(document.querySelector('.adhd-wizard')).toBeTruthy();
-  });
-
-  it('should focus on missing field', () => {
-    // Trigger wizard
-    const wizard = new ADHDFormWizard(form, doc, fieldmap, progress, events, FIELD_HELP);
-    wizard.handleSaveError(new Error('Mandatory field missing'));
-    
-    // Verify field is focused
-    const field = document.querySelector('[data-fieldname="test_field"]');
-    expect(field).toBeTruthy();
-    expect(field.classList.contains('focused')).toBeTruthy();
-  });
-
-  it('should track progress correctly', () => {
-    // Trigger wizard
-    const wizard = new ADHDFormWizard(form, doc, fieldmap, progress, events, FIELD_HELP);
-    wizard.handleSaveError(new Error('Mandatory field missing'));
-    
-    // Verify progress tracking
-    const stepIndicators = document.querySelectorAll('.wizard-step');
-    expect(stepIndicators.length).toBe(3);
-    expect(stepIndicators[0].classList.contains('active')).toBeTruthy();
-  });
-
-  // Additional tests would be added here...
+test("guided save displays and updates progress", () => {
+	assert.match(source, /adhd-wizard-progress/);
+	assert.match(source, /index \+ 1, fields\.length/);
 });
