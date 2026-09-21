@@ -67,7 +67,7 @@ frappe.provide("erpnext.adhd");
 		frm.layout.$wrapper.find(".adhd-wizard-banner").remove();
 
 		const hint =
-			(window.ADHD_FIELD_HELP && window.ADHD_FIELD_HELP[item.fieldname]) ||
+			window.ADHD_FIELD_HELP?.[frm.doctype]?.[item.fieldname] ||
 			item.label ||
 			item.fieldname;
 		const $banner = $(`

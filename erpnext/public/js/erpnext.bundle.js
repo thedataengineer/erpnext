@@ -50,6 +50,7 @@ import "./adhd/adhd_month_end"; // Month-end close checklist
 import "./adhd/adhd_time_log"; // Pomodoro time-log prompt
 import "./adhd/adhd_timebox_timer"; // Custom-duration timer API
 import "./adhd/adhd_payment_digest"; // Focus Panel receivables summary
+import "./adhd/adhd_field_help"; // Canonical contextual field help
 import "./adhd/form_focus";        // Form simplification & tooltips
 import "./adhd/task_kanban";       // Task Kanban board
 import "./adhd/adhd_accounts"; // Journal Entry balance meter

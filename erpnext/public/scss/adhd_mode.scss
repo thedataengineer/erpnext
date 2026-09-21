@@ -1921,3 +1921,12 @@ body.adhd-mode {
 .adhd-next-action {
 	margin-top: 8px;
 }
+
+.adhd-field-help-tip {
+	padding: 5px 8px;
+	margin-top: 4px;
+	border-left: 3px solid var(--blue-400);
+	background: var(--subtle-fg);
+	color: var(--text-muted);
+	font-size: var(--text-xs);
+}
