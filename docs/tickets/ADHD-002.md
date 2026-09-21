@@ -24,7 +24,7 @@ Working memory | initiation | attention switching
 **Create:**
 - `erpnext/public/js/adhd/adhd_smart_inbox.js`
 - `erpnext/public/js/adhd/adhd_smart_inbox.html` (Mustache/Jinja template for panel markup)
-- `erpnext/setup/workspace/adhd_inbox/adhd_inbox.json` (Frappe Workspace definition, or a new custom Page if Workspace JSON is insufficient)
+- `erpnext/setup/workspace/adhd_home/adhd_home.json` (Frappe Workspace definition, or a new custom Page if Workspace JSON is insufficient)
 
 **Modify:**
 - `erpnext/public/scss/adhd_mode.scss` — add `.adhd-inbox-*` styles
@@ -34,7 +34,7 @@ Working memory | initiation | attention switching
 1. **Create a new Frappe Workspace (or Page).**
    - Name: `"ADHD Inbox"`, icon: `calendar-check`, module: `"ERPNext"`.
    - Set it as the homepage for users who have `adhd_mode` enabled. Hook this via `frappe.boot` post-login redirect: if `frappe.boot.adhd_mode && frappe.boot.desk_settings?.home_page !== "ADHD Inbox"`, redirect with `frappe.set_route("page", "adhd-inbox")`.
-   - Export the Workspace JSON to `erpnext/setup/workspace/adhd_inbox/adhd_inbox.json` for version control.
+   - Export the Workspace JSON to `erpnext/setup/workspace/adhd_home/adhd_home.json` for version control.
 
 2. **Panel 1 — Overdue / Due Today.**
    Build `loadUrgentItems()` which calls a single `frappe.call` to a new whitelisted Python endpoint `erpnext.adhd.get_urgent_items(user)` (see step 6). The endpoint returns a flat list sorted by urgency score. Render as a `<ul class="adhd-inbox-urgent">` where each `<li>` shows: urgency badge (🔴 overdue / 🟡 due today), doctype icon, document name, and counterparty (customer/supplier/assigned-to). Each item is a single `<a>` tag navigating via `frappe.set_route("Form", doctype, name)`.
