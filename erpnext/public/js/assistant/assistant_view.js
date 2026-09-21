@@ -49,7 +49,7 @@ erpnext.assistant.view = {
 			.map((item) => {
 				const inner = `<span class="label">${v.esc(item.label)}</span>
 					${item.meta ? `<span class="meta">${v.esc(item.meta)}</span>` : ""}`;
-				const cls = `erp-assistant-item ${item.tone ? `is-${item.tone}` : ""}`;
+				const cls = `erp-assistant-item ${item.tone ? `is-${v.esc(item.tone)}` : ""}`;
 				return item.route
 					? `<a href="#" class="${cls}" data-route='${v.esc(
 							JSON.stringify(item.route)
@@ -78,7 +78,7 @@ erpnext.assistant.view = {
 		};
 		const rows = card.rows
 			.map(
-				(r) => `<div class="erp-assistant-row is-${r.status}">
+				(r) => `<div class="erp-assistant-row is-${v.esc(r.status)}">
 					<span class="k">${v.esc(r.label)}</span>
 					<span class="v">${v.esc(r.value) || "&mdash;"}
 						${flags[r.status] ? `<em>${flags[r.status]}</em>` : ""}
@@ -130,9 +130,13 @@ erpnext.assistant.view = {
 	// Which record is the person looking at? "Log a call" on Acme's page means Acme.
 	currentContext() {
 		const route = (frappe.get_route && frappe.get_route()) || [];
-		if (route[0] === "Form" && route[1] && route[2] && !String(route[2]).startsWith("new-")) {
-			return { doctype: route[1], name: decodeURIComponent(route[2]) };
-		}
-		return null;
+		if (route[0] !== "Form" || !route[1] || !route[2]) return null;
+		// frappe.get_route() has already decoded each part (router.js decode_component): decoding again
+		// throws on a name like "Summer 50% off" and quietly changes one like "A%20B"
+		const name = String(route[2]);
+		// a document that is not saved yet is a local one; the "new-" prefix is only Frappe's naming habit
+		const doc = frappe.get_doc && frappe.get_doc(route[1], name);
+		const unsaved = doc ? Boolean(doc.__islocal) : name.startsWith("new-");
+		return unsaved ? null : { doctype: route[1], name };
 	},
 };
