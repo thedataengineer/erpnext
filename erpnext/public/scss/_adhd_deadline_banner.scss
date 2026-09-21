@@ -1,0 +1,37 @@
+body.adhd-mode {
+	.adhd-deadline-banner {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		justify-content: space-between;
+		margin-bottom: 8px;
+		padding: 8px 14px;
+		border-radius: 4px;
+		font-size: 0.85rem;
+	}
+
+	.adhd-deadline-dismiss {
+		border: 0;
+		background: none;
+		color: inherit;
+		cursor: pointer;
+	}
+
+	.adhd-deadline--overdue {
+		border-left: 4px solid var(--red-500, #ef4444);
+		background: var(--red-100, #fff1f0);
+		color: var(--red-700, #a61d24);
+	}
+
+	.adhd-deadline--soon {
+		border-left: 4px solid var(--yellow-500, #eab308);
+		background: var(--yellow-100, #fffbe6);
+		color: var(--yellow-800, #7c5a00);
+	}
+
+	.adhd-deadline--normal {
+		border-left: 4px solid var(--blue-400, #60a5fa);
+		background: var(--blue-50, #e6f7ff);
+		color: var(--blue-700, #0050b3);
+	}
+}
