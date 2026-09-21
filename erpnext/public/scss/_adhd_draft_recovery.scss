@@ -1,0 +1,27 @@
+// ADHD-023: the "Resume it?" banner on a Sales Order or Quotation. Imported from adhd_mode.scss.
+body.adhd-mode {
+	.adhd-restore-banner {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.75rem;
+		margin-bottom: 8px;
+		padding: 8px 16px;
+		border-left: 4px solid var(--yellow-500, #eab308);
+		border-bottom: 1px solid var(--yellow-300, #fde68a);
+		border-radius: 4px;
+		background: var(--yellow-100, #fffbe6);
+		font-size: 0.85rem;
+	}
+
+	.adhd-restore-text {
+		flex: 1;
+		min-width: 12rem;
+	}
+
+	// the party and item count, on their own line under the question
+	.adhd-restore-details {
+		display: block;
+		color: var(--text-muted);
+	}
+}

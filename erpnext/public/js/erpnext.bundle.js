@@ -61,6 +61,7 @@ import "./adhd/adhd_notifications"; // Enhanced notifications
 import "./adhd/adhd_chain_navigator"; // Workflow document chain navigator
 import "./adhd/adhd_smart_inbox"; // Daily priorities and resume panel
 import "./adhd/adhd_form_wizard"; // Guided mandatory-field save
+import "./adhd/adhd_draft_recovery"; // Sales Order / Quotation interruption restore
 import "./adhd/adhd_help"; // Keyboard shortcut reference
 import "./adhd/adhd_list_view"; // Due-date heat map
 import "./adhd/adhd_deadline_banner"; // Contextual deadline nudges

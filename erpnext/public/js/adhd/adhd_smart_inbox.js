@@ -342,6 +342,17 @@ frappe.provide("erpnext.adhd");
 		saveRecentDoc(entry);
 	}
 
+	// The Resume panel and the unsaved-draft banner (ADHD-023) share one slot on a form. The offer is
+	// idempotent, so asking on every refresh cannot stack a second banner.
+	function offerDraftRestore(frm) {
+		try {
+			const recovery = erpnext.adhd.draftRecovery;
+			if (recovery && recovery.checkAndOfferDraftRestore) recovery.checkAndOfferDraftRestore(frm);
+		} catch (error) {
+			console.warn("[ADHD Smart Inbox] Could not offer the saved draft", error);
+		}
+	}
+
 	function registerRecentTracker() {
 		if (recentTrackerRegistered) return;
 		if (!(frappe.ui && frappe.ui.form && frappe.ui.form.ScriptManager)) return;
@@ -352,6 +363,8 @@ frappe.provide("erpnext.adhd");
 			const eventName = args && args[0];
 			if (eventName === "after_save") {
 				trackSavedForm(this.frm);
+			} else if (eventName === "refresh") {
+				offerDraftRestore(this.frm);
 			}
 			return result;
 		};
