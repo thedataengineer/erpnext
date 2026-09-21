@@ -1881,3 +1881,43 @@ body.adhd-mode {
 	font-size: var(--text-xs);
 	color: var(--text-muted);
 }
+
+.adhd-po-steps {
+	padding: 10px 16px;
+	background: var(--subtle-fg);
+	border-radius: 6px;
+	margin-bottom: 10px;
+}
+
+.adhd-po-step-row {
+	display: flex;
+	align-items: center;
+}
+
+.adhd-po-steps .adhd-step {
+	flex: 1;
+	text-align: center;
+	font-size: var(--text-sm);
+	color: var(--text-muted);
+	position: relative;
+}
+
+.adhd-po-steps .adhd-step--active {
+	color: var(--blue-500);
+	font-weight: 700;
+}
+
+.adhd-po-steps .adhd-step--done {
+	color: var(--green-600);
+	text-decoration: line-through;
+}
+
+.adhd-waiting-on {
+	font-size: var(--text-xs);
+	color: var(--text-muted);
+	margin: 4px 0;
+}
+
+.adhd-next-action {
+	margin-top: 8px;
+}

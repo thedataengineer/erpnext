@@ -53,6 +53,7 @@ import "./adhd/adhd_payment_digest"; // Focus Panel receivables summary
 import "./adhd/form_focus";        // Form simplification & tooltips
 import "./adhd/task_kanban";       // Task Kanban board
 import "./adhd/adhd_accounts"; // Journal Entry balance meter
+import "./adhd/adhd_buying"; // Purchase Order lifecycle panel
 import "./adhd/adhd_notifications"; // Enhanced notifications
 import "./adhd/adhd_chain_navigator"; // Workflow document chain navigator
 import "./adhd/adhd_smart_inbox"; // Daily priorities and resume panel
