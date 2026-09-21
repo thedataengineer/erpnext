@@ -7,6 +7,13 @@ frappe.provide("erpnext.adhd");
 	const originalSave = frappe.ui.form.Form.prototype.save;
 	let wizardState = null;
 
+	// The guided save is the "Mandatory Field Wizard" switch in ADHD Settings. Without that module it stays
+	// as it was.
+	function isWizardSettingOn() {
+		const settings = erpnext.adhd.ADHDSettings || window.ADHDSettings;
+		return !settings || Boolean(settings.get("mandatory_wizard"));
+	}
+
 	function hasValue(value) {
 		return value !== undefined && value !== null && value !== "";
 	}
@@ -146,7 +153,8 @@ frappe.provide("erpnext.adhd");
 	}
 
 	frappe.ui.form.Form.prototype.save = function (...args) {
-		if (!(frappe.boot && frappe.boot.adhd_mode)) {
+		// mode or wizard off: exactly the stock save
+		if (!(frappe.boot && frappe.boot.adhd_mode) || !isWizardSettingOn()) {
 			return originalSave.apply(this, args);
 		}
 		const missing = getMissingRequiredFields(this);
@@ -177,6 +185,16 @@ frappe.provide("erpnext.adhd");
 			frm.__adhd_guided_save_cancelled = null;
 		},
 	});
+
+	// Switching the wizard off in ADHD Settings while it is asking removes its banner. The save it was
+	// holding back is not run behind the person's back: it rejects like a cancel, and saving again is stock.
+	// `detail` is { key, value } for one switch and undefined for a reset, which can change all of them.
+	if (typeof $ === "function") {
+		$(document).on?.("adhd_setting_changed adhd_settings_reset", (_event, detail) => {
+			if (detail && detail.key !== "mandatory_wizard") return;
+			if (!isWizardSettingOn()) abandonWizard("ADHD guided save switched off in ADHD Settings");
+		});
+	}
 
 	erpnext.adhd.getMissingRequiredFields = getMissingRequiredFields;
 	erpnext.adhd.startGuidedSave = startGuidedSave;

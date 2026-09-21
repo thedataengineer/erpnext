@@ -3,6 +3,13 @@
 frappe.provide("erpnext.adhd");
 
 (() => {
+	// The banners are the "Contextual Form Banners" switch in ADHD Settings. Without that module they stay as
+	// they were.
+	function isBannerSettingOn() {
+		const settings = erpnext.adhd.ADHDSettings || window.ADHDSettings;
+		return !settings || Boolean(settings.get("form_banners"));
+	}
+
 	const plural = (count) => (Math.abs(count) === 1 ? "" : "s");
 	const DEADLINE_CONFIG = {
 		"Sales Invoice": {
@@ -51,7 +58,8 @@ frappe.provide("erpnext.adhd");
 
 	function renderDeadlineBanner(frm) {
 		frm.layout.$wrapper.find(".adhd-deadline-banner").remove();
-		if (!(frappe.boot && frappe.boot.adhd_mode) || frm.is_new()) return;
+		// the banner is gone by now, so switching the setting off removes it from the form it was on
+		if (!(frappe.boot && frappe.boot.adhd_mode) || !isBannerSettingOn() || frm.is_new()) return;
 		const config = DEADLINE_CONFIG[frm.doctype];
 		const dateValue = config && frm.doc[config.dateField];
 		if (!config || !dateValue || !config.showWhen(frm.doc)) return;
@@ -80,6 +88,16 @@ frappe.provide("erpnext.adhd");
 			after_save: renderDeadlineBanner,
 		});
 	});
+
+	// Switching the banners on or off in ADHD Settings changes the form on screen at once. `detail` is
+	// { key, value } for one switch and undefined for a reset, which can change all of them.
+	if (typeof $ === "function") {
+		$(document).on?.("adhd_setting_changed adhd_settings_reset", (_event, detail) => {
+			if (detail && detail.key !== "form_banners") return;
+			const frm = window.cur_frm;
+			if (frm && frm.layout && DEADLINE_CONFIG[frm.doctype]) renderDeadlineBanner(frm);
+		});
+	}
 
 	erpnext.adhd.DEADLINE_CONFIG = DEADLINE_CONFIG;
 	erpnext.adhd.renderDeadlineBanner = renderDeadlineBanner;

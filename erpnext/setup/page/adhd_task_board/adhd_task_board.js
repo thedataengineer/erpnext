@@ -6,10 +6,56 @@ function is_task_board_enabled() {
 	return Boolean(erpnext.adhd && erpnext.adhd.isActive && erpnext.adhd.isActive());
 }
 
-// Shows the board when ADHD mode is on and a short how-to message when it is off. It never
-// switches the mode on by itself. Safe to call repeatedly: it only rebuilds when the state changes.
+// The board is the "Task Kanban View" switch in ADHD Settings. Without that module it stays as it was.
+function is_task_kanban_setting_on() {
+	const settings = (erpnext.adhd && erpnext.adhd.ADHDSettings) || window.ADHDSettings;
+	return !settings || Boolean(settings.get("task_kanban"));
+}
+
+// What the page says in place of the board: the mode is off, or the board is switched off in ADHD Settings.
+function show_task_board_off_message(page, state) {
+	const $message = $('<div class="adhd-task-board-off text-muted">').css({
+		padding: "48px 16px",
+		"text-align": "center",
+	});
+
+	if (state === "switched_off") {
+		$message
+			.append($("<p>").text(__("The Task Board is switched off in ADHD Settings.")))
+			.append(
+				$("<p>").text(
+					__(
+						"To switch it on, right-click (or press and hold) the Focus button in the top bar and turn on Task Kanban View."
+					)
+				)
+			)
+			.append(
+				$('<button type="button" class="btn btn-default btn-sm">')
+					.text(__("Open ADHD Settings"))
+					.on("click", () => {
+						if (erpnext.adhd && erpnext.adhd.ADHDSettings) erpnext.adhd.ADHDSettings.openPanel();
+					})
+			);
+	} else {
+		$message
+			.append($("<p>").text(__("The Task Board is part of Focus Mode, which is switched off.")))
+			.append(
+				$("<p>").text(
+					__(
+						"Switch it on with the Focus button in the top bar (or press Alt+A), then open this page again."
+					)
+				)
+			);
+	}
+
+	$message.appendTo(page.body);
+}
+
+// Shows the board when ADHD mode and the Task Kanban View setting are on, and a short how-to message when
+// either is off. It never switches the mode or the setting on by itself. Safe to call repeatedly: it only
+// rebuilds when the state changes.
 function render_task_board(page) {
-	const state = is_task_board_enabled() ? "board" : "off";
+	const state = !is_task_board_enabled() ? "off" : !is_task_kanban_setting_on() ? "switched_off" : "board";
 
 	if (page.__adhd_task_board_state === state) {
 		if (state === "board" && erpnext.adhd.taskKanban) erpnext.adhd.taskKanban.refresh();
@@ -21,20 +67,10 @@ function render_task_board(page) {
 	page.__adhd_task_board_state = state;
 	page.body.empty();
 
-	if (state === "off") {
+	if (state !== "board") {
 		erpnext.adhd.taskKanban = null;
 		window.TaskKanban = null;
-		$('<div class="adhd-task-board-off text-muted">')
-			.css({ padding: "48px 16px", "text-align": "center" })
-			.append($("<p>").text(__("The Task Board is part of Focus Mode, which is switched off.")))
-			.append(
-				$("<p>").text(
-					__(
-						"Switch it on with the Focus button in the top bar (or press Alt+A), then open this page again."
-					)
-				)
-			)
-			.appendTo(page.body);
+		show_task_board_off_message(page, state);
 		return;
 	}
 
@@ -64,6 +100,15 @@ frappe.pages["adhd-task-board"].on_page_load = function (wrapper) {
 		});
 	}
 	listening = true;
+
+	// Switching Task Kanban View on or off in ADHD Settings changes the open page at once. `detail` is
+	// { key, value } for one switch and undefined for a reset, which can change all of them.
+	if (typeof $ === "function") {
+		$(document).on?.("adhd_setting_changed adhd_settings_reset", (_event, detail) => {
+			if (detail && detail.key !== "task_kanban") return;
+			if (frappe.get_route_str() === "adhd-task-board") render_task_board(page);
+		});
+	}
 };
 
 frappe.pages["adhd-task-board"].on_page_show = function () {

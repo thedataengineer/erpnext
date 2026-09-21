@@ -6,10 +6,23 @@
 	const originalHide = FocusPanel.prototype.hide;
 	const originalDestroy = FocusPanel.prototype.destroy;
 
+	// The digest is the "Daily Payment Digest" switch in ADHD Settings, which is off until someone turns it on.
+	// Without the settings module the digest stays as it was.
+	function isDigestOn() {
+		const settings = erpnext.adhd.ADHDSettings || window.ADHDSettings;
+		return !settings || Boolean(settings.get("payment_digest"));
+	}
+
+	FocusPanel.prototype._removePaymentDigest = function () {
+		this.panel?.querySelector?.(".adhd-payment-section")?.remove();
+	};
+
 	// Load the receivables summary without ever raising a dialog: it runs every time the panel is shown and
 	// every ten minutes, and a user with no default Company or no Sales Invoice access cannot use it.
 	FocusPanel.prototype._loadPaymentDigest = async function () {
 		if (!(frappe.boot && frappe.boot.adhd_mode)) return;
+		// switched off: no request, and no section left behind from when it was on
+		if (!isDigestOn()) return this._removePaymentDigest();
 		// the server refuses a user who cannot read Sales Invoices, so do not ask
 		if (!frappe.model.can_read("Sales Invoice")) return this._renderPaymentDigest(null);
 		try {
@@ -67,18 +80,20 @@
 					allocate_payment_amount: 1,
 				},
 				true,
-				false,
+				false
 			);
 		}, 200);
 	}
 
 	FocusPanel.prototype._renderPaymentDigest = function (data) {
+		// a request that was already on its way when the switch went off must not bring the section back
+		if (!isDigestOn()) return this._removePaymentDigest();
 		const body = this.panel?.querySelector(".afp-body");
 		if (!body) return;
 		const section = paymentSection(body);
 		if (!data) {
 			section.querySelector(".adhd-payment-body").innerHTML = `<p class="adhd-payment-empty">${__(
-				"Payment summary is not available.",
+				"Payment summary is not available."
 			)}</p>`;
 			return;
 		}
@@ -93,14 +108,19 @@
 								<button type="button" class="btn btn-xs btn-primary adhd-payment-create"
 									data-customer="${frappe.utils.escape_html(item.customer)}"
 									data-invoices="${frappe.utils.escape_html(item.invoices.join(","))}">${__("Create Payment Entry")}</button>
-							</div>`,
+							</div>`
 						)
 						.join("")
 				: `<p class="adhd-payment-empty">${__("No {0} invoices", [label])}</p>`;
 		section.querySelector(".adhd-payment-body").innerHTML = `
-			<div class="adhd-payment-total">${__("Total Outstanding")}: <strong>${format(data.total_outstanding)}</strong></div>
+			<div class="adhd-payment-total">${__("Total Outstanding")}: <strong>${format(
+			data.total_outstanding
+		)}</strong></div>
 			<h5 class="adhd-payment-subhead">${__("Overdue")}</h5>${rows(data.overdue || [], "overdue")}
-			<h5 class="adhd-payment-subhead">${__("Due This Week")}</h5>${rows(data.due_this_week || [], "due-this-week")}`;
+			<h5 class="adhd-payment-subhead">${__("Due This Week")}</h5>${rows(
+			data.due_this_week || [],
+			"due-this-week"
+		)}`;
 		section.querySelectorAll(".adhd-payment-create").forEach((button) => {
 			button.addEventListener("click", () => {
 				const previousDocname = window.cur_frm?.docname;
@@ -111,17 +131,24 @@
 				});
 				loadInvoicesIntoPaymentEntry(
 					button.dataset.invoices.split(",").filter(Boolean),
-					previousDocname,
+					previousDocname
 				);
 			});
 		});
 	};
 
+	// Starts (or, with the digest switched off, stops and removes) the digest of an open panel.
+	FocusPanel.prototype._syncPaymentDigest = function () {
+		clearInterval(this._paymentDigestInterval);
+		this._paymentDigestInterval = null;
+		if (!isDigestOn()) return this._removePaymentDigest();
+		this._loadPaymentDigest();
+		this._paymentDigestInterval = setInterval(() => this._loadPaymentDigest(), 10 * 60 * 1000);
+	};
+
 	FocusPanel.prototype.show = function () {
 		const result = originalShow.call(this);
-		this._loadPaymentDigest();
-		clearInterval(this._paymentDigestInterval);
-		this._paymentDigestInterval = setInterval(() => this._loadPaymentDigest(), 10 * 60 * 1000);
+		this._syncPaymentDigest();
 		return result;
 	};
 
@@ -135,4 +162,15 @@
 		clearInterval(this._paymentDigestInterval);
 		return originalDestroy.call(this);
 	};
+
+	// Switching the digest on or off in ADHD Settings takes effect on the open panel at once. `detail` is
+	// { key, value } for one switch and undefined for a reset, which can change all of them.
+	if (typeof $ === "function") {
+		$(document).on?.("adhd_setting_changed adhd_settings_reset", (_event, detail) => {
+			if (detail && detail.key !== "payment_digest") return;
+			const panel = erpnext.adhd.focusPanel;
+			// a closed panel loads it when it is next shown
+			if (panel && (!isDigestOn() || panel._isOpen)) panel._syncPaymentDigest();
+		});
+	}
 })();

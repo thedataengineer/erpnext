@@ -19,6 +19,13 @@ frappe.provide("erpnext.adhd");
 	let heatInterval = null;
 	let defaultWarehousePromise = null;
 
+	// The heat map is the "Due-Date Heat Maps" switch in ADHD Settings. Without that module it stays as it was.
+	// Only the heat map: the Item stock health below is not part of this switch.
+	function isHeatMapOn() {
+		const settings = erpnext.adhd.ADHDSettings || window.ADHDSettings;
+		return !settings || Boolean(settings.get("due_date_heatmap"));
+	}
+
 	function getUrgencyClass(dateValue) {
 		if (!dateValue) return null;
 		const diff = frappe.datetime.get_diff(dateValue, frappe.datetime.get_today());
@@ -89,8 +96,17 @@ frappe.provide("erpnext.adhd");
 		return window.cur_list === listview && listview.view === "List" ? listview : null;
 	}
 
+	// Takes off everything applyHeat put on the rows.
+	function clearHeat(listview) {
+		const $rows = listview && listview.$result && listview.$result.find("[data-name]");
+		if (!$rows) return;
+		$rows.removeClass(HEAT_CLASSES);
+		// the next-depreciation title is the only attribute the heat map sets, and only on Asset rows
+		if (listview.doctype === "Asset") $rows.removeAttr("title");
+	}
+
 	function applyHeat(listview) {
-		if (!(frappe.boot && frappe.boot.adhd_mode) || !listview) return;
+		if (!(frappe.boot && frappe.boot.adhd_mode) || !isHeatMapOn() || !listview) return;
 		const dateField = DATE_FIELD_MAP[listview.doctype];
 		if (!dateField || !listview.$result) return;
 		(listview.data || []).forEach((row) => {
@@ -123,6 +139,13 @@ frappe.provide("erpnext.adhd");
 		if (observer) observer.disconnect();
 		observer = null;
 		if (!(frappe.boot && frappe.boot.adhd_mode) || !DATE_FIELD_MAP[listview && listview.doctype]) return;
+		// switched off: nothing watches the list, no field is added to it, and its rows lose their heat
+		if (!isHeatMapOn()) {
+			clearInterval(heatInterval);
+			heatInterval = null;
+			clearHeat(listview);
+			return;
+		}
 
 		const dateField = DATE_FIELD_MAP[listview.doctype];
 		listview.fields ||= [];
@@ -281,6 +304,16 @@ frappe.provide("erpnext.adhd");
 			}
 		});
 	});
+
+	// Switching the heat map on or off in ADHD Settings takes effect on the list on screen at once. `detail` is
+	// { key, value } for one switch and undefined for a reset, which can change all of them.
+	if (typeof $ === "function") {
+		$(document).on?.("adhd_setting_changed adhd_settings_reset", async (_event, detail) => {
+			if (detail && detail.key !== "due_date_heatmap") return;
+			const listview = await getCurrentListView();
+			if (listview) attachHeatMap(listview);
+		});
+	}
 
 	erpnext.adhd.DATE_FIELD_MAP = DATE_FIELD_MAP;
 	erpnext.adhd.hasListField = hasListField;

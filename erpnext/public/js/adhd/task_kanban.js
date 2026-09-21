@@ -4,6 +4,12 @@
 
 frappe.provide("erpnext.adhd");
 
+// The board is the "Task Kanban View" switch in ADHD Settings. Without that module it stays as it was.
+function isTaskKanbanOn() {
+	const settings = erpnext.adhd.ADHDSettings || window.ADHDSettings;
+	return !settings || Boolean(settings.get("task_kanban"));
+}
+
 erpnext.adhd.TaskKanban = class TaskKanban {
 	constructor(wrapper) {
 		this.wrapper = wrapper;
@@ -15,6 +21,8 @@ erpnext.adhd.TaskKanban = class TaskKanban {
 			{ id: "Completed", label: "✅ Done", color: "#10b981" },
 		];
 		this.draggedTask = null;
+		// switched off in ADHD Settings: build nothing and ask for nothing (the page says why)
+		if (!isTaskKanbanOn()) return;
 		this._render();
 		this._loadTasks();
 	}
@@ -130,6 +138,8 @@ erpnext.adhd.TaskKanban = class TaskKanban {
 	}
 
 	async _loadTasks() {
+		// the board on screen can outlive the switch: its timers and buttons must not fetch after it is off
+		if (!isTaskKanbanOn()) return;
 		try {
 			const result = await frappe.call({
 				method: "frappe.client.get_list",

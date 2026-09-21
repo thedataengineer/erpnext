@@ -4,6 +4,19 @@
 
 frappe.provide("erpnext.adhd");
 
+// The per-feature switches live in ADHD Settings. Without that module a feature stays as it was.
+function isAdhdSettingOn(key) {
+	const settings = erpnext.adhd.ADHDSettings || window.ADHDSettings;
+	return !settings || Boolean(settings.get(key));
+}
+
+// The settings panel announces a switch with jQuery's trigger(), so only a jQuery handler hears it. `detail` is
+// { key, value } for one switch and undefined for a reset, which can change all of them.
+function onAdhdSettingChange(handler) {
+	if (typeof $ !== "function") return;
+	$(document).on?.("adhd_setting_changed adhd_settings_reset", (_event, detail) => handler(detail));
+}
+
 erpnext.adhd.FocusPanel = class FocusPanel {
 	constructor() {
 		this.panel = null;
@@ -48,7 +61,7 @@ erpnext.adhd.FocusPanel = class FocusPanel {
 				</div>
 
 				<!-- Pomodoro Timer -->
-				<div class="afp-section afp-timer-section">
+				<div class="afp-section afp-timer-section" id="afp-timer-section">
 					<div class="afp-section-title">⏱ Focus Timer</div>
 					<div class="afp-timer-display">
 						<svg class="afp-timer-ring" viewBox="0 0 100 100">
@@ -105,6 +118,7 @@ erpnext.adhd.FocusPanel = class FocusPanel {
 		const saved = localStorage.getItem("adhd_quick_note") || "";
 		document.getElementById("afp-quick-note").value = saved;
 		this._syncModeSwitch();
+		this._applyPomodoroSetting();
 	}
 
 	_bindEvents() {
@@ -301,7 +315,22 @@ erpnext.adhd.FocusPanel = class FocusPanel {
 	}
 
 	// --- Pomodoro Timer ---
+
+	// The timer is the "Pomodoro Timer" switch in ADHD Settings: with it off the timer section is hidden and
+	// a session that is running or paused is thrown away, so nothing counts down or alerts unseen.
+	_applyPomodoroSetting() {
+		const on = isAdhdSettingOn("pomodoro");
+		const section = document.getElementById("afp-timer-section");
+		if (section) {
+			section.hidden = !on;
+			section.style.display = on ? "" : "none";
+		}
+		if (!on) this.stopTimer();
+		return on;
+	}
+
 	_timerToggle() {
+		if (!this._applyPomodoroSetting()) return;
 		if (this.timerRunning) {
 			this._timerPause();
 		} else {
@@ -310,12 +339,15 @@ erpnext.adhd.FocusPanel = class FocusPanel {
 	}
 
 	_timerStart() {
+		if (!this._applyPomodoroSetting()) return;
 		clearInterval(this.timerInterval);
 		this.timerRunning = true;
 		const startBtn = document.getElementById("afp-timer-start");
 		if (startBtn) startBtn.textContent = "⏸ Pause";
 
 		this.timerInterval = setInterval(() => {
+			// switched off in another tab: no more ticks, and no completion alert
+			if (!this._applyPomodoroSetting()) return;
 			this.timerSeconds--;
 			this._updateTimerDisplay();
 
@@ -484,8 +516,8 @@ erpnext.adhd.onStateChange &&
 				window.FocusPanel = erpnext.adhd.focusPanel;
 			}
 
-			// Request notification permission
-			if (Notification && Notification.permission === "default") {
+			// Request notification permission, which only the timer's alerts need
+			if (isAdhdSettingOn("pomodoro") && Notification && Notification.permission === "default") {
 				Notification.requestPermission();
 			}
 
@@ -502,3 +534,8 @@ erpnext.adhd.onStateChange &&
 			}
 		}
 	});
+
+// Switching the timer on or off in ADHD Settings takes effect on the open panel at once
+onAdhdSettingChange((detail) => {
+	if (!detail || detail.key === "pomodoro") erpnext.adhd.focusPanel?._applyPomodoroSetting();
+});
