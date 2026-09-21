@@ -16,6 +16,7 @@ import frappe
 from frappe import _dict
 
 from erpnext.accounts.services import adhd_month_end, adhd_payment_digest
+from erpnext.adhd import api as adhd_api
 from erpnext.adhd_usage_log.doctype.adhd_usage_log import adhd_usage_log
 from erpnext.manufacturing.services import adhd_bom_ancestry
 from erpnext.stock import adhd as stock_adhd
@@ -266,3 +267,73 @@ class TestUsageLog(AdhdServerTestCase):
 		with self._switch(True):
 			with self.assertRaises(frappe.ValidationError):
 				adhd_usage_log.log_adhd_event("something_else")
+
+
+class TestSmartInbox(AdhdServerTestCase):
+	def _todo(self, description, **kwargs):
+		return _dict(
+			name="TD-0001",
+			description=description,
+			reference_type=None,
+			reference_name=None,
+			modified=datetime(2026, 9, 1),
+			**kwargs,
+		)
+
+	def _action_titles(self, description):
+		def fake_get_list(doctype, **kwargs):
+			return [self._todo(description)] if doctype == "ToDo" else []
+
+		with patch.object(adhd_api, "_get_list", side_effect=fake_get_list):
+			return [item["title"] for item in adhd_api.get_action_queue()]
+
+	def test_a_todo_description_is_shown_as_plain_text(self):
+		# ToDo.description is a Text Editor field, so it holds HTML that the inbox would print as tags
+		html = '<div class="ql-editor read-mode"><p>Call  <strong>Jo</strong> &amp; Sam</p><p>Bring the&nbsp;quote</p></div>'
+		self.assertEqual(self._action_titles(html), ["Call Jo & Sam Bring the quote"])
+
+	def test_a_todo_with_an_empty_editor_value_falls_back_to_its_name(self):
+		self.assertEqual(self._action_titles("<p><br></p>"), ["TD-0001"])
+
+	def test_plain_text_is_not_treated_as_markup_after_unescaping(self):
+		# "&lt;b&gt;" is text the user typed, not a tag to strip
+		self.assertEqual(adhd_api._plain_text("<p>Use &lt;b&gt; for bold</p>"), "Use <b> for bold")
+
+	def _urgent_task_rows(self, assign):
+		overdue = frappe.utils.add_days(frappe.utils.today(), -1)
+		filters_seen = []
+
+		def fake_get_list(doctype, **kwargs):
+			if doctype != "Task":
+				return []
+			filters_seen.append(kwargs["filters"])
+			if "_assign" in kwargs["fields"]:
+				return [
+					_dict(
+						name="TASK-1", subject="Ship it", exp_end_date=overdue, status="Open", _assign=assign
+					)
+				]
+			return [_dict(name="TASK-1")]
+
+		with (
+			patch.object(adhd_api, "_get_list", side_effect=fake_get_list),
+			patch.object(
+				adhd_api, "get_fullname", side_effect=lambda user: {"a@b.com": "Ann Lee"}.get(user, user)
+			),
+		):
+			return adhd_api.get_urgent_items(), filters_seen
+
+	def test_task_assignees_are_shown_as_names_not_json(self):
+		rows, _filters = self._urgent_task_rows('["a@b.com", "c@d.com"]')
+		self.assertEqual(rows[0]["title"], "Ship it")
+		self.assertEqual(rows[0]["counterparty"], "Ann Lee, c@d.com")
+
+	def test_a_task_nobody_is_assigned_to_has_no_counterparty(self):
+		for assign in (None, "", "[]", "not json", '"a@b.com"', "[null, 5]"):
+			rows, _filters = self._urgent_task_rows(assign)
+			self.assertIsNone(rows[0]["counterparty"], repr(assign))
+
+	def test_assigned_task_lookup_matches_the_whole_user_id(self):
+		# _assign is a JSON list; %a@b.com% would also match "aa@b.com"
+		_rows, filters_seen = self._urgent_task_rows('["a@b.com"]')
+		self.assertEqual(filters_seen[0]["_assign"], ("like", f'%"{frappe.session.user}"%'))

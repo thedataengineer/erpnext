@@ -6,23 +6,16 @@ function is_smart_inbox_enabled() {
 	return Boolean(erpnext.adhd && erpnext.adhd.isActive && erpnext.adhd.isActive());
 }
 
+// Frappe calls on_page_load once, when the page is created, and on_page_show straight after it (and on
+// every later visit). The page is always built here so a first visit with ADHD mode off still leaves
+// something for on_page_show to fill once the mode is on; the content, and its single fetch, come from
+// on_page_show.
 frappe.pages["adhd-inbox"].on_page_load = function (wrapper) {
-	if (!is_smart_inbox_enabled()) {
-		frappe.set_route("Workspaces");
-		return;
-	}
-
-	const page = frappe.ui.make_app_page({
+	frappe.adhd_inbox_page = frappe.ui.make_app_page({
 		parent: wrapper,
 		title: __("ADHD Inbox"),
 		single_column: true,
 	});
-
-	frappe.adhd_inbox_page = page;
-	if (erpnext.adhd && erpnext.adhd.renderSmartInbox) {
-		erpnext.adhd.renderSmartInbox(page);
-		page.__adhd_inbox_rendered = true;
-	}
 };
 
 frappe.pages["adhd-inbox"].on_page_show = function () {
@@ -30,11 +23,15 @@ frappe.pages["adhd-inbox"].on_page_show = function () {
 		frappe.set_route("Workspaces");
 		return;
 	}
-	if (!(erpnext.adhd && erpnext.adhd.smartInbox)) return;
+	if (!(erpnext.adhd && erpnext.adhd.smartInbox && erpnext.adhd.renderSmartInbox)) return;
 
-	if (frappe.adhd_inbox_page && !frappe.adhd_inbox_page.__adhd_inbox_rendered && erpnext.adhd.renderSmartInbox) {
-		erpnext.adhd.renderSmartInbox(frappe.adhd_inbox_page);
-		frappe.adhd_inbox_page.__adhd_inbox_rendered = true;
+	const page = frappe.adhd_inbox_page;
+	if (!page) return;
+
+	if (!page.__adhd_inbox_rendered) {
+		// renders, fetches once and starts the auto-refresh
+		erpnext.adhd.renderSmartInbox(page);
+		page.__adhd_inbox_rendered = true;
 		return;
 	}
 

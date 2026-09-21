@@ -37,6 +37,25 @@ frappe.provide("erpnext.adhd");
 		return `adhd_module_freq_${frappe.session.user}`;
 	}
 
+	// The document titles are per person: another user of the same browser must not see them.
+	function recentKey() {
+		return `${RECENT_STORAGE_KEY}_${frappe.session.user}`;
+	}
+
+	function resumeKey() {
+		return `${RESUME_STORAGE_KEY}_${frappe.session.user}`;
+	}
+
+	// Before the keys carried the user, one shared copy held whoever saved last.
+	function removeSharedRecentDocs() {
+		try {
+			localStorage.removeItem(RECENT_STORAGE_KEY);
+			localStorage.removeItem(RESUME_STORAGE_KEY);
+		} catch {
+			// storage is unavailable; there is nothing to remove
+		}
+	}
+
 	function moduleSlug(moduleName) {
 		return String(moduleName).toLowerCase().replaceAll(" ", "-");
 	}
@@ -50,7 +69,7 @@ frappe.provide("erpnext.adhd");
 	}
 
 	function recordVisit(moduleName) {
-		if (!moduleName || !MODULES.includes(moduleName)) return;
+		if (!isADHDModeActive() || !moduleName || !MODULES.includes(moduleName)) return;
 		const store = loadFrequencyStore();
 		const dow = String(new Date().getDay());
 		store[moduleName] ||= {};
@@ -88,7 +107,7 @@ frappe.provide("erpnext.adhd");
 					0
 				);
 				const hidden = hideUnvisited && total === 0;
-				return `<a href="/app/${moduleSlug(moduleName)}"
+				return `<a href="/desk/${moduleSlug(moduleName)}"
 					class="adhd-module-card ${hidden ? "adhd-module-hidden" : ""}"
 					data-module="${moduleName}" style="order:${index + 1}">
 					<span>${escapeHTML(__(moduleName))}</span>
@@ -103,10 +122,10 @@ frappe.provide("erpnext.adhd");
 		const banner =
 			top && count >= 3 && !localStorage.getItem(dismissalKey)
 				? `<div class="adhd-suggestion-banner">
-					<a href="/app/${moduleSlug(top)}">${__(
-						"📅 You usually work on {0} on {1}. Start there?",
-						[top, new Date().toLocaleDateString(undefined, { weekday: "long" })]
-					)}</a>
+					<a href="/desk/${moduleSlug(top)}">${__("📅 You usually work on {0} on {1}. Start there?", [
+						top,
+						new Date().toLocaleDateString(undefined, { weekday: "long" }),
+				  ])}</a>
 					<button type="button" aria-label="${__("Dismiss")}">×</button>
 				</div>`
 				: "";
@@ -115,7 +134,13 @@ frappe.provide("erpnext.adhd");
 			<section class="adhd-module-section">
 				<h3>${__("Your modules")}</h3>
 				<div class="adhd-module-cards">${cards}</div>
-				${hideUnvisited ? `<button class="btn btn-xs btn-default adhd-show-all">${__("Show all modules")}</button>` : ""}
+				${
+					hideUnvisited
+						? `<button class="btn btn-xs btn-default adhd-show-all">${__(
+								"Show all modules"
+						  )}</button>`
+						: ""
+				}
 			</section>
 		`);
 		$body.find(".adhd-suggestion-banner button").on("click", (event) => {
@@ -206,7 +231,12 @@ frappe.provide("erpnext.adhd");
 					if (item.counterparty) {
 						$main.append($("<span>").addClass("adhd-inbox-meta").text(item.counterparty));
 					}
-					$row.append($main, $("<span>").addClass(`adhd-inbox-badge ${badgeClass(item.urgency)}`).text(badge));
+					$row.append(
+						$main,
+						$("<span>")
+							.addClass(`adhd-inbox-badge ${badgeClass(item.urgency)}`)
+							.text(badge)
+					);
 					return $row;
 				});
 			})
@@ -236,7 +266,10 @@ frappe.provide("erpnext.adhd");
 					if (item.status) {
 						$main.append($("<span>").addClass("adhd-inbox-meta").text(item.status));
 					}
-					$row.append($main, $("<span>").addClass("adhd-inbox-badge adhd-badge-action").text(item.type));
+					$row.append(
+						$main,
+						$("<span>").addClass("adhd-inbox-badge adhd-badge-action").text(item.type)
+					);
 					return $row;
 				});
 			})
@@ -259,7 +292,7 @@ frappe.provide("erpnext.adhd");
 	}
 
 	function getRecentDocs() {
-		const docs = [...parseStoredDocs(RECENT_STORAGE_KEY), ...parseStoredDocs(RESUME_STORAGE_KEY)]
+		const docs = [...parseStoredDocs(recentKey()), ...parseStoredDocs(resumeKey())]
 			.map((doc) => ({
 				doctype: doc.doctype,
 				name: doc.name || doc.docname,
@@ -270,23 +303,24 @@ frappe.provide("erpnext.adhd");
 
 		const deduped = [];
 		const seen = new Set();
-		docs
-			.sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0))
-			.forEach((doc) => {
-				const key = `${doc.doctype}::${doc.name}`;
-				if (seen.has(key)) return;
-				seen.add(key);
-				deduped.push(doc);
-			});
+		docs.sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0)).forEach((doc) => {
+			const key = `${doc.doctype}::${doc.name}`;
+			if (seen.has(key)) return;
+			seen.add(key);
+			deduped.push(doc);
+		});
 
 		return deduped;
 	}
 
 	function saveRecentDoc(entry) {
-		const updated = [entry, ...getRecentDocs().filter((doc) => !(doc.doctype === entry.doctype && doc.name === entry.name))].slice(0, 10);
-		localStorage.setItem(RECENT_STORAGE_KEY, JSON.stringify(updated));
+		const updated = [
+			entry,
+			...getRecentDocs().filter((doc) => !(doc.doctype === entry.doctype && doc.name === entry.name)),
+		].slice(0, 10);
+		localStorage.setItem(recentKey(), JSON.stringify(updated));
 		localStorage.setItem(
-			RESUME_STORAGE_KEY,
+			resumeKey(),
 			JSON.stringify(updated.map((doc) => ({ ...doc, docname: doc.name })))
 		);
 	}
@@ -297,7 +331,12 @@ frappe.provide("erpnext.adhd");
 		const entry = {
 			doctype: frm.doctype,
 			name: frm.doc.name,
-			title: frm.doc.title || frm.doc.subject || frm.doc.customer_name || frm.doc.supplier_name || frm.doc.name,
+			title:
+				frm.doc.title ||
+				frm.doc.subject ||
+				frm.doc.customer_name ||
+				frm.doc.supplier_name ||
+				frm.doc.name,
 			timestamp: new Date().toISOString(),
 		};
 		saveRecentDoc(entry);
@@ -333,15 +372,17 @@ frappe.provide("erpnext.adhd");
 			);
 			$row.append(
 				$main,
-				$("<span>").addClass("adhd-inbox-time").text(item.timestamp ? frappe.datetime.prettyDate(item.timestamp) : "")
+				$("<span>")
+					.addClass("adhd-inbox-time")
+					.text(item.timestamp ? frappe.datetime.prettyDate(item.timestamp) : "")
 			);
 			return $row;
 		});
 	}
 
 	function clearResumeItems() {
-		localStorage.removeItem(RECENT_STORAGE_KEY);
-		localStorage.removeItem(RESUME_STORAGE_KEY);
+		localStorage.removeItem(recentKey());
+		localStorage.removeItem(resumeKey());
 		loadResumeItems();
 	}
 
@@ -377,7 +418,8 @@ frappe.provide("erpnext.adhd");
 		registerRecentTracker();
 
 		page.clear_inner_toolbar && page.clear_inner_toolbar();
-		page.set_primary_action && page.set_primary_action(__("↻ Refresh"), () => refreshSmartInbox(), "refresh");
+		page.set_primary_action &&
+			page.set_primary_action(__("↻ Refresh"), () => refreshSmartInbox(), "refresh");
 
 		const $body = $(page.body);
 		$body.html(`
@@ -429,11 +471,15 @@ frappe.provide("erpnext.adhd");
 
 			const route = frappe.get_route();
 			const routeType = route && route[0];
-			const isDeskLanding = !routeType || routeType === "Workspaces" || routeType === "workspace" || frappe.get_route_str() === "";
+			const isDeskLanding =
+				!routeType ||
+				routeType === "Workspaces" ||
+				routeType === "workspace" ||
+				frappe.get_route_str() === "";
 			if (!isDeskLanding) return;
 
 			sessionStorage.setItem("adhd_inbox_redirected", "1");
-			frappe.set_route("page", "adhd-inbox");
+			frappe.set_route("adhd-inbox");
 		}, 600);
 	}
 
@@ -450,6 +496,7 @@ frappe.provide("erpnext.adhd");
 	});
 
 	frappe.after_ajax(() => {
+		removeSharedRecentDocs();
 		registerRecentTracker();
 		schedulePostLoginRedirect();
 	});

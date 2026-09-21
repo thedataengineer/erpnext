@@ -3,25 +3,32 @@
 frappe.provide("erpnext.adhd");
 
 (() => {
+	// Only shortcuts that something handles: Alt+A (adhd_mode.js), Alt+J (assistant_chat.js), Ctrl/Cmd+K
+	// (assistant_bar.js), and the Frappe desk ones (ui/keyboard.js, ui/sidebar/sidebar.js, form/form.js,
+	// form/toolbar.js, list/list_view.js).
 	const SHORTCUTS = [
-		{ context: "ADHD Mode", key: "Alt+?", description: "Open this shortcut reference" },
 		{ context: "ADHD Mode", key: "Alt+A", description: "Toggle ADHD mode" },
-		{ context: "ADHD Mode", key: "Alt+F", description: "Open Focus Panel" },
-		{ context: "ADHD Mode", key: "Alt+N", description: "Open command bar" },
-		{ context: "ADHD Mode", key: "Alt+R", description: "Resume the last edited document" },
-		{ context: "Global", key: "Ctrl+G", description: "Open Awesomebar" },
-		{ context: "Global", key: "Ctrl+S", description: "Save current document" },
-		{ context: "Global", key: "Ctrl+E", description: "Toggle edit mode" },
-		{ context: "Global", key: "Ctrl+/", description: "Focus global search" },
-		{ context: "List View", key: "Ctrl+N", description: "Create a document" },
+		{ context: "ADHD Mode", key: "Alt+Shift+/", description: "Open this shortcut reference" },
+		{ context: "Assistant", key: "Alt+J", description: "Open the assistant chat" },
+		{ context: "Assistant", key: "Ctrl/Cmd+K", description: "Open the command bar" },
+		{ context: "Global", key: "Ctrl+G", description: "Open global search" },
+		{ context: "Global", key: "Ctrl+S", description: "Save (trigger the primary action)" },
+		{ context: "Global", key: "Ctrl+/", description: "Toggle the sidebar" },
+		{ context: "Global", key: "Shift+/", description: "Show all Frappe keyboard shortcuts" },
+		{ context: "List View", key: "Ctrl+B", description: "Create a new document" },
+		{ context: "List View", key: "↑/↓", description: "Move between rows" },
 		{ context: "List View", key: "Shift+↑/↓", description: "Select multiple rows" },
-		{ context: "List View", key: "Ctrl+A", description: "Select all visible rows" },
-		{ context: "List View", key: "Delete", description: "Delete selected rows" },
+		{ context: "List View", key: "Space", description: "Select the focused row" },
+		{ context: "List View", key: "Enter", description: "Open the focused row" },
 		{ context: "Form", key: "Ctrl+S", description: "Save" },
-		{ context: "Form", key: "Ctrl+Z", description: "Discard unsaved changes" },
-		{ context: "Form", key: "Alt+→", description: "Open next document" },
-		{ context: "Form", key: "Alt+←", description: "Open previous document" },
-		{ context: "Form", key: "F5", description: "Reload document" },
+		{ context: "Form", key: "Ctrl+Z", description: "Undo the last action" },
+		{ context: "Form", key: "Ctrl+Y", description: "Redo the last action" },
+		{ context: "Form", key: "Ctrl+E", description: "Email the document" },
+		{ context: "Form", key: "Ctrl+P", description: "Print the document" },
+		{ context: "Form", key: "Ctrl+B", description: "Create a new document" },
+		{ context: "Form", key: "Ctrl+J", description: "Jump to a field" },
+		{ context: "Form", key: "Ctrl+Shift+>", description: "Go to the next record" },
+		{ context: "Form", key: "Ctrl+Shift+<", description: "Go to the previous record" },
 	];
 
 	const escape = (value) => frappe.utils.escape_html(String(value));
@@ -43,13 +50,13 @@ frappe.provide("erpnext.adhd");
 						${items
 							.map(
 								(item) =>
-									`<tr><td class="adhd-help-key"><kbd>${escape(item.key)}</kbd></td><td>${escape(
-										__(item.description),
-									)}</td></tr>`,
+									`<tr><td class="adhd-help-key"><kbd>${escape(
+										item.key
+									)}</kbd></td><td>${escape(__(item.description))}</td></tr>`
 							)
 							.join("")}
 					</tbody></table>
-				</section>`,
+				</section>`
 			)
 			.join("");
 	}
@@ -70,7 +77,13 @@ frappe.provide("erpnext.adhd");
 					<header><h2 id="adhd-help-title">${__("Keyboard Shortcuts")}</h2>
 						<button type="button" class="adhd-help-close" aria-label="${__("Close")}">×</button>
 					</header>
-					${frappe.boot && frappe.boot.adhd_mode ? "" : `<div class="adhd-help-mode-prompt">${__("Enable ADHD Mode in User Settings to unlock ADHD-specific shortcuts.")}</div>`}
+					${
+						frappe.boot && frappe.boot.adhd_mode
+							? ""
+							: `<div class="adhd-help-mode-prompt">${__(
+									"Turn on ADHD Mode with the Focus button or Alt+A to unlock ADHD-specific shortcuts."
+							  )}</div>`
+					}
 					<input class="adhd-help-search" type="search" placeholder="${__("Search shortcuts…")}">
 					<div class="adhd-help-list">${renderShortcuts(SHORTCUTS)}</div>
 				</div>
@@ -87,7 +100,7 @@ frappe.provide("erpnext.adhd");
 			const term = this.value.trim().toLowerCase();
 			const filtered = SHORTCUTS.filter(
 				(item) =>
-					item.key.toLowerCase().includes(term) || item.description.toLowerCase().includes(term),
+					item.key.toLowerCase().includes(term) || item.description.toLowerCase().includes(term)
 			);
 			$overlay.find(".adhd-help-list").html(renderShortcuts(filtered, this.value.trim()));
 		});
@@ -95,13 +108,21 @@ frappe.provide("erpnext.adhd");
 		$overlay.find(".adhd-help-search").trigger("focus");
 	}
 
+	// Alt+? is Alt+Shift+/. Match the physical key: on macOS, Option changes event.key ("¿" here), and
+	// in a text field that character is what the person meant to type.
+	function isHelpShortcut(event) {
+		if (!event.altKey || event.ctrlKey || event.metaKey) return false;
+		return (event.shiftKey && event.code === "Slash") || event.key === "?";
+	}
+
 	document.addEventListener("keydown", (event) => {
-		if (event.altKey && event.key === "?") {
-			event.preventDefault();
-			openHelpModal();
-		}
+		if (!isHelpShortcut(event)) return;
+		if (erpnext.adhd.isTypingTarget?.(event.target)) return;
+		event.preventDefault();
+		openHelpModal();
 	});
 
 	erpnext.adhd.SHORTCUTS = SHORTCUTS;
 	erpnext.adhd.openHelpModal = openHelpModal;
+	erpnext.adhd.isHelpShortcut = isHelpShortcut;
 })();

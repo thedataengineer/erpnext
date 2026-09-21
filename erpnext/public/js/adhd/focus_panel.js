@@ -9,8 +9,10 @@ erpnext.adhd.FocusPanel = class FocusPanel {
 		this.panel = null;
 		this.timerInterval = null;
 		this.timerSeconds = 25 * 60;
+		this.timerTotalSeconds = 25 * 60; // the length of the session on screen: the ring's 100%
 		this.timerRunning = false;
 		this.timerMode = "work"; // "work" | "break"
+		this.lastTimerCompletion = null; // { mode, minutes } of the session that last ran out
 		this._render();
 		this._bindEvents();
 		this._loadTasks();
@@ -63,7 +65,7 @@ erpnext.adhd.FocusPanel = class FocusPanel {
 					<div class="afp-timer-presets">
 						<button class="afp-preset" data-mins="25">25m</button>
 						<button class="afp-preset" data-mins="50">50m</button>
-						<button class="afp-preset" data-mins="5">5m break</button>
+						<button class="afp-preset" data-mins="5" data-mode="break">5m break</button>
 					</div>
 				</div>
 
@@ -130,10 +132,8 @@ erpnext.adhd.FocusPanel = class FocusPanel {
 
 		document.querySelectorAll(".afp-preset").forEach((btn) => {
 			btn.addEventListener("click", () => {
-				const mins = parseInt(btn.dataset.mins);
-				this._timerReset(mins * 60);
-				const label = document.getElementById("afp-timer-label");
-				if (label) label.textContent = mins === 5 ? "Break Time 🌱" : `Work Session (${mins}m)`;
+				const mins = parseInt(btn.dataset.mins, 10);
+				this._timerReset(mins * 60, btn.dataset.mode === "break" ? "break" : "work");
 			});
 		});
 
@@ -164,17 +164,19 @@ erpnext.adhd.FocusPanel = class FocusPanel {
 					doctype: "Task",
 					filters: [
 						["status", "in", ["Open", "Working", "Overdue"]],
+						// _assign is a JSON list of user ids, so match the quoted id: "a@b.com" is not "aa@b.com"
+						["_assign", "like", `%"${user}"%`],
 					],
 					fields: ["name", "subject", "status", "priority", "exp_end_date", "project", "progress"],
 					order_by: "modified desc",
-					limit: 20,
+					limit_page_length: 20,
 				},
 			});
 
 			const tasks = (result && result.message) || [];
 			this._renderTasks(tasks);
 		} catch (e) {
-			listEl.innerHTML = `<div class="afp-empty">Could not load tasks. <a href="/app/task">View all tasks</a></div>`;
+			listEl.innerHTML = `<div class="afp-empty">Could not load tasks. <a href="/desk/task">View all tasks</a></div>`;
 		}
 	}
 
@@ -198,46 +200,56 @@ erpnext.adhd.FocusPanel = class FocusPanel {
 			return pa - pb;
 		});
 
+		const esc = (value) => frappe.utils.escape_html(value == null ? "" : String(value));
 		const now = new Date();
 		listEl.innerHTML = tasks
 			.map((t) => {
 				const isOverdue = t.status === "Overdue";
 				const isUrgent = t.priority === "Urgent";
 				const dueDate = t.exp_end_date ? new Date(t.exp_end_date) : null;
-				const dueSoon = dueDate && (dueDate - now) < 2 * 24 * 60 * 60 * 1000 && dueDate > now;
+				const dueSoon = dueDate && dueDate - now < 2 * 24 * 60 * 60 * 1000 && dueDate > now;
 
 				const priorityEmoji =
-					t.priority === "Urgent" ? "🔴"
-					: t.priority === "High" ? "🟠"
-					: t.priority === "Medium" ? "🟡"
-					: "🟢";
+					t.priority === "Urgent"
+						? "🔴"
+						: t.priority === "High"
+						? "🟠"
+						: t.priority === "Medium"
+						? "🟡"
+						: "🟢";
 
 				const dueLabel = isOverdue
 					? `<span class="afp-due overdue">⚠ OVERDUE</span>`
 					: dueDate
-					? `<span class="afp-due ${dueSoon ? "due-soon" : ""}">Due ${frappe.datetime.prettyDate(t.exp_end_date)}</span>`
+					? `<span class="afp-due ${dueSoon ? "due-soon" : ""}">Due ${frappe.datetime.prettyDate(
+							t.exp_end_date
+					  )}</span>`
 					: "";
 
 				const progress = t.progress || 0;
 
 				return `
 				<div class="afp-task-card ${isOverdue ? "afp-task-overdue" : ""} ${isUrgent ? "afp-task-urgent" : ""}"
-				     data-task="${t.name}">
+				     data-task="${esc(t.name)}">
 					<div class="afp-task-header">
 						<span class="afp-priority-dot">${priorityEmoji}</span>
-						<a class="afp-task-subject" href="/app/task/${t.name}">${t.subject}</a>
+						<a class="afp-task-subject" href="${frappe.utils.get_form_link("Task", t.name)}">${esc(t.subject)}</a>
 					</div>
-					${t.project ? `<div class="afp-task-project">📁 ${t.project}</div>` : ""}
+					${t.project ? `<div class="afp-task-project">📁 ${esc(t.project)}</div>` : ""}
 					${dueLabel}
-					${progress > 0 ? `
+					${
+						progress > 0
+							? `
 					<div class="afp-progress-bar">
 						<div class="afp-progress-fill" style="width:${progress}%"></div>
-					</div>` : ""}
+					</div>`
+							: ""
+					}
 					<div class="afp-task-actions">
-						<button class="afp-btn-done afp-btn-sm" data-task="${t.name}" title="${__("Mark as Done")}">
+						<button class="afp-btn-done afp-btn-sm" data-task="${esc(t.name)}" title="${__("Mark as Done")}">
 							✓ Done
 						</button>
-						<button class="afp-btn-working afp-btn-sm" data-task="${t.name}" title="${__("Set to Working")}">
+						<button class="afp-btn-working afp-btn-sm" data-task="${esc(t.name)}" title="${__("Set to Working")}">
 							▶ Working
 						</button>
 					</div>
@@ -273,7 +285,10 @@ erpnext.adhd.FocusPanel = class FocusPanel {
 				if (status === "Completed") {
 					card.classList.add("afp-task-done-anim");
 					setTimeout(() => card.remove(), 600);
-					frappe.show_alert({ message: "✅ Task marked as Done! Great work!", indicator: "green" }, 3);
+					frappe.show_alert(
+						{ message: "✅ Task marked as Done! Great work!", indicator: "green" },
+						3
+					);
 				} else {
 					card.classList.add("afp-task-working-anim");
 					setTimeout(() => this._loadTasks(), 600);
@@ -295,6 +310,7 @@ erpnext.adhd.FocusPanel = class FocusPanel {
 	}
 
 	_timerStart() {
+		clearInterval(this.timerInterval);
 		this.timerRunning = true;
 		const startBtn = document.getElementById("afp-timer-start");
 		if (startBtn) startBtn.textContent = "⏸ Pause";
@@ -316,15 +332,44 @@ erpnext.adhd.FocusPanel = class FocusPanel {
 		if (startBtn) startBtn.textContent = "▶ Resume";
 	}
 
-	_timerReset(seconds) {
+	// Sets the session on screen: how long it is, and whether it is work or a break. The ring counts down
+	// from this length, so it must be set every time the length changes.
+	_setTimerSession(seconds, mode) {
+		this.timerMode = mode || this.timerMode;
+		this.timerSeconds = seconds;
+		this.timerTotalSeconds = seconds;
+
+		const label = document.getElementById("afp-timer-label");
+		if (label) {
+			const mins = Math.round(seconds / 60);
+			label.textContent =
+				this.timerMode === "break"
+					? "Break Time 🌱"
+					: mins === 25
+					? "Work Session"
+					: `Work Session (${mins}m)`;
+		}
+	}
+
+	// Back to the start of a session. With no length it restarts the one on screen; `mode` ("work" | "break")
+	// says what the new session is, and is kept as it was when left out.
+	_timerReset(seconds, mode) {
 		clearInterval(this.timerInterval);
 		this.timerRunning = false;
-		this.timerSeconds = seconds !== undefined ? seconds : 25 * 60;
+		this._setTimerSession(seconds !== undefined ? seconds : this.timerTotalSeconds, mode);
 		const startBtn = document.getElementById("afp-timer-start");
 		if (startBtn) startBtn.textContent = "▶ Start";
 		this._updateTimerDisplay();
 	}
 
+	// Stops the timer and puts it back to a fresh work session, e.g. when ADHD mode goes off.
+	stopTimer() {
+		this._timerReset(25 * 60, "work");
+	}
+
+	// Returns { mode, minutes }: what the session that just ran out was. The mode has already flipped by the
+	// time this returns, so wrappers read it from the return value (or this.lastTimerCompletion), not from
+	// this.timerMode.
 	_timerComplete() {
 		clearInterval(this.timerInterval);
 		this.timerRunning = false;
@@ -332,17 +377,20 @@ erpnext.adhd.FocusPanel = class FocusPanel {
 		const startBtn = document.getElementById("afp-timer-start");
 		if (startBtn) startBtn.textContent = "▶ Start";
 
-		const label = document.getElementById("afp-timer-label");
+		const completed = {
+			mode: this.timerMode,
+			minutes: Math.round((this.timerTotalSeconds / 60) * 100) / 100,
+		};
+		this.lastTimerCompletion = completed;
 
-		if (this.timerMode === "work") {
-			this.timerMode = "break";
-			this.timerSeconds = 5 * 60;
-			if (label) label.textContent = "Break Time! 🌱";
-			frappe.show_alert({ message: "🎉 Pomodoro complete! Take a 5-minute break.", indicator: "green" }, 8);
+		if (completed.mode === "work") {
+			this._setTimerSession(5 * 60, "break");
+			frappe.show_alert(
+				{ message: "🎉 Pomodoro complete! Take a 5-minute break.", indicator: "green" },
+				8
+			);
 		} else {
-			this.timerMode = "work";
-			this.timerSeconds = 25 * 60;
-			if (label) label.textContent = "Work Session";
+			this._setTimerSession(25 * 60, "work");
 			frappe.show_alert({ message: "🧠 Break over! Back to focus.", indicator: "blue" }, 5);
 		}
 
@@ -351,17 +399,22 @@ erpnext.adhd.FocusPanel = class FocusPanel {
 		// Browser notification
 		if (Notification && Notification.permission === "granted") {
 			new Notification("⏰ ERPNext Focus Timer", {
-				body: this.timerMode === "break" ? "Work session done! Take a break." : "Break over! Time to focus.",
+				body:
+					this.timerMode === "break"
+						? "Work session done! Take a break."
+						: "Break over! Time to focus.",
 				icon: "/assets/erpnext/images/erpnext-logo.svg",
 			});
 		}
+
+		return completed;
 	}
 
 	_updateTimerDisplay() {
 		const timeEl = document.getElementById("afp-timer-time");
 		const circleEl = document.getElementById("afp-ring-circle");
 
-		const total = this.timerMode === "work" ? 25 * 60 : 5 * 60;
+		const total = this.timerTotalSeconds || 25 * 60;
 		const mins = Math.floor(this.timerSeconds / 60);
 		const secs = this.timerSeconds % 60;
 
@@ -423,26 +476,29 @@ erpnext.adhd.FocusPanel = class FocusPanel {
 };
 
 // Initialize when ADHD mode state changes
-erpnext.adhd.onStateChange && erpnext.adhd.onStateChange((active) => {
-	if (active) {
-		if (!erpnext.adhd.focusPanel) {
-			erpnext.adhd.focusPanel = new erpnext.adhd.FocusPanel();
-			window.FocusPanel = erpnext.adhd.focusPanel;
-		}
+erpnext.adhd.onStateChange &&
+	erpnext.adhd.onStateChange((active) => {
+		if (active) {
+			if (!erpnext.adhd.focusPanel) {
+				erpnext.adhd.focusPanel = new erpnext.adhd.FocusPanel();
+				window.FocusPanel = erpnext.adhd.focusPanel;
+			}
 
-		// Request notification permission
-		if (Notification && Notification.permission === "default") {
-			Notification.requestPermission();
-		}
+			// Request notification permission
+			if (Notification && Notification.permission === "default") {
+				Notification.requestPermission();
+			}
 
-		// Restore visibility
-		const wasVisible = localStorage.getItem("adhd_focus_panel_visible");
-		if (wasVisible !== "0") {
-			erpnext.adhd.focusPanel.show();
+			// Restore visibility
+			const wasVisible = localStorage.getItem("adhd_focus_panel_visible");
+			if (wasVisible !== "0") {
+				erpnext.adhd.focusPanel.show();
+			}
+		} else {
+			if (erpnext.adhd.focusPanel) {
+				// no alerts or notifications from a timer the person switched the mode off on
+				erpnext.adhd.focusPanel.stopTimer();
+				erpnext.adhd.focusPanel.hide();
+			}
 		}
-	} else {
-		if (erpnext.adhd.focusPanel) {
-			erpnext.adhd.focusPanel.hide();
-		}
-	}
-});
+	});

@@ -1,12 +1,20 @@
 # Copyright (c) 2024, ERPNext Contributors
 # License: GNU General Public License v3. See license.txt
 
+import json
+import re
+from html import unescape
+
 import frappe
 from frappe import _
-from frappe.utils import date_diff, getdate, now_datetime, today
+from frappe.utils import date_diff, get_fullname, getdate, now_datetime, strip_html, today
 
 MAX_URGENT_ITEMS = 20
 MAX_ACTION_ITEMS = 30
+
+# Where one block of a Text Editor value ends and the next begins: stripping the tags alone would glue the
+# last word of a paragraph to the first word of the next.
+BLOCK_TAG = re.compile(r"<\s*/?\s*(?:p|div|br|li|ul|ol|h[1-6])\b[^>]*>", re.IGNORECASE)
 
 
 def _as_date(value):
@@ -25,6 +33,24 @@ def _urgency_score(due_date):
 def _urgency_badge(due_date):
 	due = _as_date(due_date)
 	return "overdue" if due and due < getdate(today()) else "today"
+
+
+def _plain_text(value):
+	"""Text Editor fields (a ToDo description) hold HTML; the inbox shows one plain line."""
+	return " ".join(unescape(strip_html(BLOCK_TAG.sub(" ", value or ""))).split())
+
+
+def _assignee_names(assign):
+	"""A document's `_assign` is a JSON list of user ids ('["a@b.com"]'); show their full names."""
+	try:
+		users = json.loads(assign) if assign else []
+	except (TypeError, ValueError):
+		return None
+
+	if not isinstance(users, list):
+		return None
+
+	return ", ".join(get_fullname(user) for user in users if user and isinstance(user, str)) or None
 
 
 def _doctype_exists(doctype):
@@ -71,11 +97,15 @@ def _assigned_task_names(user):
 
 def _make_urgent_row(doctype, doc, due_field, title_field=None, counterparty_field=None):
 	due_date = doc.get(due_field)
+	counterparty = doc.get(counterparty_field) if counterparty_field else None
+	if counterparty_field == "_assign":
+		counterparty = _assignee_names(counterparty)
+
 	return {
 		"doctype": doctype,
 		"name": doc.name,
 		"title": doc.get(title_field) if title_field else doc.name,
-		"counterparty": doc.get(counterparty_field) if counterparty_field else None,
+		"counterparty": counterparty,
 		"due_date": due_date,
 		"urgency_score": _urgency_score(due_date),
 		"urgency": _urgency_badge(due_date),
@@ -144,7 +174,7 @@ def get_urgent_items(user=None):
 	for doc in _get_list(
 		"Task",
 		filters={
-			"_assign": ("like", f"%{user}%"),
+			"_assign": ("like", f'%"{user}"%'),
 			"exp_end_date": ("<=", current_day),
 			"status": ("not in", ["Closed", "Completed", "Cancelled"]),
 		},
@@ -206,7 +236,7 @@ def get_action_queue(user=None):
 				"ToDo",
 				todo.reference_type or "ToDo",
 				todo.reference_name or todo.name,
-				todo.description or todo.reference_name or todo.name,
+				_plain_text(todo.description) or todo.reference_name or todo.name,
 				"Open",
 				todo.modified,
 			)

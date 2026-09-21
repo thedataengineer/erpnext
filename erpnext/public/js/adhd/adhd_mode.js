@@ -7,6 +7,38 @@ frappe.provide("erpnext.adhd");
 erpnext.adhd.STORAGE_KEY = "erpnext_adhd_mode";
 erpnext.adhd.CLASS = "adhd-mode";
 
+// The mode is remembered per user, so a second person on the same browser
+// does not inherit it. STORAGE_KEY stays the legacy (global) key name.
+erpnext.adhd.currentUser = () =>
+	(frappe.session && frappe.session.user) ||
+	(typeof frappe.get_cookie === "function" && frappe.get_cookie("user_id")) ||
+	"Guest";
+erpnext.adhd.storageKey = () => `${erpnext.adhd.STORAGE_KEY}:${erpnext.adhd.currentUser()}`;
+
+// True when a keystroke is going into something the person is typing in. Alt+<letter> there is a
+// character (Option+A is "å" on macOS) or a rich-text command, so the shortcuts leave it alone. The editors
+// are listed too: Frappe's text editor is a contenteditable .ql-editor, Ace keeps a hidden textarea.
+erpnext.adhd.TYPING_TARGETS =
+	'input, textarea, select, [contenteditable]:not([contenteditable="false"]), .ql-editor, .ace_editor, .CodeMirror, .note-editable';
+erpnext.adhd.isTypingTarget = (target) => {
+	if (!target || !target.tagName) return false;
+	return Boolean(target.isContentEditable || target.closest?.(erpnext.adhd.TYPING_TARGETS));
+};
+
+erpnext.adhd.readStoredMode = () => {
+	const key = erpnext.adhd.storageKey();
+	const stored = localStorage.getItem(key);
+	if (stored !== null) return stored;
+
+	// One-time migration: the first user to load after this change keeps the
+	// setting that used to be shared, then the shared key is dropped.
+	const legacy = localStorage.getItem(erpnext.adhd.STORAGE_KEY);
+	if (legacy === null || erpnext.adhd.currentUser() === "Guest") return legacy;
+	localStorage.setItem(key, legacy);
+	localStorage.removeItem(erpnext.adhd.STORAGE_KEY);
+	return legacy;
+};
+
 erpnext.adhd.ADHDMode = class ADHDMode {
 	constructor() {
 		this.active = false;
@@ -15,16 +47,20 @@ erpnext.adhd.ADHDMode = class ADHDMode {
 	}
 
 	_init() {
-		const stored = localStorage.getItem(erpnext.adhd.STORAGE_KEY);
+		const stored = erpnext.adhd.readStoredMode();
 		if (stored === "on") {
 			this._apply(true, false);
 		}
 
-			document.addEventListener("keydown", (e) => {
-				const isADHDShortcut = e.altKey && (e.key === "a" || e.key === "A" || e.code === "KeyA");
-				if (isADHDShortcut && !e.ctrlKey && !e.metaKey) {
-				const tag = document.activeElement && document.activeElement.tagName;
-				if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+		document.addEventListener("keydown", (e) => {
+			// Match the physical key: on macOS, Option changes e.key ("å" for Option+A).
+			if (e.altKey && e.code === "KeyA" && !e.ctrlKey && !e.metaKey) {
+				if (
+					erpnext.adhd.isTypingTarget(e.target) ||
+					erpnext.adhd.isTypingTarget(document.activeElement)
+				) {
+					return;
+				}
 				e.preventDefault();
 				this.toggle();
 			}
@@ -54,7 +90,7 @@ erpnext.adhd.ADHDMode = class ADHDMode {
 	_apply(state, notify = true) {
 		this.active = state;
 		frappe.boot.adhd_mode = state;
-		localStorage.setItem(erpnext.adhd.STORAGE_KEY, state ? "on" : "off");
+		localStorage.setItem(erpnext.adhd.storageKey(), state ? "on" : "off");
 
 		if (state) {
 			document.body.classList.add(erpnext.adhd.CLASS);
@@ -67,7 +103,11 @@ erpnext.adhd.ADHDMode = class ADHDMode {
 		this._updateToggleButton();
 
 		this.observers.forEach((fn) => {
-			try { fn(state); } catch (e) { console.error("[ADHD Mode] Observer error:", e); }
+			try {
+				fn(state);
+			} catch (e) {
+				console.error("[ADHD Mode] Observer error:", e);
+			}
 		});
 
 		if (notify) {
@@ -106,14 +146,15 @@ erpnext.adhd.ADHDMode = class ADHDMode {
 	}
 
 	getState() {
-		const settings = window.ADHDSettings && erpnext.adhd.ADHD_FEATURES
-			? Object.fromEntries(
-					erpnext.adhd.ADHD_FEATURES.map((feature) => [
-						feature.key,
-						window.ADHDSettings.get(feature.key),
-					])
-				)
-			: {};
+		const settings =
+			window.ADHDSettings && erpnext.adhd.ADHD_FEATURES
+				? Object.fromEntries(
+						erpnext.adhd.ADHD_FEATURES.map((feature) => [
+							feature.key,
+							window.ADHDSettings.get(feature.key),
+						])
+				  )
+				: {};
 		return {
 			isActive: this.active,
 			enabledSettings: settings,
@@ -126,66 +167,97 @@ erpnext.adhd.ADHDMode = class ADHDMode {
 erpnext.adhd.mode = new erpnext.adhd.ADHDMode();
 window.ADHDMode = erpnext.adhd.mode;
 
+// This Frappe's desk has no navbar: the icon buttons live in the dock rail and, for an app without a rail,
+// in the sidebar's standard-items band (frappe/ui/sidebar/dock.js, sidebar.js). `.navbar-right` is the
+// older navbar. The toggle goes in the first of these that is on screen.
+const NAVBAR_TARGETS = [".dock-shortcuts", ".standard-items-band", ".navbar-right"];
+const NAVBAR_MOUNT_TRIES = 40;
+const NAVBAR_MOUNT_DELAY_MS = 300;
+
 frappe.after_ajax(() => {
 	_addNavbarToggle();
 });
 
-function _addNavbarToggle() {
-	const interval = setInterval(() => {
-		const navbarRight = document.querySelector(".navbar-right, .nav.navbar-nav:last-child, .navbar .dropdown-list");
-		if (!navbarRight) return;
+function _isShown(element) {
+	return element.getClientRects().length > 0;
+}
 
-		clearInterval(interval);
+function _findNavbarTarget() {
+	for (const selector of NAVBAR_TARGETS) {
+		const element = document.querySelector(selector);
+		if (element && _isShown(element)) return element;
+	}
+	return null;
+}
 
-		if (document.getElementById("adhd-mode-toggle")) return;
+// Returns true once the toggle is in the page.
+function _mountNavbarToggle() {
+	const target = _findNavbarTarget();
+	const existing = document.getElementById("adhd-mode-toggle");
+	if (existing) {
+		// The rail and the band take turns between apps: follow whichever one is on screen.
+		const item = existing.closest(".adhd-nav-item");
+		if (target && item && !_isShown(item)) target.appendChild(item);
+		return true;
+	}
+	if (!target) return false;
 
-		const li = document.createElement("li");
-		li.className = "nav-item adhd-nav-item";
-		li.innerHTML = `
-			<a id="adhd-mode-toggle"
-			   class="adhd-mode-toggle-btn nav-link"
-			   title="${__("Focus Mode (Alt+A)")}"
-			   href="#">
-				<span class="adhd-toggle-icon">🧠</span>
-				<span class="adhd-toggle-label">${__("Focus")}</span>
-			</a>
-		`;
+	const item = document.createElement(/^(UL|OL)$/.test(target.tagName) ? "li" : "div");
+	item.className = "nav-item adhd-nav-item";
+	item.innerHTML = `
+		<a id="adhd-mode-toggle"
+		   class="adhd-mode-toggle-btn nav-link"
+		   title="${__("Focus Mode (Alt+A)")}"
+		   href="#">
+			<span class="adhd-toggle-icon">🧠</span>
+			<span class="adhd-toggle-label">${__("Focus")}</span>
+		</a>
+	`;
+	target.appendChild(item);
 
-		navbarRight.parentNode && navbarRight.parentNode.insertBefore(li, navbarRight);
-
-		const toggle = document.getElementById("adhd-mode-toggle");
-		let longPressTimer = null;
-		let settingsOpened = false;
-		const cancelLongPress = () => {
-			clearTimeout(longPressTimer);
-			longPressTimer = null;
-		};
-		toggle.addEventListener("contextmenu", (e) => {
-			e.preventDefault();
+	const toggle = document.getElementById("adhd-mode-toggle");
+	let longPressTimer = null;
+	let settingsOpened = false;
+	const cancelLongPress = () => {
+		clearTimeout(longPressTimer);
+		longPressTimer = null;
+	};
+	toggle.addEventListener("contextmenu", (e) => {
+		e.preventDefault();
+		window.ADHDSettings?.openPanel();
+	});
+	toggle.addEventListener("mousedown", () => {
+		settingsOpened = false;
+		longPressTimer = setTimeout(() => {
+			settingsOpened = true;
 			window.ADHDSettings?.openPanel();
-		});
-		toggle.addEventListener("mousedown", () => {
+		}, 600);
+	});
+	["mouseup", "mouseleave"].forEach((eventName) => toggle.addEventListener(eventName, cancelLongPress));
+	toggle.addEventListener("click", (e) => {
+		e.preventDefault();
+		cancelLongPress();
+		if (settingsOpened) {
 			settingsOpened = false;
-			longPressTimer = setTimeout(() => {
-				settingsOpened = true;
-				window.ADHDSettings?.openPanel();
-			}, 600);
-		});
-		["mouseup", "mouseleave"].forEach((eventName) =>
-			toggle.addEventListener(eventName, cancelLongPress)
-		);
-		toggle.addEventListener("click", (e) => {
-			e.preventDefault();
-			cancelLongPress();
-			if (settingsOpened) {
-				settingsOpened = false;
-				return;
-			}
-			erpnext.adhd.mode.toggle();
-		});
+			return;
+		}
+		erpnext.adhd.mode.toggle();
+	});
 
-		erpnext.adhd.mode._updateToggleButton();
-	}, 300);
+	erpnext.adhd.mode._updateToggleButton();
+	return true;
+}
+
+function _addNavbarToggle() {
+	// The rail and the sidebar are built a little after the page loads: try for a few seconds, then stop.
+	let tries = 0;
+	const interval = setInterval(() => {
+		tries += 1;
+		if (_mountNavbarToggle() || tries >= NAVBAR_MOUNT_TRIES) clearInterval(interval);
+	}, NAVBAR_MOUNT_DELAY_MS);
+
+	// A page change can bring the rail or the band on screen later, or swap one for the other.
+	$(document).on("page-change", _mountNavbarToggle);
 }
 
 erpnext.adhd.isActive = () => erpnext.adhd.mode.isActive();
@@ -196,10 +268,7 @@ erpnext.adhd.toggle = () => erpnext.adhd.mode.toggle();
 
 let doneWellTimer = null;
 erpnext.adhd.showDoneWell = (message, cardElement) => {
-	if (
-		!erpnext.adhd.mode.isActive() ||
-		(window.ADHDSettings && !window.ADHDSettings.get("done_well"))
-	) {
+	if (!erpnext.adhd.mode.isActive() || (window.ADHDSettings && !window.ADHDSettings.get("done_well"))) {
 		return;
 	}
 	clearTimeout(doneWellTimer);
@@ -210,11 +279,9 @@ erpnext.adhd.showDoneWell = (message, cardElement) => {
 	doneWellTimer = setTimeout(() => document.body.classList.remove("adhd-done-pulse"), 600);
 	if (cardElement) {
 		cardElement.classList.add("adhd-card-done");
-		cardElement.addEventListener(
-			"animationend",
-			() => cardElement.classList.remove("adhd-card-done"),
-			{ once: true }
-		);
+		cardElement.addEventListener("animationend", () => cardElement.classList.remove("adhd-card-done"), {
+			once: true,
+		});
 	}
 };
 
@@ -232,8 +299,6 @@ frappe.ui.form.on("*", {
 		delete frm._adhdSaveStart;
 	},
 	after_submit(frm) {
-		erpnext.adhd.showDoneWell(
-			__("{0} {1} submitted.", [frm.doc.doctype, frm.doc.name])
-		);
+		erpnext.adhd.showDoneWell(__("{0} {1} submitted.", [frm.doc.doctype, frm.doc.name]));
 	},
 });
