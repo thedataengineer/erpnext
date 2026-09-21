@@ -1,0 +1,1 @@
+"""Buying service endpoints."""

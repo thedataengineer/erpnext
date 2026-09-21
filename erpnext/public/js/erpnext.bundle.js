@@ -73,6 +73,8 @@ import "./adhd/adhd_stock_entry"; // Stock impact and putaway explanations
 import "./adhd/adhd_batch_picker"; // Cross-doctype FEFO batch picker
 import "./adhd/adhd_stock_reconciliation"; // Quantity variance warnings
 import "./adhd/adhd_delivery_trip"; // Route summary and stop sequence
+import "./adhd/adhd_installation_note"; // Installation checklist column
+import "./adhd/adhd_purchase_receipt"; // Open quantities on receipts
 import "./adhd/adhd_tickets_041_061"; // Module-specific ADHD aids
 import "./adhd/adhd_customer"; // Customer essentials strip
 import "./adhd/adhd_sales_order"; // Sales Order delivery status

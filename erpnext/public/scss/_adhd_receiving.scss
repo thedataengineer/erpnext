@@ -1,0 +1,102 @@
+// Receiving aids: the Installation Note confirmation line (ADHD-024) and the Purchase Receipt
+// "what's still open?" panel (ADHD-027). Both are only ever added to the page while ADHD mode is on.
+
+body.adhd-mode {
+	.adhd-install-progress {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 4px 8px;
+		font-size: 0.8rem;
+		color: var(--text-muted);
+	}
+
+	.adhd-install-count {
+		font-weight: 600;
+	}
+
+	.adhd-install-progress--complete {
+		color: var(--green-600, #2f9e44);
+	}
+
+	.adhd-receipt-diff {
+		margin: 12px 0;
+		padding: 12px 16px;
+		background: var(--subtle-fg);
+		border: 1px solid var(--border-color);
+		border-radius: 4px;
+	}
+
+	.adhd-receipt-diff-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 8px;
+	}
+
+	.adhd-diff-title {
+		font-weight: 700;
+		font-size: 0.85rem;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+	}
+
+	.adhd-diff-summary,
+	.adhd-diff-po-status,
+	.adhd-diff-muted,
+	.adhd-diff-stock,
+	.adhd-diff-over,
+	.adhd-diff-note,
+	.adhd-diff-order-done {
+		font-size: 0.8rem;
+		color: var(--text-muted);
+	}
+
+	.adhd-diff-order {
+		margin-top: 8px;
+	}
+
+	.adhd-diff-order-head {
+		display: flex;
+		align-items: baseline;
+		gap: 0.5rem;
+		margin-bottom: 4px;
+	}
+
+	.adhd-diff-po-link {
+		font-size: 0.8rem;
+		color: var(--text-muted);
+		text-decoration: underline;
+	}
+
+	.adhd-diff-table {
+		width: 100%;
+		margin-bottom: 4px;
+		font-size: 0.83rem;
+	}
+
+	.adhd-diff-rest summary {
+		cursor: pointer;
+		font-size: 0.8rem;
+		color: var(--text-muted);
+	}
+
+	.adhd-diff-pending td {
+		color: var(--text-color);
+	}
+
+	.adhd-diff-complete td {
+		color: var(--text-muted);
+	}
+
+	td.adhd-diff-open-qty {
+		color: var(--orange-500);
+		font-weight: 700;
+	}
+
+	.adhd-diff-all-done {
+		margin: 0;
+		color: var(--green-600, #2f9e44);
+		font-weight: 600;
+	}
+}
