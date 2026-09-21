@@ -37,7 +37,7 @@ Server-backed features call whitelisted RPC modules:
 - **ADHD-013, Implemented:** Purchase Order lifecycle panel, `adhd_buying.js`. The step follows `status_updater.py` (a fully billed order that has not been received is still "To Receive").
 - **ADHD-014, Blocked:** Employee onboarding wizard depends on HRMS doctypes and workspace files absent from this repository.
 - **ADHD-015, Implemented:** Eight-DocType, 80-entry field-help catalog, `adhd_field_help.js`.
-- **ADHD-016, Implemented:** Per-feature settings, `adhd_settings.js`.
+- **ADHD-016, Implemented:** Per-feature settings, `adhd_settings.js`. Eleven switches, each read by its feature and applied without a reload; the settings are stored per browser, not per user. Defaults follow the ticket: everything on except Auto Time-Log Prompt and Daily Payment Digest, so those two sections stay hidden until switched on.
 - **ADHD-017, Implemented:** Opt-in friction telemetry and usage report.
 - **ADHD-018, Implemented:** Personalized Smart Inbox ordering.
 - **ADHD-019, Implemented:** Completion feedback with reduced-motion handling. Task completion and document submit (`on_submit`); a submit made through a workflow action fires no `on_submit`, so no feedback shows there.
