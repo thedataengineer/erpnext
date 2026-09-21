@@ -17,6 +17,17 @@ TODAY = date(2026, 9, 19)  # a Saturday
 CANDIDATES = [("PROJ-1", "Website Redesign"), ("PROJ-2", "Q4 Audit"), ("PROJ-3", "Website Migration")]
 
 
+def hide_ambient_rows(test, *doctypes):
+	"""These tests count and list what they made themselves, and the site may hold real data (a demo
+	organisation). The rows are deleted inside the test's transaction, which the rollback in tearDown undoes,
+	and a commit is made to fail so that a real row could never be lost for good."""
+	for doctype in doctypes:
+		frappe.db.delete(doctype)
+	no_commit = patch.object(frappe.db, "commit", side_effect=AssertionError("a test must not commit"))
+	no_commit.start()
+	test.addCleanup(no_commit.stop)
+
+
 class FakeLLM:
 	"""Stands in for the local model: replays canned answers in order and records what it was asked."""
 
@@ -129,6 +140,7 @@ class TestAssistant(unittest.TestCase):
 
 	def setUp(self):
 		frappe.set_user("Administrator")
+		hide_ambient_rows(self, "Task", "ToDo", "Opportunity")
 		self.acme = self.make("Customer", customer_name="Acme Corp")
 		self.globex = self.make("Customer", customer_name="Globex")
 		self.redesign = self.make("Project", project_name="Website Redesign", customer=self.acme.name)

@@ -109,6 +109,19 @@ Most client behavior is consolidated in `erpnext/public/js/adhd/adhd_tickets_041
 
 There is no `docs/tickets/ADHD-062.md`. ADHD-061 is the highest existing ticket.
 
+## Demo organisation
+
+`erpnext/setup/rtb_demo.py` creates **Yadavilli Solutions**, a small IT consultancy (USD, United States, standard chart of accounts), with just enough data to see the Focus aids on a real screen:
+
+    bench --site <site> execute erpnext.setup.rtb_demo.create_yadavilli_solutions
+    bench --site <site> execute erpnext.setup.rtb_demo.create_yadavilli_solutions --kwargs "{'dry_run': True}"
+
+A dry run does everything and rolls it back; running it again once the company exists changes nothing. It also makes Yadavilli Solutions Administrator's default company. Nothing in it sends mail: mail is muted, no RFQ supplier is set to receive one, every address is on example.com, and the run stops if anything was queued.
+
+What each part is for: Bluebird Analytics owes 8,400 and has 5,760 on a partly delivered Sales Order against a 15,000 limit (Customer essentials in amber, Sales Order delivery status); one submitted Quotation expires in days and another already has (expiry banner); an Opportunity nobody has saved for three weeks (stale badge); an RFQ with two supplier quotes (Compare Responses); a Purchase Order with four of six laptops and docks received (open quantities) and a draft Purchase Invoice that bills one laptop too many (three-way match, red); a weak scorecard on Lumen Cloud Services (score 38, set directly for the demo); an Installation Note with one row confirmed; and a project with tasks overdue, due today and waiting on Administrator (Focus Inbox, Task Board).
+
+The assistant tests count what they create, so they delete the site's tasks, to-dos and opportunities inside their own transaction (rolled back afterwards) and refuse to commit while they run.
+
 ## Known limitations
 
 - **Not seen in a browser.** Nothing here has been exercised in a logged-in Desk. Payment Entry timing (waiting for ERPNext's own party handler), the payment-digest hand-off, and the list-view heat map need that check first.

@@ -13,6 +13,7 @@ import unittest
 from unittest.mock import patch
 
 import frappe
+from frappe.cache_manager import clear_defaults_cache
 from frappe.utils import add_days, today
 
 from erpnext.selling.services import adhd_customer_essentials as essentials
@@ -25,19 +26,24 @@ class TestCustomerEssentials(unittest.TestCase):
 	@classmethod
 	def setUpClass(cls):
 		frappe.set_user("Administrator")
+		# the site default: a user with no default of their own gets it, and the site may hold a demo organisation
+		# that Administrator prefers
 		cls.company = (
-			frappe.defaults.get_user_default("Company")
+			frappe.db.get_single_value("Global Defaults", "default_company")
 			or frappe.get_all("Company", pluck="name", limit_page_length=1)[0]
 		)
 
 	def setUp(self):
 		frappe.set_user("Administrator")
+		frappe.defaults.set_user_default("company", self.company, "Administrator")
 		self.currency = frappe.get_cached_value("Company", self.company, "default_currency")
 		self.customer = self.make_customer(credit_limit=10000)
 		self.item = self.make_item()
 
 	def tearDown(self):
 		frappe.db.rollback()
+		# the default set in setUp was rolled back, but the cached copy of it was not
+		clear_defaults_cache("Administrator")
 		frappe.set_user("Administrator")
 
 	# --- fixtures ---

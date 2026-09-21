@@ -12,7 +12,7 @@ import frappe
 
 from erpnext.assistant import engine, search
 from erpnext.assistant.parsing import find_amount, find_date, parse_amount, parse_date
-from erpnext.assistant.test_assistant import TODAY, FakeLLM  # a Saturday, 19 Sep 2026
+from erpnext.assistant.test_assistant import TODAY, FakeLLM, hide_ambient_rows  # a Saturday, 19 Sep 2026
 
 LEAD = ("person", "company", "email", "phone", "notes")
 NOTE = ("about", "note", "kind")
@@ -64,6 +64,7 @@ class TestCRMParsing(unittest.TestCase):
 class TestCRM(unittest.TestCase):
 	def setUp(self):
 		frappe.set_user("Administrator")
+		hide_ambient_rows(self, "Opportunity", "Task", "ToDo")
 		self.acme = self.make("Customer", customer_name="Acme Corp")
 		self.globex = self.make("Customer", customer_name="Globex")
 		self.lead = self.make(
