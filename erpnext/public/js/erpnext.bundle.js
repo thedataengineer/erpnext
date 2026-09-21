@@ -64,6 +64,13 @@ import "./adhd/adhd_form_wizard"; // Guided mandatory-field save
 import "./adhd/adhd_help"; // Keyboard shortcut reference
 import "./adhd/adhd_list_view"; // Due-date heat map
 import "./adhd/adhd_deadline_banner"; // Contextual deadline nudges
+import "./adhd/adhd_bank_recon"; // Resumable reconciliation progress
+import "./adhd/adhd_payment_entry"; // Outstanding invoice shortlist
+import "./adhd/adhd_stock_entry"; // Stock impact and putaway explanations
+import "./adhd/adhd_batch_picker"; // Cross-doctype FEFO batch picker
+import "./adhd/adhd_stock_reconciliation"; // Quantity variance warnings
+import "./adhd/adhd_delivery_trip"; // Route summary and stop sequence
+import "./adhd/adhd_tickets_041_061"; // Module-specific ADHD aids
 import "./adhd/adhd_test_utils"; // Conditional developer test harness
 
 // Assistant: local-LLM chat that fills in forms from plain sentences
