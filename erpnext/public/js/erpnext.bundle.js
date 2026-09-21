@@ -57,6 +57,7 @@ import "./adhd/form_focus";        // Form simplification & tooltips
 import "./adhd/task_kanban";       // Task Kanban board
 import "./adhd/adhd_accounts"; // Journal Entry balance meter
 import "./adhd/adhd_buying"; // Purchase Order lifecycle panel
+import "./adhd/adhd_purchase_invoice_match"; // Purchase Invoice three-way match badge
 import "./adhd/adhd_rfq"; // RFQ response comparison
 import "./adhd/adhd_purchase_order_scorecard"; // Weak supplier scorecard nudge
 import "./adhd/adhd_notifications"; // Enhanced notifications

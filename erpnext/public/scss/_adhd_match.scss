@@ -1,0 +1,24 @@
+// Purchase Invoice three-way match badge (ADHD-028). The colour comes from Frappe's own indicator pill
+// (green / orange / red), so it follows the theme; these rules only let it hold a sentence.
+body.adhd-mode {
+	.adhd-match {
+		margin-top: 6px;
+	}
+
+	// the indicator pill is a single line of fixed height, and the badge can say more than that
+	.adhd-match-badge {
+		height: auto;
+		min-height: 20px;
+		max-width: 100%;
+		white-space: normal;
+		text-align: left;
+		cursor: default;
+	}
+
+	.adhd-match-lines {
+		margin: 6px 0 0;
+		padding-left: 16px;
+		color: var(--text-muted);
+		font-size: 0.8rem;
+	}
+}
