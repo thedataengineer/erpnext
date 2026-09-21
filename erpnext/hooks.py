@@ -57,7 +57,16 @@ web_include_icons = [
 fixtures = [
 	{
 		"dt": "Custom Field",
-		"filters": [["name", "=", "System Settings-adhd_telemetry_enabled"]],
+		"filters": [
+			[
+				"name",
+				"in",
+				[
+					"System Settings-adhd_telemetry_enabled",
+					"Installation Note Item-adhd_confirmed_installed",
+				],
+			]
+		],
 	}
 ]
 
