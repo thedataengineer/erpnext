@@ -172,6 +172,7 @@ erpnext.utils.CRMNotes = class CRMNotes {
 				primary_action_label: __("Add"),
 			});
 			d.show();
+			erpnext.adhd?.attachCommitmentDetector?.(d, me.frm);
 		};
 		$(".new-note-btn").click(_add_note);
 	}
@@ -214,6 +215,7 @@ erpnext.utils.CRMNotes = class CRMNotes {
 				primary_action_label: __("Done"),
 			});
 			d.show();
+			erpnext.adhd?.attachCommitmentDetector?.(d, me.frm);
 		}
 	}
 
