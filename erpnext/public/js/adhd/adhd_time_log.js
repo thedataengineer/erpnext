@@ -6,6 +6,7 @@
 	const originalTimerStart = FocusPanel.prototype._timerStart;
 	const originalTimerReset = FocusPanel.prototype._timerReset;
 	const originalTimerComplete = FocusPanel.prototype._timerComplete;
+	const BREAK_SECONDS = 5 * 60;
 
 	FocusPanel.prototype._renderTasks = function (tasks) {
 		originalRenderTasks.call(this, tasks);
@@ -23,42 +24,52 @@
 		});
 	};
 
+	// frappe.datetime has no add_minutes, so go through moment with the system datetime format.
+	function minutesBefore(datetime, minutes) {
+		return moment(datetime, frappe.defaultDatetimeFormat)
+			.subtract(minutes, "minutes")
+			.format(frappe.defaultDatetimeFormat);
+	}
+
 	FocusPanel.prototype._timerStart = function () {
-		if (this.timerMode === "work" && !this._sessionStartedAt) {
-			this._sessionStartedAt = frappe.datetime.now_datetime();
+		// One session is one Start..complete span, however many pauses it has. Whether it is a break is
+		// read from its length: timerMode cannot say, because the "5m break" preset leaves it on "work"
+		// and a preset picked after a break leaves it on "break".
+		if (this._sessionMinutes == null) {
 			this._sessionMinutes = this.timerSeconds / 60;
+			this._sessionIsBreak = this.timerSeconds === BREAK_SECONDS;
 		}
 		return originalTimerStart.call(this);
 	};
 
 	FocusPanel.prototype._timerReset = function (...args) {
-		this._sessionStartedAt = null;
 		this._sessionMinutes = null;
+		this._sessionIsBreak = false;
 		return originalTimerReset.apply(this, args);
 	};
 
 	FocusPanel.prototype._timerComplete = function () {
-		const completedWork = this.timerMode === "work";
-		const options =
-			completedWork && this.activeTask
-				? {
-						fromTime:
-							this._sessionStartedAt ||
-							frappe.datetime.add_minutes(
-								frappe.datetime.now_datetime(),
-								-(this._sessionMinutes || 25),
-							),
-						toTime: frappe.datetime.now_datetime(),
-						hours: (this._sessionMinutes || 25) / 60,
-						task: this.activeTask,
-						project: this.activeTask.project || null,
-						activityType: frappe.boot.adhd_default_activity_type || "Execution",
-					}
-				: null;
+		const sessionMinutes = this._sessionMinutes;
+		let completedWork = sessionMinutes != null && !this._sessionIsBreak;
 		const result = originalTimerComplete.call(this);
-		this._sessionStartedAt = null;
+		// a focus panel that reports what ran out ({ mode, minutes }) knows better than the length guess
+		if (result?.mode) completedWork = result.mode === "work";
+		const minutes = sessionMinutes ?? result?.minutes;
 		this._sessionMinutes = null;
-		if (options && frappe.boot.adhd_mode) this._renderTimeLogBanner(options);
+		this._sessionIsBreak = false;
+		if (completedWork && minutes && this.activeTask && frappe.boot.adhd_mode) {
+			// Timesheet recomputes hours from from/to on save, so the two times must span exactly the
+			// minutes counted here: a paused session's wall-clock span would save more than the banner says.
+			const toTime = frappe.datetime.now_datetime();
+			this._renderTimeLogBanner({
+				fromTime: minutesBefore(toTime, minutes),
+				toTime,
+				hours: minutes / 60,
+				task: this.activeTask,
+				project: this.activeTask.project || null,
+				activityType: frappe.boot.adhd_default_activity_type || "Execution",
+			});
+		}
 		return result;
 	};
 
@@ -81,11 +92,14 @@
 		banner.querySelector(".adhd-timelog-log").addEventListener("click", async (event) => {
 			event.currentTarget.disabled = true;
 			try {
-				await this._saveTimeLog(options);
-				frappe.show_alert({
-					message: __("Time logged on {0}", [options.task.subject || options.task.name]),
-					indicator: "green",
-				});
+				const saved = await this._saveTimeLog(options);
+				if (saved) {
+					frappe.show_alert({
+						message: __("Time logged on {0}", [options.task.subject || options.task.name]),
+						indicator: "green",
+					});
+				}
+				// with no employee there is nothing to retry either, so the prompt goes in both cases
 				banner.remove();
 			} catch (error) {
 				event.currentTarget.disabled = false;
@@ -96,8 +110,30 @@
 		setTimeout(() => banner.remove(), 5 * 60 * 1000);
 	};
 
+	// The Employee of the signed-in user; boot has no employee, so ask for the one linked by user_id.
+	FocusPanel.prototype._getEmployee = async function () {
+		if (!this._employee) {
+			const response = await frappe.db.get_value(
+				"Employee",
+				{ user_id: frappe.session.user, status: "Active" },
+				"name",
+			);
+			this._employee = response?.message?.name || null;
+		}
+		return this._employee;
+	};
+
 	FocusPanel.prototype._saveTimeLog = async function (options) {
-		const employee = frappe.boot.employee_name || null;
+		// Without an employee the Timesheet overlap check is skipped and the "today's draft" lookup below
+		// would match any employee-less draft, so do not log at all.
+		const employee = await this._getEmployee();
+		if (!employee) {
+			frappe.show_alert({
+				message: __("No active Employee is linked to your user, so this time was not logged."),
+				indicator: "orange",
+			});
+			return null;
+		}
 		const response = await frappe.call({
 			method: "frappe.client.get_list",
 			args: {

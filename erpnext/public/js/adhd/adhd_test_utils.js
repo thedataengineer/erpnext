@@ -36,7 +36,7 @@ erpnext.adhd.test = {
 				doctype: "Task",
 				subject: "ADHD Test Task",
 				status: "Open",
-				exp_end_date: frappe.datetime.add_days(frappe.datetime.today(), 3),
+				exp_end_date: frappe.datetime.add_days(frappe.datetime.get_today(), 3),
 				...overrides,
 			});
 		},
@@ -44,7 +44,7 @@ erpnext.adhd.test = {
 			return insertFixture({
 				doctype: "Sales Invoice",
 				customer: "__Test Customer",
-				posting_date: frappe.datetime.today(),
+				posting_date: frappe.datetime.get_today(),
 				items: [{ item_code: "__Test Item", qty: 1, rate: 100 }],
 				...overrides,
 			});
@@ -53,7 +53,7 @@ erpnext.adhd.test = {
 			return insertFixture({
 				doctype: "Journal Entry",
 				voucher_type: "Journal Entry",
-				posting_date: frappe.datetime.today(),
+				posting_date: frappe.datetime.get_today(),
 				accounts: [
 					{ account: "__Test Account AR - _TC", debit_in_account_currency: 100 },
 					{ account: "__Test Account AP - _TC", credit_in_account_currency: 100 },
@@ -67,8 +67,9 @@ erpnext.adhd.test = {
 				first_name: "ADHD",
 				last_name: "Test",
 				company: frappe.boot.user_info?.default_company || frappe.boot.sysdefaults?.company,
-				date_of_joining: frappe.datetime.today(),
+				date_of_joining: frappe.datetime.get_today(),
 				gender: "Male",
+				date_of_birth: "1990-01-01",
 				employment_type: "Full-time",
 				...overrides,
 			});

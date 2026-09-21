@@ -25,15 +25,30 @@ frappe.provide("erpnext.adhd");
 		frm.layout?.$wrapper?.find("#adhd-invoice-shortlist").remove();
 	}
 
+	// An invoice with payment terms comes back as one row per term, so the term is part of the identity.
 	function referenceKey(invoice) {
-		return `${invoice.voucher_type || ""}::${invoice.voucher_no || ""}`;
+		return `${invoice.voucher_type || ""}::${invoice.voucher_no || ""}::${invoice.payment_term || ""}`;
 	}
 
 	function findReference(frm, invoice) {
 		return (frm.doc.references || []).find(
 			(row) =>
-				row.reference_doctype === invoice.voucher_type && row.reference_name === invoice.voucher_no,
+				row.reference_doctype === invoice.voucher_type &&
+				row.reference_name === invoice.voucher_no &&
+				(row.payment_term || "") === (invoice.payment_term || ""),
 		);
+	}
+
+	// party_account_currency is not a Payment Entry field: the party's account is paid_from when
+	// receiving and paid_to when paying.
+	function partyAccount(frm) {
+		return frm.doc.payment_type === "Receive" ? frm.doc.paid_from : frm.doc.paid_to;
+	}
+
+	function partyAccountCurrency(frm) {
+		return frm.doc.payment_type === "Receive"
+			? frm.doc.paid_from_account_currency
+			: frm.doc.paid_to_account_currency;
 	}
 
 	function setAppliedState($row, applied) {
@@ -57,11 +72,15 @@ frappe.provide("erpnext.adhd");
 			child.payment_term = invoice.payment_term;
 			child.payment_term_outstanding = invoice.payment_term_outstanding;
 			child.account = invoice.account;
+			// the server sends 1 unless the party account is in a foreign currency (see get_outstanding_documents)
+			child.exchange_rate = invoice.exchange_rate || 1;
 		} else if (!apply && existing) {
 			frappe.model.clear_doc(existing.doctype, existing.name);
 			frm.doc.references = (frm.doc.references || []).filter((row) => row.name !== existing.name);
 		}
 		frm.refresh_field("references");
+		// rows were changed directly, so run what the grid's own allocated_amount/references_remove handlers run
+		frm.events.set_total_allocated_amount?.(frm);
 		setAppliedState($row, apply);
 	}
 
@@ -75,7 +94,7 @@ frappe.provide("erpnext.adhd");
 			<tr data-reference-key="${frappe.utils.escape_html(key)}">
 				<td><a href="${href}">${frappe.utils.escape_html(invoice.voucher_no || "")}</a></td>
 				<td>${frappe.utils.escape_html(invoice.due_date || __("No due date"))}</td>
-				<td class="text-right">${format_currency(outstanding, frm.doc.party_account_currency)}</td>
+				<td class="text-right">${format_currency(outstanding, partyAccountCurrency(frm))}</td>
 				<td><label><input type="checkbox" class="adhd-apply-invoice"> <span class="adhd-apply-label">${__(
 					"Apply full amount",
 				)}</span></label></td>
@@ -155,9 +174,39 @@ frappe.provide("erpnext.adhd");
 		$(field.wrapper).before($panel);
 	}
 
+	// ERPNext's own party handler (payment_entry.js) runs after ours and, while it fetches the party's
+	// account and sets paid_from/paid_to, keeps this flag up. Reading the account before it drops would
+	// send the previous party's account (or none).
+	function whenPartyAccountSettled(frm, callback, attempts = 50) {
+		if (!frm.set_party_account_based_on_party) return callback();
+		if (attempts > 0) {
+			setTimeout(() => whenPartyAccountSettled(frm, callback, attempts - 1), 200);
+		}
+	}
+
 	async function fetchAndRenderShortlist(frm) {
 		removeShortlist(frm);
 		if (!isActive() || frm.doc.docstatus !== 0 || !frm.doc.party || !frm.doc.party_type) return;
+		// Without the party's account the server finds nothing and says so in a dialog. It is still unset on
+		// a new entry opened with a party until ERPNext has fetched it, and the party handler runs us again.
+		const account = partyAccount(frm);
+		if (!account) return;
+
+		// refresh runs after every save and load: ask the server once per party, not on each of them
+		const key = [
+			frm.doc.name,
+			frm.doc.company,
+			frm.doc.payment_type,
+			frm.doc.party_type,
+			frm.doc.party,
+			account,
+			frm.doc.cost_center,
+		].join("::");
+		if (frm._adhdShortlist?.key === key) {
+			if (frm._adhdShortlist.invoices.length) renderShortlist(frm, frm._adhdShortlist.invoices);
+			return;
+		}
+
 		const requestId = (frm._adhdInvoiceRequestId || 0) + 1;
 		frm._adhdInvoiceRequestId = requestId;
 		frm.set_df_property("references", "description", __("Loading outstanding invoices…"));
@@ -165,14 +214,15 @@ frappe.provide("erpnext.adhd");
 			const response = await frappe.call({
 				method:
 					"erpnext.accounts.doctype.payment_entry.payment_entry.get_outstanding_reference_documents",
+				// silent: the server msgprints "No outstanding invoices…" when there are none
+				silent: true,
 				args: {
 					args: {
 						posting_date: frm.doc.posting_date || frappe.datetime.get_today(),
 						company: frm.doc.company,
 						party_type: frm.doc.party_type,
 						party: frm.doc.party,
-						party_account:
-							frm.doc.payment_type === "Receive" ? frm.doc.paid_from : frm.doc.paid_to,
+						party_account: account,
 						payment_type: frm.doc.payment_type,
 						cost_center: frm.doc.cost_center,
 						get_outstanding_invoices: true,
@@ -180,7 +230,9 @@ frappe.provide("erpnext.adhd");
 				},
 			});
 			if (requestId !== frm._adhdInvoiceRequestId) return;
-			if (response.message?.length) renderShortlist(frm, response.message);
+			const invoices = response.message || [];
+			frm._adhdShortlist = { key, invoices };
+			if (invoices.length) renderShortlist(frm, invoices);
 		} catch {
 			if (requestId === frm._adhdInvoiceRequestId) removeShortlist(frm);
 		} finally {
@@ -204,8 +256,14 @@ frappe.provide("erpnext.adhd");
 
 	injectStyles();
 	frappe.ui.form.on("Payment Entry", {
+		onload(frm) {
+			frm._adhdShortlist = null;
+		},
 		party(frm) {
-			fetchAndRenderShortlist(frm);
+			frm._adhdShortlist = null;
+			removeShortlist(frm);
+			// let ERPNext's handler start (and raise its flag) before waiting on it
+			setTimeout(() => whenPartyAccountSettled(frm, () => fetchAndRenderShortlist(frm)), 0);
 		},
 		party_type(frm) {
 			frm._adhdInvoiceRequestId = (frm._adhdInvoiceRequestId || 0) + 1;

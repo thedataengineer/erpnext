@@ -29,23 +29,43 @@ frappe.provide("erpnext.adhd");
 		return $(frm.get_field("reconciliation_tool_dt")?.wrapper);
 	}
 
-	function saveState(frm) {
-		if (!isActive()) return;
-		const key = storageKey(frm);
-		if (!key) return;
+	// The datatable only keeps the rows in view in the DOM (clusterize), so ticks are tracked in a set that
+	// outlives the rendered checkboxes instead of being read back from them.
+	function checkedIds(frm, key) {
+		if (frm._adhdReconChecked?.key !== key) {
+			frm._adhdReconChecked = { key, ids: new Set(readState(key)?.checkedIds || []) };
+		}
+		return frm._adhdReconChecked.ids;
+	}
+
+	function persistState(frm, key) {
 		const $wrapper = transactionWrapper(frm);
-		const checkedIds = $wrapper
-			.find(`${CHECKBOX}:checked`)
-			.map((_, element) => element.dataset.name)
-			.get();
+		const transactions = frm.bank_reconciliation_data_table_manager?.transactions;
 		localStorage.setItem(
 			key,
 			JSON.stringify({
 				savedAt: new Date().toISOString(),
-				checkedIds,
-				total: $wrapper.find(CHECKBOX).length,
+				checkedIds: [...checkedIds(frm, key)],
+				total: transactions?.length ?? $wrapper.find(CHECKBOX).length,
 			}),
 		);
+	}
+
+	function setChecked(frm, name, checked) {
+		if (!isActive() || !name) return;
+		const key = storageKey(frm);
+		if (!key) return;
+		const ids = checkedIds(frm, key);
+		if (checked) ids.add(name);
+		else ids.delete(name);
+		persistState(frm, key);
+	}
+
+	// A reconciled transaction leaves the list, so only its own tick goes; the rest of the session stays.
+	function forgetTransaction(frm, name) {
+		const key = storageKey(frm);
+		if (!key || !name) return;
+		if (checkedIds(frm, key).delete(name)) persistState(frm, key);
 	}
 
 	function showResumeBanner(frm, state, restored) {
@@ -71,6 +91,7 @@ frappe.provide("erpnext.adhd");
 		$banner.find(".adhd-clear-recon-session").on("click", (event) => {
 			event.preventDefault();
 			localStorage.removeItem(key);
+			frm._adhdReconChecked = null;
 			$wrapper.find(CHECKBOX).prop("checked", false);
 			$banner.remove();
 		});
@@ -82,16 +103,13 @@ frappe.provide("erpnext.adhd");
 		const key = storageKey(frm);
 		const state = key && readState(key);
 		if (!state) return;
-		const checked = new Set(state.checkedIds);
-		let restored = 0;
+		const checked = checkedIds(frm, key);
 		transactionWrapper(frm)
 			.find(CHECKBOX)
 			.each((_, element) => {
-				const shouldCheck = checked.has(element.dataset.name);
-				element.checked = shouldCheck;
-				if (shouldCheck) restored += 1;
+				element.checked = checked.has(element.dataset.name);
 			});
-		showResumeBanner(frm, state, restored);
+		showResumeBanner(frm, state, checked.size);
 	}
 
 	function decorateTransactions(frm) {
@@ -121,10 +139,9 @@ frappe.provide("erpnext.adhd");
 		if (!manager || manager._adhdProgressWrapped) return;
 		const original = manager.update_dt_cards;
 		manager.update_dt_cards = function (...args) {
-			const key = storageKey(frm);
-			if (key) localStorage.removeItem(key);
 			frm.layout.$wrapper.find("#adhd-recon-banner").remove();
 			const result = original.apply(this, args);
+			forgetTransaction(frm, args[0]?.name);
 			setTimeout(() => decorateTransactions(frm), 0);
 			return result;
 		};
@@ -143,7 +160,9 @@ frappe.provide("erpnext.adhd");
 		}
 		if (!$wrapper.length) return;
 
-		$wrapper.on("change.adhdBankRecon", CHECKBOX, () => saveState(frm));
+		$wrapper.on("change.adhdBankRecon", CHECKBOX, (event) =>
+			setChecked(frm, event.currentTarget.dataset.name, event.currentTarget.checked),
+		);
 		frm._adhdReconObserver = new MutationObserver(
 			frappe.utils.debounce(() => decorateTransactions(frm), 100),
 		);
@@ -160,4 +179,6 @@ frappe.provide("erpnext.adhd");
 
 	erpnext.adhd.bankReconStorageKey = storageKey;
 	erpnext.adhd.readBankReconState = readState;
+	erpnext.adhd.setBankReconChecked = setChecked;
+	erpnext.adhd.forgetBankReconTransaction = forgetTransaction;
 })();

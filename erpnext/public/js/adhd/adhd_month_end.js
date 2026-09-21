@@ -88,17 +88,36 @@ function renderReadinessResults($body, data) {
 	`);
 }
 
-async function runReadinessCheck(company, fromDate, toDate, issueType = null) {
+// The last successful readiness result, so re-rendering the checklist (every tick of a step re-renders
+// it) does not throw the scan away.
+let lastReadiness = null;
+
+// The readiness scan reads all four of these; the server refuses a user who cannot read any of them.
+const READINESS_DOCTYPES = ["Journal Entry", "Bank Transaction", "Purchase Invoice", "Sales Invoice"];
+
+// A refocus recheck is only worth its four server counts when the user already ran a check, can see the
+// result, and ADHD mode is on.
+function shouldRecheckReadiness({ hasRun, sectionVisible, adhdActive }) {
+	return Boolean(hasRun && sectionVisible && adhdActive);
+}
+
+// options.silent is for background rechecks: no "Checking…" flash, no error dialog, and the previous
+// results stay on screen if the check cannot run (for instance a user who cannot read every doctype).
+async function runReadinessCheck(company, fromDate, toDate, issueType = null, options = {}) {
+	const silent = Boolean(options.silent);
 	const $section = $("#adhd-close-readiness");
 	const $body = $section.find(".adhd-readiness-body");
 	if (!$body.length) return;
-	if (!issueType) $body.html(`<span class="text-muted">${__("Checking…")}</span>`);
+	if (silent && !READINESS_DOCTYPES.every((doctype) => frappe.model.can_read(doctype))) return;
+	if (!issueType && !silent) $body.html(`<span class="text-muted">${__("Checking…")}</span>`);
 	try {
 		const response = await frappe.call({
 			method: "erpnext.accounts.services.adhd_period_close_check.get_period_close_readiness",
 			args: { company, from_date: fromDate, to_date: toDate },
+			silent,
 		});
 		if (!response.message) return;
+		lastReadiness = { company, fromDate, toDate, data: response.message };
 		if (!issueType) {
 			renderReadinessResults($body, response.message);
 			return;
@@ -120,7 +139,9 @@ async function runReadinessCheck(company, fromDate, toDate, issueType = null) {
 			.toggleClass("text-danger", !response.message.ready)
 			.text(`${response.message.ready ? "✅" : "⚠"} ${response.message.summary}`);
 	} catch {
-		$body.html(`<span class="text-danger">${__("Readiness check failed. Try again.")}</span>`);
+		if (!silent) {
+			$body.html(`<span class="text-danger">${__("Readiness check failed. Try again.")}</span>`);
+		}
 	}
 }
 
@@ -141,11 +162,19 @@ function renderReadinessSection($container, context) {
 		</div>
 	`);
 	$container.find(".adhd-month-end-checklist").append($section);
-	const check = (issueType = null) =>
-		runReadinessCheck(company, context.fromDate, context.toDate, issueType);
+	const check = (issueType = null, options = {}) =>
+		runReadinessCheck(company, context.fromDate, context.toDate, issueType, options);
 	$section.find(".adhd-check-readiness-btn").on("click", () => check());
 	$section.on("click", ".adhd-recheck-btn", (event) => check(event.currentTarget.dataset.type));
 	$section.data("adhd-readiness-check", check);
+
+	if (
+		lastReadiness?.company === company &&
+		lastReadiness.fromDate === context.fromDate &&
+		lastReadiness.toDate === context.toDate
+	) {
+		renderReadinessResults($section.find(".adhd-readiness-body"), lastReadiness.data);
+	}
 }
 
 async function initMonthEndChecklist(container) {
@@ -202,14 +231,17 @@ async function initMonthEndChecklist(container) {
 
 	render();
 	try {
+		// silent: a user who cannot read Period Closing Vouchers just keeps what the checklist already knows
 		const response = await frappe.call({
 			method: "erpnext.accounts.services.adhd_month_end.is_period_closed",
 			args: { month_str: context.apiMonth, company: frappe.boot.sysdefaults.company },
+			silent: true,
 		});
-		if (response.message) {
-			state.period_close = true;
-			save();
-		}
+		// follow the server both ways: a cancelled closing voucher must un-tick the step again
+		state.period_close = Boolean(response.message);
+		save();
+	} catch {
+		// keep the saved state
 	} finally {
 		render();
 	}
@@ -217,10 +249,19 @@ async function initMonthEndChecklist(container) {
 
 erpnext.adhd.initMonthEndChecklist = initMonthEndChecklist;
 erpnext.adhd.runReadinessCheck = runReadinessCheck;
+erpnext.adhd.shouldRecheckReadiness = shouldRecheckReadiness;
 
 $(document)
 	.off("visibilitychange.adhdReadiness")
 	.on("visibilitychange.adhdReadiness", () => {
 		if (document.visibilityState !== "visible") return;
-		$("#adhd-close-readiness").data("adhd-readiness-check")?.();
+		const $section = $("#adhd-close-readiness");
+		const $panel = $section.closest(".adhd-focus-panel");
+		const recheck = shouldRecheckReadiness({
+			hasRun: Boolean(lastReadiness),
+			// the panel slides off-screen with a transform, so :visible alone would still be true
+			sectionVisible: $section.is(":visible") && (!$panel.length || $panel.hasClass("visible")),
+			adhdActive: Boolean(erpnext.adhd?.isActive?.()),
+		});
+		if (recheck) $section.data("adhd-readiness-check")?.(null, { silent: true });
 	});

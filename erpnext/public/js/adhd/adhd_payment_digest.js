@@ -6,18 +6,26 @@
 	const originalHide = FocusPanel.prototype.hide;
 	const originalDestroy = FocusPanel.prototype.destroy;
 
-	FocusPanel.prototype._loadPaymentDigest = function () {
+	// Load the receivables summary without ever raising a dialog: it runs every time the panel is shown and
+	// every ten minutes, and a user with no default Company or no Sales Invoice access cannot use it.
+	FocusPanel.prototype._loadPaymentDigest = async function () {
 		if (!(frappe.boot && frappe.boot.adhd_mode)) return;
-		frappe.call({
-			method: "erpnext.accounts.services.adhd_payment_digest.get_payment_digest",
-			args: { company: frappe.defaults.get_default("Company") },
-			callback: (response) => response.message && this._renderPaymentDigest(response.message),
-		});
+		// the server refuses a user who cannot read Sales Invoices, so do not ask
+		if (!frappe.model.can_read("Sales Invoice")) return this._renderPaymentDigest(null);
+		try {
+			const response = await frappe.call({
+				method: "erpnext.accounts.services.adhd_payment_digest.get_payment_digest",
+				args: { company: frappe.defaults.get_default("Company") },
+				silent: true,
+			});
+			this._renderPaymentDigest(response?.message || null);
+		} catch {
+			this._renderPaymentDigest(null);
+		}
 	};
 
-	FocusPanel.prototype._renderPaymentDigest = function (data) {
-		const body = this.panel?.querySelector(".afp-body");
-		if (!body) return;
+	// The section is created by the first render, whether that shows the summary or the unavailable note.
+	function paymentSection(body) {
 		let section = body.querySelector(".adhd-payment-section");
 		if (!section) {
 			section = document.createElement("section");
@@ -33,6 +41,46 @@
 				paymentBody.hidden = expanded;
 				section.querySelector(".adhd-payment-toggle").textContent = expanded ? "▸" : "▾";
 			});
+		}
+		return section;
+	}
+
+	// Payment Entry is created empty and ERPNext's own party handler then clears its references table
+	// (payment_entry.js), so invoices handed over as rows are lost. Wait for that handler to finish, then
+	// let ERPNext's get_outstanding_documents load exactly these invoices the supported way.
+	function loadInvoicesIntoPaymentEntry(invoices, previousDocname) {
+		if (!invoices.length) return;
+		let attempts = 50;
+		const timer = setInterval(() => {
+			attempts -= 1;
+			const frm = window.cur_frm;
+			if (attempts <= 0 || !frm) return clearInterval(timer);
+			// still on the form the user came from, or not the new entry yet
+			if (frm.doctype !== "Payment Entry" || frm.docname === previousDocname || !frm.is_new()) return;
+			// the party account is set by ERPNext's party handler, which raises this flag while it works
+			if (!frm.doc.party || !frm.doc.paid_from || frm.set_party_account_based_on_party) return;
+			clearInterval(timer);
+			frm.events.get_outstanding_documents(
+				frm,
+				{
+					vouchers: invoices.map((name) => ({ voucher_type: "Sales Invoice", voucher_no: name })),
+					allocate_payment_amount: 1,
+				},
+				true,
+				false,
+			);
+		}, 200);
+	}
+
+	FocusPanel.prototype._renderPaymentDigest = function (data) {
+		const body = this.panel?.querySelector(".afp-body");
+		if (!body) return;
+		const section = paymentSection(body);
+		if (!data) {
+			section.querySelector(".adhd-payment-body").innerHTML = `<p class="adhd-payment-empty">${__(
+				"Payment summary is not available.",
+			)}</p>`;
+			return;
 		}
 		const format = (amount) => format_currency(amount, data.currency);
 		const rows = (items, label) =>
@@ -55,15 +103,16 @@
 			<h5 class="adhd-payment-subhead">${__("Due This Week")}</h5>${rows(data.due_this_week || [], "due-this-week")}`;
 		section.querySelectorAll(".adhd-payment-create").forEach((button) => {
 			button.addEventListener("click", () => {
+				const previousDocname = window.cur_frm?.docname;
 				frappe.new_doc("Payment Entry", {
 					payment_type: "Receive",
 					party_type: "Customer",
 					party: button.dataset.customer,
-					references: button.dataset.invoices
-						.split(",")
-						.filter(Boolean)
-						.map((name) => ({ reference_doctype: "Sales Invoice", reference_name: name })),
 				});
+				loadInvoicesIntoPaymentEntry(
+					button.dataset.invoices.split(",").filter(Boolean),
+					previousDocname,
+				);
 			});
 		});
 	};

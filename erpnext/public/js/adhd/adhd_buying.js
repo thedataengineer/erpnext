@@ -10,9 +10,17 @@ const PURCHASE_ORDER_STEPS = [
 	{ id: "closed", label: __("Closed") },
 ];
 
+// Workflow states that mean "waiting for someone to approve". A workflow keeps the document a draft
+// (docstatus 0) until that approval submits it, so this is a draft-time state.
+const PENDING_APPROVAL_STATE = /(Approval|Pending)/i;
+
 function getPurchaseOrderStep(doc) {
+	// a cancelled order is out of the lifecycle: it is neither "Created" nor any later step
+	if (doc.docstatus === 2 || doc.status === "Cancelled") return null;
 	if (doc.status === "Closed" || flt(doc.per_billed) >= 100) return "closed";
-	if (doc.docstatus === 0) return "created";
+	if (doc.docstatus === 0) {
+		return PENDING_APPROVAL_STATE.test(doc.workflow_state || "") ? "approved" : "created";
+	}
 	if (doc.docstatus === 1 && ["Pending Approval", "Waiting for Approval"].includes(doc.workflow_state)) {
 		return "approved";
 	}
@@ -22,7 +30,7 @@ function getPurchaseOrderStep(doc) {
 }
 
 async function addWaitingOn($panel, frm) {
-	if (!/(Approval|Pending)/i.test(frm.doc.workflow_state || "") || frm.is_new()) return;
+	if (!PENDING_APPROVAL_STATE.test(frm.doc.workflow_state || "") || frm.is_new()) return;
 	const result = await frappe.db.get_value(
 		"Workflow Action",
 		{ reference_doctype: "Purchase Order", reference_name: frm.doc.name, status: "Open" },
@@ -43,6 +51,7 @@ function initPurchaseOrderStatusPanel(frm) {
 	if (!erpnext.adhd?.isActive?.() || frm.doctype !== "Purchase Order") return;
 
 	const current = getPurchaseOrderStep(frm.doc);
+	if (!current) return;
 	const currentIndex = PURCHASE_ORDER_STEPS.findIndex((step) => step.id === current);
 	const $panel = $(`
 		<div id="adhd-po-steps" class="adhd-po-steps">

@@ -14,18 +14,31 @@ function removeJournalEntryBalanceMeter(frm) {
 	frm?.layout?.$wrapper?.find("#adhd-balance-meter").remove();
 }
 
-function updateJournalEntryBalanceMeter(frm) {
-	const $meter = frm?.layout?.$wrapper?.find("#adhd-balance-meter");
-	if (!$meter?.length) return;
-
-	const totals = (frm.doc.accounts || []).reduce(
+// The server balances a Journal Entry on the company-currency amounts (debit/credit), not on the
+// *_in_account_currency ones, so a multi-currency entry must be summed the same way.
+function getJournalEntryTotals(rows) {
+	return (rows || []).reduce(
 		(result, row) => {
-			result.debit += flt(row.debit_in_account_currency);
-			result.credit += flt(row.credit_in_account_currency);
+			result.debit += flt(row.debit);
+			result.credit += flt(row.credit);
 			return result;
 		},
 		{ debit: 0, credit: 0 },
 	);
+}
+
+// set_indicator belongs to the page (frm.page), not the form, and the verdict only means
+// something while the entry can still be edited.
+function setBalanceIndicator(frm, label, color) {
+	if (frm.doc.docstatus !== 0) return;
+	frm.page?.set_indicator?.(label, color);
+}
+
+function updateJournalEntryBalanceMeter(frm) {
+	const $meter = frm?.layout?.$wrapper?.find("#adhd-balance-meter");
+	if (!$meter?.length) return;
+
+	const totals = getJournalEntryTotals(frm.doc.accounts);
 	const difference = Math.abs(totals.debit - totals.credit);
 	const currency = frm.doc.company_currency || erpnext.get_currency?.(frm.doc.company);
 	const format = (value) => format_currency(value, currency);
@@ -39,11 +52,12 @@ function updateJournalEntryBalanceMeter(frm) {
 		.toggleClass("adhd-unbalanced", difference >= 0.001);
 
 	if (difference < 0.001 && (totals.debit || totals.credit)) {
-		frm.set_indicator(__("Balanced ✓"), "green");
+		setBalanceIndicator(frm, __("Balanced ✓"), "green");
 	} else if (difference >= 0.001 && frm.is_dirty()) {
-		frm.set_indicator(__("Unbalanced"), "red");
-	} else if ($difference.hasClass("adhd-balanced")) {
-		frm.page?.clear_indicator?.();
+		setBalanceIndicator(frm, __("Unbalanced"), "red");
+	} else if ($difference.hasClass("adhd-balanced") && frm.doc.docstatus === 0) {
+		// nothing to judge yet: give the header back to the standard Draft / Not Saved indicator
+		frm.toolbar?.set_indicator?.();
 	}
 }
 
@@ -67,6 +81,18 @@ function initJournalEntryBalanceMeter(frm) {
 	updateJournalEntryBalanceMeter(frm);
 }
 
+// debit/credit are recalculated from the account-currency amounts and the exchange rate, which for a
+// foreign-currency row happens after a server round trip, so refresh the meter when they change too.
+frappe.ui.form.on("Journal Entry Account", {
+	debit(frm) {
+		frm._adhdUpdateBalanceMeter?.();
+	},
+	credit(frm) {
+		frm._adhdUpdateBalanceMeter?.();
+	},
+});
+
+erpnext.adhd.getJournalEntryTotals = getJournalEntryTotals;
 erpnext.adhd.initJournalEntryBalanceMeter = initJournalEntryBalanceMeter;
 erpnext.adhd.updateJournalEntryBalanceMeter = updateJournalEntryBalanceMeter;
 erpnext.adhd.removeJournalEntryBalanceMeter = removeJournalEntryBalanceMeter;
@@ -114,6 +140,12 @@ erpnext.adhd.removeJournalEntryBalanceMeter = removeJournalEntryBalanceMeter;
 		return ["cost_center", ...(await getActiveDimensions())];
 	}
 
+	// A cost center (and most dimensions) belongs to one company, so the last-used value is kept per
+	// company; a single shared value fails link validation as soon as the user switches company.
+	function lastUsedKey(frm, fieldname) {
+		return `adhd_last_${fieldname}::${frm.doc?.company || ""}`;
+	}
+
 	async function prefillLastUsed(frm) {
 		if (
 			!isActive() ||
@@ -128,7 +160,7 @@ erpnext.adhd.removeJournalEntryBalanceMeter = removeJournalEntryBalanceMeter;
 		await Promise.all(
 			fields.map(async (fieldname) => {
 				if (!Object.hasOwn(frm.fields_dict || {}, fieldname) || frm.doc[fieldname]) return;
-				const last = localStorage.getItem(`adhd_last_${fieldname}`);
+				const last = localStorage.getItem(lastUsedKey(frm, fieldname));
 				if (!last) return;
 				await frm.set_value(fieldname, last);
 				markAsLastUsed(frm, fieldname);
@@ -140,29 +172,41 @@ erpnext.adhd.removeJournalEntryBalanceMeter = removeJournalEntryBalanceMeter;
 		if (!isActive() || frm.meta?.istable === 1 || frm.doc?.__unsaved) return;
 		const fields = await accountingDefaultFields();
 		fields.forEach((fieldname) => {
-			if (frm.doc[fieldname]) localStorage.setItem(`adhd_last_${fieldname}`, frm.doc[fieldname]);
+			if (frm.doc[fieldname]) localStorage.setItem(lastUsedKey(frm, fieldname), frm.doc[fieldname]);
 		});
 	}
 
 	frappe.ui.form.Form.prototype.save = function (...args) {
 		const result = originalSave.apply(this, args);
-		if (!result?.then) return result;
+		if (!isActive() || !result?.then) return result;
 		return result.then((value) => {
-			saveLastUsed(this);
+			// remembering a default must never break or fail a save
+			saveLastUsed(this).catch((error) => console.warn("[ADHD] Could not remember defaults", error));
 			return value;
 		});
 	};
 
+	const quietly = (promise) =>
+		promise?.catch((error) => console.warn("[ADHD] Could not prefill defaults", error));
+
 	$(document).on("form-load.adhdLastUsed form-refresh.adhdLastUsed", (_event, frm) => {
-		prefillLastUsed(frm || cur_frm);
+		quietly(prefillLastUsed(frm || cur_frm));
 	});
 	frappe.router.on("change", () => {
-		frappe.after_ajax(() => prefillLastUsed(cur_frm));
+		frappe.after_ajax(() => quietly(prefillLastUsed(cur_frm)));
 	});
 
 	window.adhdClearLastUsedDefaults = async function () {
 		const fields = await accountingDefaultFields();
-		fields.forEach((fieldname) => localStorage.removeItem(`adhd_last_${fieldname}`));
+		// every company's value, plus the company-less key older versions wrote
+		Object.keys(localStorage)
+			.filter((key) =>
+				fields.some(
+					(fieldname) =>
+						key === `adhd_last_${fieldname}` || key.startsWith(`adhd_last_${fieldname}::`),
+				),
+			)
+			.forEach((key) => localStorage.removeItem(key));
 		frappe.show_alert({
 			message: __("ADHD cost center and dimension defaults cleared."),
 			indicator: "blue",
