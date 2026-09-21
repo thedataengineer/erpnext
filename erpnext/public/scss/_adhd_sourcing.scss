@@ -1,0 +1,95 @@
+// ADHD-025 RFQ comparison dialog and ADHD-026 supplier scorecard nudge.
+// Dialogs are appended to <body>, so the ADHD-mode scope covers the comparison table too.
+
+body.adhd-mode {
+	.adhd-rfq-scroll {
+		overflow-x: auto;
+	}
+
+	.adhd-rfq-table {
+		width: 100%;
+		margin-bottom: 0;
+		font-size: 0.85rem;
+
+		th,
+		td {
+			vertical-align: top;
+		}
+
+		th[scope="row"] {
+			font-weight: 600;
+			white-space: nowrap;
+		}
+	}
+
+	.adhd-rfq-col {
+		min-width: 150px;
+	}
+
+	.adhd-rfq-supplier {
+		font-weight: 600;
+	}
+
+	.adhd-rfq-quote-id,
+	.adhd-rfq-status,
+	.adhd-rfq-uom,
+	.adhd-rfq-base,
+	.adhd-rfq-item-name {
+		font-size: 0.75rem;
+		font-weight: 400;
+	}
+
+	.adhd-rfq-uom,
+	.adhd-rfq-status {
+		color: var(--text-muted);
+	}
+
+	// a lowest price is marked with a star and a tint, so it never depends on colour alone
+	.adhd-rfq-best {
+		background: var(--green-50);
+		font-weight: 600;
+	}
+
+	.adhd-rfq-star {
+		color: var(--green-600);
+	}
+
+	.adhd-rfq-expired {
+		color: var(--red-600);
+		font-size: 0.75rem;
+		font-weight: 600;
+	}
+
+	.adhd-rfq-note {
+		margin-bottom: 8px;
+		color: var(--text-muted);
+		font-size: 0.75rem;
+	}
+
+	.adhd-scorecard-nudge {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		margin: 4px 0 8px;
+		padding: 6px 12px;
+		border: 1px solid var(--yellow-300);
+		border-radius: 4px;
+		background: var(--yellow-50);
+		font-size: 0.82rem;
+	}
+
+	.adhd-scorecard-icon {
+		flex-shrink: 0;
+		font-size: 1rem;
+	}
+
+	.adhd-scorecard-text {
+		flex: 1;
+	}
+
+	.adhd-scorecard-link {
+		color: var(--text-color);
+		text-decoration: underline;
+		white-space: nowrap;
+	}
+}
