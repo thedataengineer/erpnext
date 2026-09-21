@@ -23,9 +23,15 @@ function startPomodoro(minutes) {
 	frappe.show_alert({ message: __("Open the Focus Panel to start your timer"), indicator: "blue" });
 }
 
+// "Time-Boxing Warnings" in ADHD Settings (on by default): the banner and the time's-up alert.
+function timeboxWarningsOn() {
+	const settings = erpnext.adhd.ADHDSettings;
+	return !settings || Boolean(settings.get("timebox_warnings"));
+}
+
 function renderTimeboxBanner(frm) {
 	frm.layout.$wrapper.find(".adhd-timebox-banner").remove();
-	if (!(frappe.boot && frappe.boot.adhd_mode) || frm.is_new()) return;
+	if (!(frappe.boot && frappe.boot.adhd_mode) || !timeboxWarningsOn() || frm.is_new()) return;
 	const dismissKey = `adhd_timebox_dismissed_${frm.doctype}_${frm.docname}`;
 	if (sessionStorage.getItem(dismissKey)) return;
 	const $banner = $(`
@@ -264,8 +270,10 @@ TIMEBOX_DOCTYPES.forEach((doctype) => {
 	frappe.ui.form.on(doctype, { refresh: renderTimeboxBanner });
 });
 
-document.addEventListener("focuspanel:timercomplete", () => {
-	if (!(frappe.boot && frappe.boot.adhd_mode)) return;
+document.addEventListener("focuspanel:timercomplete", (event) => {
+	// a finished break is not "time's up" on the form you were working in
+	if (event.detail?.mode === "break") return;
+	if (!(frappe.boot && frappe.boot.adhd_mode) || !timeboxWarningsOn()) return;
 	const route = frappe.get_route();
 	if (route[0] === "Form" && TIMEBOX_DOCTYPES.includes(route[1])) {
 		frappe.show_alert(

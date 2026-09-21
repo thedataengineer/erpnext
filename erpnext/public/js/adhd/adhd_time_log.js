@@ -57,7 +57,10 @@
 		const minutes = sessionMinutes ?? result?.minutes;
 		this._sessionMinutes = null;
 		this._sessionIsBreak = false;
-		if (completedWork && minutes && this.activeTask && frappe.boot.adhd_mode) {
+		// "Auto Time-Log Prompt" in ADHD Settings, off by default: nothing is offered unless it was switched on
+		const settings = erpnext.adhd.ADHDSettings;
+		const promptOn = settings ? Boolean(settings.get("auto_timelog")) : true;
+		if (completedWork && minutes && this.activeTask && frappe.boot.adhd_mode && promptOn) {
 			// Timesheet recomputes hours from from/to on save, so the two times must span exactly the
 			// minutes counted here: a paused session's wall-clock span would save more than the banner says.
 			const toTime = frappe.datetime.now_datetime();
@@ -82,7 +85,9 @@
 		banner.innerHTML = `
 			<p class="adhd-timelog-summary">${__("Session complete — log")} <strong>${options.hours.toFixed(2)}h</strong>
 				${__("on")} <strong>${frappe.utils.escape_html(options.task.subject || options.task.name)}</strong>?</p>
-			<div class="adhd-timelog-detail">${frappe.utils.escape_html(options.fromTime)} → ${frappe.utils.escape_html(options.toTime)} · ${frappe.utils.escape_html(options.activityType)}</div>
+			<div class="adhd-timelog-detail">${frappe.utils.escape_html(options.fromTime)} → ${frappe.utils.escape_html(
+			options.toTime
+		)} · ${frappe.utils.escape_html(options.activityType)}</div>
 			<div class="adhd-timelog-actions">
 				<button type="button" class="btn btn-primary btn-sm adhd-timelog-log">${__("Log Time")}</button>
 				<button type="button" class="btn btn-default btn-sm adhd-timelog-skip">${__("Skip")}</button>
@@ -116,7 +121,7 @@
 			const response = await frappe.db.get_value(
 				"Employee",
 				{ user_id: frappe.session.user, status: "Active" },
-				"name",
+				"name"
 			);
 			this._employee = response?.message?.name || null;
 		}

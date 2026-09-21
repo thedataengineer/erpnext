@@ -60,9 +60,9 @@ frappe.provide("erpnext.adhd");
 		const $banner = $(`
 			<div id="adhd-variance-banner" class="alert alert-warning adhd-variance-banner" role="alert">
 				<span>⚠</span>
-				<span><strong><span class="adhd-variance-count">${flaggedCount}</span> ${__(
-					"row(s)",
-				)}</strong> ${__("have a variance above 10% or 50 units. Review before submitting.")}</span>
+				<span><strong><span class="adhd-variance-count">${flaggedCount}</span> ${__("row(s)")}</strong> ${__(
+			"have a variance above 10% or 50 units. Review before submitting."
+		)}</span>
 			</div>
 		`);
 		$(frm.fields_dict.items.wrapper).before($banner);
@@ -108,7 +108,8 @@ frappe.provide("erpnext.adhd");
 	frappe.ui.form.on("Stock Reconciliation", {
 		refresh,
 		after_save: refresh,
-		after_submit: clearVariance,
+		// Frappe has no client "after_submit" event: on_submit is what savesubmit() triggers
+		on_submit: clearVariance,
 	});
 	frappe.ui.form.on("Stock Reconciliation Item", {
 		qty: scheduleVarianceCheck,

@@ -245,7 +245,8 @@ frappe.provide("erpnext.adhd");
 	frappe.ui.form.on("Stock Entry", {
 		refresh: refreshFeatures,
 		after_save: refreshFeatures,
-		after_submit: refreshFeatures,
+		// Frappe has no client "after_submit" event: on_submit is what savesubmit() triggers
+		on_submit: refreshFeatures,
 	});
 	frappe.ui.form.on("Stock Entry Detail", {
 		item_code: childChanged,

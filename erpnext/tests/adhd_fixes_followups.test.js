@@ -39,7 +39,7 @@ function run(names, sandbox) {
 
 // ---- timer complete: the event carries { mode, minutes } ----------------------------------------------------
 
-function loadTimer({ stubPanel } = {}) {
+function loadTimer({ stubPanel, settings } = {}) {
 	const events = [];
 	const banners = [];
 	const sandbox = {
@@ -83,6 +83,7 @@ function loadTimer({ stubPanel } = {}) {
 			utils: { escape_html: (value) => String(value) },
 		},
 	};
+	if (settings) sandbox.erpnext.adhd.ADHDSettings = settings;
 	if (stubPanel) {
 		// a focus panel that predates { mode, minutes }: it returns nothing from _timerComplete
 		sandbox.erpnext.adhd.FocusPanel = class {
@@ -157,6 +158,72 @@ test("without a { mode, minutes } result the event still fires (null detail) and
 	// the session length it counted itself, since the panel did not say
 	assert.equal(banners.length, 1);
 	assert.equal(banners[0].hours, 25 / 60);
+});
+
+test("the time-log prompt follows the Auto Time-Log Prompt setting", () => {
+	const off = loadTimer({ settings: { get: (key) => key !== "auto_timelog" } });
+	off.panel._timerReset(25 * 60, "work");
+	off.panel._timerStart();
+	off.panel._timerComplete();
+	assert.equal(off.events.length, 1, "the event still fires");
+	assert.equal(off.banners.length, 0, "but nothing is offered for logging while the switch is off");
+
+	const on = loadTimer({ settings: { get: (key) => key === "auto_timelog" } });
+	on.panel._timerReset(25 * 60, "work");
+	on.panel._timerStart();
+	on.panel._timerComplete();
+	assert.equal(on.banners.length, 1);
+});
+
+// ---- form_focus.js: the time's-up alert -----------------------------------------------------------------------
+
+function loadFormFocus({ settings } = {}) {
+	const listeners = {};
+	const alerts = [];
+	const sandbox = {
+		console: { log() {}, warn() {}, error() {} },
+		setTimeout,
+		clearTimeout,
+		setInterval: () => 1,
+		clearInterval() {},
+		$: () => makeChain(),
+		__: translate,
+		sessionStorage: makeStorage(),
+		document: { addEventListener: (type, fn) => (listeners[type] = fn), activeElement: null },
+		erpnext: { adhd: { isActive: () => true } },
+		frappe: {
+			provide() {},
+			boot: { adhd_mode: true },
+			ui: { form: { on() {} } },
+			get_route: () => ["Form", "Item", "ITEM-1"],
+			show_alert: (message) => alerts.push(message),
+			utils: { escape_html: (value) => String(value) },
+			focusPanel: null,
+			after_ajax() {},
+		},
+	};
+	if (settings) sandbox.erpnext.adhd.ADHDSettings = settings;
+	run(["form_focus.js"], sandbox);
+	return { fire: (detail) => listeners["focuspanel:timercomplete"]({ detail }), alerts };
+}
+
+test("a finished break does not say time's up on the form you were working in", () => {
+	const { fire, alerts } = loadFormFocus();
+	fire({ mode: "break", minutes: 5 });
+	assert.equal(alerts.length, 0);
+	fire({ mode: "work", minutes: 10 });
+	assert.equal(alerts.length, 1);
+	fire(null);
+	assert.equal(alerts.length, 2, "an event without detail still alerts, as it always did");
+});
+
+test("the time's-up alert follows the Time-Boxing Warnings setting", () => {
+	const off = loadFormFocus({ settings: { get: (key) => key !== "timebox_warnings" } });
+	off.fire({ mode: "work", minutes: 10 });
+	assert.equal(off.alerts.length, 0);
+	const on = loadFormFocus({ settings: { get: () => true } });
+	on.fire({ mode: "work", minutes: 10 });
+	assert.equal(on.alerts.length, 1);
 });
 
 // ---- "Done Well" on submit ------------------------------------------------------------------------------------
