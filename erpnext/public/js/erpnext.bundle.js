@@ -48,6 +48,7 @@ import "./adhd/adhd_mode";         // Core toggle (must be first)
 import "./adhd/focus_panel";       // Focus panel + Pomodoro timer
 import "./adhd/adhd_time_log"; // Pomodoro time-log prompt
 import "./adhd/adhd_timebox_timer"; // Custom-duration timer API
+import "./adhd/adhd_payment_digest"; // Focus Panel receivables summary
 import "./adhd/form_focus";        // Form simplification & tooltips
 import "./adhd/task_kanban";       // Task Kanban board
 import "./adhd/adhd_notifications"; // Enhanced notifications
