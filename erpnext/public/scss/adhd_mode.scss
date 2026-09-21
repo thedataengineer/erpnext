@@ -1945,3 +1945,46 @@ body.adhd-mode {
 	gap: 8px;
 	margin-top: 12px;
 }
+
+.adhd-module-section,
+.adhd-suggestion-banner {
+	margin-bottom: 16px;
+	padding: 12px;
+	border: 1px solid var(--border-color);
+	border-radius: var(--border-radius);
+	background: var(--fg-color);
+}
+
+.adhd-suggestion-banner {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+
+	button {
+		border: 0;
+		background: transparent;
+		font-size: 18px;
+	}
+}
+
+.adhd-module-cards {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.adhd-module-card {
+	display: flex;
+	flex-direction: column;
+	padding: 8px 12px;
+	border: 1px solid var(--border-color);
+	border-radius: var(--border-radius);
+
+	small {
+		color: var(--text-muted);
+	}
+}
+
+.adhd-module-hidden {
+	display: none;
+}
