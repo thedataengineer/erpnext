@@ -13,7 +13,7 @@ function is_smart_inbox_enabled() {
 frappe.pages["adhd-inbox"].on_page_load = function (wrapper) {
 	frappe.adhd_inbox_page = frappe.ui.make_app_page({
 		parent: wrapper,
-		title: __("ADHD Inbox"),
+		title: __("Focus Inbox"),
 		single_column: true,
 	});
 };

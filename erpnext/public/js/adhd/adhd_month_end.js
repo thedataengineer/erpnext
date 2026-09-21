@@ -178,7 +178,7 @@ function renderReadinessSection($container, context) {
 async function initMonthEndChecklist(container) {
 	const $container = $(container);
 	if (!erpnext.adhd?.isActive?.()) {
-		$container.html(`<div class="text-muted">${__("ADHD mode is off.")}</div>`);
+		$container.html(`<div class="text-muted">${__("Focus mode is off.")}</div>`);
 		return;
 	}
 

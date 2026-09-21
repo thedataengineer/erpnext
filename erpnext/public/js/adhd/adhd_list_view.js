@@ -315,7 +315,7 @@ frappe.provide("erpnext.adhd");
 		if ($rows.length > 200) {
 			if (!listview._adhdStockLimitNoticeShown) {
 				frappe.show_alert({
-					message: __("ADHD stock health: showing is limited to 200 visible items."),
+					message: __("Focus stock health: showing is limited to 200 visible items."),
 					indicator: "blue",
 				});
 				listview._adhdStockLimitNoticeShown = true;

@@ -9,6 +9,10 @@ Status meanings:
 - **Blocked:** The required application structure or dependency is absent.
 - **Planned:** The ticket exists, but no matching implementation is present.
 
+## Naming
+
+People see "Focus" everywhere: Focus Mode, Focus Settings, Focus Inbox, Focus Home, Focus Panel. "ADHD" is kept only where it is an internal name and nothing a person reads: ticket numbers (ADHD-0NN), file and module names, the `erpnext.adhd` JavaScript namespace, `frappe.boot.adhd_mode`, CSS classes, the `/desk/adhd-inbox` and `/desk/adhd-task-board` routes, and the `ADHD Usage Log` DocType, module and `ADHD Usage Summary` report (System Manager only). Renaming those needs data-migrating patches and is not done.
+
 ## Runtime architecture
 
 Client modules live under `erpnext/public/js/adhd/` and are imported in dependency order by `erpnext/public/js/erpnext.bundle.js`. `erpnext/hooks.py` includes that bundle; it does not register one `doctype_js` entry per ADHD feature.
@@ -25,7 +29,7 @@ Server-backed features call whitelisted RPC modules:
 ## ADHD-001 through ADHD-020
 
 - **ADHD-001, Implemented:** Workflow document chain navigator, `adhd_chain_navigator.js`.
-- **ADHD-002, Implemented:** Smart Inbox, `adhd_smart_inbox.js` and `erpnext/setup/page/adhd_inbox/`. It opens at `/desk/adhd-inbox`; the ADHD Home workspace (`erpnext/setup/workspace/adhd_home/`) links to it and to the Task Board. The workspace is named so it does not share a slug with the page, which Frappe would resolve to the workspace first.
+- **ADHD-002, Implemented:** Smart Inbox, `adhd_smart_inbox.js` and `erpnext/setup/page/adhd_inbox/`. It opens at `/desk/adhd-inbox`; the Focus Home workspace (`erpnext/setup/workspace/focus_home/`) links to it and to the Task Board. The workspace is named so it does not share a slug with the page, which Frappe would resolve to the workspace first.
 - **ADHD-003, Implemented:** Mandatory-field guided save, `adhd_form_wizard.js`.
 - **ADHD-004, Implemented:** Assistant recipes for Task, Expense Claim, Material Request, and Timesheet, `erpnext/assistant/recipes.py`.
 - **ADHD-005, Implemented:** Keyboard shortcut reference, `adhd_help.js`.
@@ -106,7 +110,7 @@ There is no `docs/tickets/ADHD-062.md`. ADHD-061 is the highest existing ticket.
 - **Not seen in a browser.** Nothing here has been exercised in a logged-in Desk. Payment Entry timing (waiting for ERPNext's own party handler), the payment-digest hand-off, and the list-view heat map need that check first.
 - **Payment Entry** does not recalculate `paid_amount` after applying a shortlisted invoice.
 - **Chain navigator** on a Quotation cannot see existing Delivery Notes or Sales Invoices (Frappe's `linked_with` does not return them from a Quotation), so those steps may offer a duplicate.
-- **ADHD Home** is a public workspace, so it appears in the sidebar for every user whether or not they use ADHD mode.
+- **Focus Home** is a public workspace, so it appears in the sidebar for every user whether or not they use Focus Mode.
 - **Command bar and chat** (`erpnext/assistant/`) are deliberately available to every user, not only in ADHD mode: Cmd/Ctrl+K opens the bar, Alt+J the chat.
 
 ## Reproducible checks

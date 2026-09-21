@@ -32,7 +32,7 @@ def _text(value):
 class ADHDUsageLog(Document):
 	def before_insert(self):
 		if self.event_type not in ALLOWED_EVENT_TYPES:
-			frappe.throw(_("Unknown ADHD event type."), frappe.ValidationError)
+			frappe.throw(_("Unknown Focus event type."), frappe.ValidationError)
 
 
 @frappe.whitelist()

@@ -238,7 +238,7 @@ test("ADHD-025 adds Compare Responses to a submitted RFQ in ADHD mode only", () 
 	refresh(submitted);
 	assert.equal(submitted.added.length, 1);
 	assert.equal(submitted.added[0].label, "Compare Responses");
-	assert.equal(submitted.added[0].group, "ADHD");
+	assert.equal(submitted.added[0].group, "Focus");
 
 	for (const docstatus of [0, 2]) {
 		const other = makeRfq(env, { docstatus });
@@ -276,7 +276,7 @@ test("ADHD-025 adds and removes the button when the mode is switched with the fo
 	assert.equal(frm.added.length, 1);
 
 	env.setMode(false);
-	assert.deepEqual(plain(frm.removed), [{ label: "Compare Responses", group: "ADHD" }]);
+	assert.deepEqual(plain(frm.removed), [{ label: "Compare Responses", group: "Focus" }]);
 	assert.equal(frm.custom_buttons["Compare Responses"], undefined);
 
 	env.setMode(true);

@@ -7,8 +7,8 @@ frappe.provide("erpnext.adhd");
 	// (assistant_bar.js), and the Frappe desk ones (ui/keyboard.js, ui/sidebar/sidebar.js, form/form.js,
 	// form/toolbar.js, list/list_view.js).
 	const SHORTCUTS = [
-		{ context: "ADHD Mode", key: "Alt+A", description: "Toggle ADHD mode" },
-		{ context: "ADHD Mode", key: "Alt+Shift+/", description: "Open this shortcut reference" },
+		{ context: "Focus Mode", key: "Alt+A", description: "Toggle Focus mode" },
+		{ context: "Focus Mode", key: "Alt+Shift+/", description: "Open this shortcut reference" },
 		{ context: "Assistant", key: "Alt+J", description: "Open the assistant chat" },
 		{ context: "Assistant", key: "Ctrl/Cmd+K", description: "Open the command bar" },
 		{ context: "Global", key: "Ctrl+G", description: "Open global search" },
@@ -81,7 +81,7 @@ frappe.provide("erpnext.adhd");
 						frappe.boot && frappe.boot.adhd_mode
 							? ""
 							: `<div class="adhd-help-mode-prompt">${__(
-									"Turn on ADHD Mode with the Focus button or Alt+A to unlock ADHD-specific shortcuts."
+									"Turn on Focus Mode with the Focus button or Alt+A to unlock Focus Mode shortcuts."
 							  )}</div>`
 					}
 					<input class="adhd-help-search" type="search" placeholder="${__("Search shortcuts…")}">

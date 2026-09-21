@@ -50,13 +50,13 @@ erpnext.adhd.FocusPanel = class FocusPanel {
 				<!-- ADHD Mode Switch -->
 				<div class="afp-section afp-mode-section">
 					<div class="afp-mode-copy">
-						<div class="afp-section-title">🧠 ADHD Mode</div>
+						<div class="afp-section-title">🧠 Focus Mode</div>
 						<div class="afp-mode-description">Show focus-friendly tools and workflow guidance.</div>
 					</div>
 					<label class="afp-switch" for="afp-adhd-mode-switch">
 						<input type="checkbox" id="afp-adhd-mode-switch" />
 						<span class="afp-switch-slider"></span>
-						<span class="sr-only">${__("Toggle ADHD Mode")}</span>
+						<span class="sr-only">${__("Toggle Focus Mode")}</span>
 					</label>
 				</div>
 

@@ -310,10 +310,10 @@ test("task board on (the default): the page builds the board", () => {
 	assert.equal(state.built, 1);
 });
 
-test("task board off: the page says it is switched off in ADHD Settings, says how to switch it on, and builds nothing", () => {
+test("task board off: the page says it is switched off in Focus Settings, says how to switch it on, and builds nothing", () => {
 	const { env, sandbox, state } = loadTaskBoardPage({ task_kanban: false });
 	assert.equal(state.built, 0);
-	assert.ok(state.texts.some((text) => /switched off in ADHD Settings/.test(text)));
+	assert.ok(state.texts.some((text) => /switched off in Focus Settings/.test(text)));
 	assert.ok(state.texts.some((text) => /right-click.*Focus button.*Task Kanban View/.test(text)));
 	assert.ok(!sandbox.erpnext.adhd.taskKanban);
 	// it never switches the setting on for the person
@@ -335,7 +335,7 @@ test("task board follows the switch while its page is open", async () => {
 	assert.equal(state.built, 1);
 	assert.equal(sandbox.erpnext.adhd.taskKanban, null);
 	assert.ok(state.texts.length > messages);
-	assert.ok(state.texts.slice(messages).some((text) => /switched off in ADHD Settings/.test(text)));
+	assert.ok(state.texts.slice(messages).some((text) => /switched off in Focus Settings/.test(text)));
 
 	// another setting changing does not rebuild the page
 	const texts = state.texts.length;

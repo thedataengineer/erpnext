@@ -75,7 +75,7 @@ erpnext.adhd.ADHDSettings = {
 		).join("");
 
 		const dialog = new frappe.ui.Dialog({
-			title: __("🧠 ADHD Mode Settings"),
+			title: __("🧠 Focus Mode Settings"),
 			fields: [{ fieldtype: "HTML", fieldname: "settings" }],
 			primary_action_label: __("Done"),
 			primary_action: () => dialog.hide(),

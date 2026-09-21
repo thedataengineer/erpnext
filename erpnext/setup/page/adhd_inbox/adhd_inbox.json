@@ -4,7 +4,7 @@
  "docstatus": 0,
  "doctype": "Page",
  "idx": 0,
- "modified": "2026-09-20 00:00:00.000000",
+ "modified": "2026-09-21 21:30:00.000000",
  "modified_by": "Administrator",
  "module": "Setup",
  "name": "adhd-inbox",
@@ -19,5 +19,5 @@
  "standard": "Yes",
  "style": null,
  "system_page": 0,
- "title": "ADHD Inbox"
+ "title": "Focus Inbox"
 }

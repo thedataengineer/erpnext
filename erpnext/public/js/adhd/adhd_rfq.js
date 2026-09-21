@@ -256,7 +256,7 @@ frappe.provide("erpnext.adhd");
 	function syncCompareButton(frm) {
 		if (frm.doctype !== RFQ_DOCTYPE || !frm.doc) return;
 		const label = __("Compare Responses");
-		const group = __("ADHD");
+		const group = __("Focus");
 		const wanted = adhdOn() && cint(frm.doc.docstatus) === 1;
 		const present = Boolean(frm.custom_buttons?.[label]);
 		if (wanted && !present) {

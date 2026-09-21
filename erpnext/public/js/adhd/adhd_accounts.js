@@ -201,7 +201,7 @@ erpnext.adhd.removeJournalEntryBalanceMeter = removeJournalEntryBalanceMeter;
 			)
 			.forEach((key) => localStorage.removeItem(key));
 		frappe.show_alert({
-			message: __("ADHD cost center and dimension defaults cleared."),
+			message: __("Focus cost center and dimension defaults cleared."),
 			indicator: "blue",
 		});
 	};

@@ -12,7 +12,7 @@ function is_task_kanban_setting_on() {
 	return !settings || Boolean(settings.get("task_kanban"));
 }
 
-// What the page says in place of the board: the mode is off, or the board is switched off in ADHD Settings.
+// What the page says in place of the board: the mode is off, or the board is switched off in Focus Settings.
 function show_task_board_off_message(page, state) {
 	const $message = $('<div class="adhd-task-board-off text-muted">').css({
 		padding: "48px 16px",
@@ -21,7 +21,7 @@ function show_task_board_off_message(page, state) {
 
 	if (state === "switched_off") {
 		$message
-			.append($("<p>").text(__("The Task Board is switched off in ADHD Settings.")))
+			.append($("<p>").text(__("The Task Board is switched off in Focus Settings.")))
 			.append(
 				$("<p>").text(
 					__(
@@ -31,7 +31,7 @@ function show_task_board_off_message(page, state) {
 			)
 			.append(
 				$('<button type="button" class="btn btn-default btn-sm">')
-					.text(__("Open ADHD Settings"))
+					.text(__("Open Focus Settings"))
 					.on("click", () => {
 						if (erpnext.adhd && erpnext.adhd.ADHDSettings) erpnext.adhd.ADHDSettings.openPanel();
 					})
