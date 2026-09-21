@@ -66,6 +66,7 @@ frappe.ui.form.on("Purchase Order", {
 			erpnext.set_unit_price_items_note(frm);
 		}
 		erpnext.buying.prevent_past_schedule_dates(frm);
+		erpnext.adhd?.initPurchaseOrderStatusPanel?.(frm);
 	},
 
 	get_materials_from_supplier: function (frm) {

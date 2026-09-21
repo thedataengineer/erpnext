@@ -1,0 +1,56 @@
+body.adhd-mode {
+	.adhd-payment-section {
+		margin-top: 10px;
+		padding-top: 10px;
+		border-top: 1px solid var(--border-color);
+	}
+
+	.adhd-payment-header {
+		display: flex;
+		width: 100%;
+		align-items: center;
+		justify-content: space-between;
+		border: 0;
+		background: none;
+		cursor: pointer;
+	}
+
+	.adhd-payment-title,
+	.adhd-payment-amount {
+		font-weight: 600;
+	}
+
+	.adhd-payment-total {
+		margin: 6px 0;
+		font-size: 0.82rem;
+	}
+
+	.adhd-payment-subhead {
+		margin: 8px 0 4px;
+		color: var(--text-muted);
+		font-size: 0.75rem;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+	}
+
+	.adhd-payment-row {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		padding: 3px 0;
+		font-size: 0.82rem;
+	}
+
+	.adhd-payment-customer {
+		flex: 1;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.adhd-payment-empty {
+		margin-bottom: 8px;
+		color: var(--text-muted);
+		font-size: 0.78rem;
+	}
+}

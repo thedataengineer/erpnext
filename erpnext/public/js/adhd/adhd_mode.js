@@ -39,8 +39,16 @@ erpnext.adhd.ADHDMode = class ADHDMode {
 		this._apply(true, true);
 	}
 
+	activate() {
+		this.enable();
+	}
+
 	disable() {
 		this._apply(false, true);
+	}
+
+	deactivate() {
+		this.disable();
 	}
 
 	_apply(state, notify = true) {
@@ -96,9 +104,27 @@ erpnext.adhd.ADHDMode = class ADHDMode {
 	isActive() {
 		return this.active;
 	}
+
+	getState() {
+		const settings = window.ADHDSettings && erpnext.adhd.ADHD_FEATURES
+			? Object.fromEntries(
+					erpnext.adhd.ADHD_FEATURES.map((feature) => [
+						feature.key,
+						window.ADHDSettings.get(feature.key),
+					])
+				)
+			: {};
+		return {
+			isActive: this.active,
+			enabledSettings: settings,
+			pomodoroRunning: Boolean(erpnext.adhd.focusPanel?.timerRunning),
+			currentForm: window.cur_frm?.doctype || null,
+		};
+	}
 };
 
 erpnext.adhd.mode = new erpnext.adhd.ADHDMode();
+window.ADHDMode = erpnext.adhd.mode;
 
 frappe.after_ajax(() => {
 	_addNavbarToggle();
@@ -127,8 +153,34 @@ function _addNavbarToggle() {
 
 		navbarRight.parentNode && navbarRight.parentNode.insertBefore(li, navbarRight);
 
-		document.getElementById("adhd-mode-toggle").addEventListener("click", (e) => {
+		const toggle = document.getElementById("adhd-mode-toggle");
+		let longPressTimer = null;
+		let settingsOpened = false;
+		const cancelLongPress = () => {
+			clearTimeout(longPressTimer);
+			longPressTimer = null;
+		};
+		toggle.addEventListener("contextmenu", (e) => {
 			e.preventDefault();
+			window.ADHDSettings?.openPanel();
+		});
+		toggle.addEventListener("mousedown", () => {
+			settingsOpened = false;
+			longPressTimer = setTimeout(() => {
+				settingsOpened = true;
+				window.ADHDSettings?.openPanel();
+			}, 600);
+		});
+		["mouseup", "mouseleave"].forEach((eventName) =>
+			toggle.addEventListener(eventName, cancelLongPress)
+		);
+		toggle.addEventListener("click", (e) => {
+			e.preventDefault();
+			cancelLongPress();
+			if (settingsOpened) {
+				settingsOpened = false;
+				return;
+			}
 			erpnext.adhd.mode.toggle();
 		});
 
@@ -141,3 +193,47 @@ erpnext.adhd.onStateChange = (fn) => erpnext.adhd.mode.onStateChange(fn);
 erpnext.adhd.enable = () => erpnext.adhd.mode.enable();
 erpnext.adhd.disable = () => erpnext.adhd.mode.disable();
 erpnext.adhd.toggle = () => erpnext.adhd.mode.toggle();
+
+let doneWellTimer = null;
+erpnext.adhd.showDoneWell = (message, cardElement) => {
+	if (
+		!erpnext.adhd.mode.isActive() ||
+		(window.ADHDSettings && !window.ADHDSettings.get("done_well"))
+	) {
+		return;
+	}
+	clearTimeout(doneWellTimer);
+	frappe.show_alert({ message, indicator: "green" }, 2);
+	document.body.classList.remove("adhd-done-pulse");
+	void document.body.offsetWidth;
+	document.body.classList.add("adhd-done-pulse");
+	doneWellTimer = setTimeout(() => document.body.classList.remove("adhd-done-pulse"), 600);
+	if (cardElement) {
+		cardElement.classList.add("adhd-card-done");
+		cardElement.addEventListener(
+			"animationend",
+			() => cardElement.classList.remove("adhd-card-done"),
+			{ once: true }
+		);
+	}
+};
+
+frappe.ui.form.on("*", {
+	before_save(frm) {
+		frm._adhdSaveStart = Date.now();
+	},
+	after_save(frm) {
+		if (!frm._adhdSaveStart) return;
+		window.ADHDTelemetry?.emit({
+			event_type: "form_save",
+			doctype_name: frm.doctype,
+			duration_ms: Date.now() - frm._adhdSaveStart,
+		});
+		delete frm._adhdSaveStart;
+	},
+	after_submit(frm) {
+		erpnext.adhd.showDoneWell(
+			__("{0} {1} submitted.", [frm.doc.doctype, frm.doc.name])
+		);
+	},
+});

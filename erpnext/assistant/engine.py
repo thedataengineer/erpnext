@@ -124,6 +124,9 @@ def _classify_prompt() -> str:
 		"- log_note: record a call, meeting or conversation that already happened with a lead or customer\n"
 		"- create_opportunity: a potential deal or sale for a lead or customer, often with a value\n"
 		"- follow_up: a reminder to contact or chase someone later (call, email, send something)\n"
+		"- create_expense_claim: add an employee expense claim\n"
+		"- create_material_request: request stock or materials\n"
+		"- create_timesheet_detail: log time against a specific task or project\n"
 		f"- my_day: {QUERIES['my_day']}\n"
 		f"- hours_summary: {QUERIES['hours_summary']}\n"
 		f"- pipeline: {QUERIES['pipeline']}\n"
@@ -137,6 +140,9 @@ def _classify_prompt() -> str:
 		'"just spoke to Globex, they want a proposal by friday" -> log_note\n'
 		'"opportunity for Initech: ERP audit, 20k, closing end of month" -> create_opportunity\n'
 		'"follow up with Acme next tuesday" -> follow_up\n'
+		'"log expense 850 for travel" -> create_expense_claim\n'
+		'"request 50 units of item RM-001 for next week" -> create_material_request\n'
+		'"log time on task TASK-0032 1.5h" -> create_timesheet_detail\n'
 		'"what should I work on" -> my_day\n'
 		'"how many hours this week" -> hours_summary\n'
 		'"how is my pipeline" -> pipeline'

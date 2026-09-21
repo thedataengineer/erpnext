@@ -44,12 +44,27 @@ import "./sales_trends_filters.js";
 import "./purchase_trends_filters.js";
 
 // ADHD-Friendly Mode — load in dependency order
+import "./adhd/adhd_settings"; // Per-feature settings
 import "./adhd/adhd_mode";         // Core toggle (must be first)
+import "./adhd/adhd_telemetry"; // Opt-in anonymous interaction signals
 import "./adhd/focus_panel";       // Focus panel + Pomodoro timer
+import "./adhd/adhd_month_end"; // Month-end close checklist
+import "./adhd/adhd_time_log"; // Pomodoro time-log prompt
+import "./adhd/adhd_timebox_timer"; // Custom-duration timer API
+import "./adhd/adhd_payment_digest"; // Focus Panel receivables summary
+import "./adhd/adhd_field_help"; // Canonical contextual field help
 import "./adhd/form_focus";        // Form simplification & tooltips
 import "./adhd/task_kanban";       // Task Kanban board
+import "./adhd/adhd_accounts"; // Journal Entry balance meter
+import "./adhd/adhd_buying"; // Purchase Order lifecycle panel
 import "./adhd/adhd_notifications"; // Enhanced notifications
 import "./adhd/adhd_chain_navigator"; // Workflow document chain navigator
+import "./adhd/adhd_smart_inbox"; // Daily priorities and resume panel
+import "./adhd/adhd_form_wizard"; // Guided mandatory-field save
+import "./adhd/adhd_help"; // Keyboard shortcut reference
+import "./adhd/adhd_list_view"; // Due-date heat map
+import "./adhd/adhd_deadline_banner"; // Contextual deadline nudges
+import "./adhd/adhd_test_utils"; // Conditional developer test harness
 
 // Assistant: local-LLM chat that fills in forms from plain sentences
 import "./assistant/assistant_view";

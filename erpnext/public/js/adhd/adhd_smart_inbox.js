@@ -7,6 +7,7 @@ frappe.provide("erpnext.adhd");
 (() => {
 	const RECENT_STORAGE_KEY = "adhd_recent_docs";
 	const RESUME_STORAGE_KEY = "adhd_resume_docs";
+	const MODULES = ["Accounting", "Buying", "Stock", "Selling", "Manufacturing", "Projects", "Support"];
 	const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 	let refreshInterval = null;
 	let recentTrackerRegistered = false;
@@ -30,6 +31,101 @@ frappe.provide("erpnext.adhd");
 
 	function escapeHTML(value) {
 		return frappe.utils.escape_html(value == null ? "" : String(value));
+	}
+
+	function frequencyKey() {
+		return `adhd_module_freq_${frappe.session.user}`;
+	}
+
+	function moduleSlug(moduleName) {
+		return String(moduleName).toLowerCase().replaceAll(" ", "-");
+	}
+
+	function loadFrequencyStore() {
+		try {
+			return JSON.parse(localStorage.getItem(frequencyKey())) || {};
+		} catch {
+			return {};
+		}
+	}
+
+	function recordVisit(moduleName) {
+		if (!moduleName || !MODULES.includes(moduleName)) return;
+		const store = loadFrequencyStore();
+		const dow = String(new Date().getDay());
+		store[moduleName] ||= {};
+		store[moduleName][dow] = (store[moduleName][dow] || 0) + 1;
+		localStorage.setItem(frequencyKey(), JSON.stringify(store));
+		const dates = new Set(JSON.parse(localStorage.getItem("adhd_session_dates") || "[]"));
+		dates.add(frappe.datetime.get_today());
+		localStorage.setItem("adhd_session_dates", JSON.stringify([...dates]));
+	}
+
+	function getRankedModules() {
+		const store = loadFrequencyStore();
+		const dow = String(new Date().getDay());
+		return Object.keys(store)
+			.filter((moduleName) => (store[moduleName]?.[dow] || 0) > 0)
+			.sort((left, right) => store[right][dow] - store[left][dow]);
+	}
+
+	function clearFrequencyStore() {
+		localStorage.removeItem(frequencyKey());
+		localStorage.removeItem("adhd_session_dates");
+	}
+
+	function renderModuleSuggestions($body) {
+		const store = loadFrequencyStore();
+		const ranked = getRankedModules();
+		const dow = String(new Date().getDay());
+		const sessionDates = JSON.parse(localStorage.getItem("adhd_session_dates") || "[]");
+		const hideUnvisited = sessionDates.length >= 30;
+		const ordered = [...ranked, ...MODULES.filter((moduleName) => !ranked.includes(moduleName))];
+		const cards = ordered
+			.map((moduleName, index) => {
+				const total = Object.values(store[moduleName] || {}).reduce(
+					(sum, count) => sum + Number(count),
+					0
+				);
+				const hidden = hideUnvisited && total === 0;
+				return `<a href="/app/${moduleSlug(moduleName)}"
+					class="adhd-module-card ${hidden ? "adhd-module-hidden" : ""}"
+					data-module="${moduleName}" style="order:${index + 1}">
+					<span>${escapeHTML(__(moduleName))}</span>
+					${index === 0 && ranked.length ? `<small>${__("📌 Your top module today")}</small>` : ""}
+				</a>`;
+			})
+			.join("");
+		const top = ranked[0];
+		const count = top ? store[top]?.[dow] || 0 : 0;
+		const today = frappe.datetime.get_today().replaceAll("-", "_");
+		const dismissalKey = `adhd_suggestion_dismissed_${today}`;
+		const banner =
+			top && count >= 3 && !localStorage.getItem(dismissalKey)
+				? `<div class="adhd-suggestion-banner">
+					<a href="/app/${moduleSlug(top)}">${__(
+						"📅 You usually work on {0} on {1}. Start there?",
+						[top, new Date().toLocaleDateString(undefined, { weekday: "long" })]
+					)}</a>
+					<button type="button" aria-label="${__("Dismiss")}">×</button>
+				</div>`
+				: "";
+		$body.prepend(`
+			${banner}
+			<section class="adhd-module-section">
+				<h3>${__("Your modules")}</h3>
+				<div class="adhd-module-cards">${cards}</div>
+				${hideUnvisited ? `<button class="btn btn-xs btn-default adhd-show-all">${__("Show all modules")}</button>` : ""}
+			</section>
+		`);
+		$body.find(".adhd-suggestion-banner button").on("click", (event) => {
+			localStorage.setItem(dismissalKey, "1");
+			$(event.currentTarget).closest(".adhd-suggestion-banner").remove();
+		});
+		$body.find(".adhd-show-all").on("click", (event) => {
+			$body.find(".adhd-module-hidden").removeClass("adhd-module-hidden");
+			$(event.currentTarget).remove();
+		});
 	}
 
 	function makeSkeleton() {
@@ -307,6 +403,7 @@ frappe.provide("erpnext.adhd");
 				</section>
 			</div>
 		`);
+		renderModuleSuggestions($body);
 		$body.find(".adhd-resume-clear").on("click", clearResumeItems);
 
 		refreshSmartInbox();
@@ -341,6 +438,12 @@ frappe.provide("erpnext.adhd");
 	}
 
 	frappe.router.on("change", () => {
+		const route = frappe.get_route();
+		const candidate = route?.[0]?.toLowerCase() === "workspaces" ? route[1] : route?.[0];
+		const moduleName = MODULES.find(
+			(module) => moduleSlug(module) === String(candidate || "").toLowerCase()
+		);
+		recordVisit(moduleName);
 		if (frappe.get_route_str && frappe.get_route_str() !== "adhd-inbox") {
 			clearRefreshInterval();
 		}
@@ -358,5 +461,8 @@ frappe.provide("erpnext.adhd");
 		refreshResumeItems: loadResumeItems,
 		refresh: refreshSmartInbox,
 		startAutoRefresh: setupRefreshInterval,
+		recordVisit,
+		getRankedModules,
+		clearStore: clearFrequencyStore,
 	};
 })();

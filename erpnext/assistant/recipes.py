@@ -123,6 +123,56 @@ def _build_task(v: dict[str, Any]) -> dict[str, Any]:
 		"exp_end_date": v.get("due_date"),
 		"priority": v.get("priority"),
 		"description": v.get("description"),
+		"_assign": frappe.as_json([v["assigned_to"]]) if v.get("assigned_to") else None,
+	}
+
+
+def _build_expense_claim(v: dict[str, Any]) -> dict[str, Any]:
+	return {
+		"doctype": "Expense Claim",
+		"employee": v.get("employee"),
+		"expenses": [
+			{
+				"expense_date": v.get("expense_date"),
+				"expense_type": v.get("expense_type"),
+				"amount": v.get("amount"),
+				"description": v.get("description"),
+			}
+		],
+	}
+
+
+def _build_material_request(v: dict[str, Any]) -> dict[str, Any]:
+	return {
+		"doctype": "Material Request",
+		"material_request_type": v.get("material_request_type"),
+		"schedule_date": v.get("schedule_date"),
+		"items": [
+			{
+				"item_code": v.get("item_code"),
+				"qty": v.get("qty"),
+				"schedule_date": v.get("schedule_date"),
+				"warehouse": v.get("warehouse"),
+			}
+		],
+	}
+
+
+def _build_timesheet_detail(v: dict[str, Any]) -> dict[str, Any]:
+	start = _next_start(v.get("date") or nowdate())
+	return {
+		"doctype": "Timesheet",
+		"parent_project": v.get("project"),
+		"employee": _employee_for_user(),
+		"time_logs": [
+			{
+				"from_time": start,
+				"hours": v.get("hours"),
+				"project": v.get("project"),
+				"task": v.get("task"),
+				"activity_type": v.get("activity_type"),
+			}
+		],
 	}
 
 
@@ -430,6 +480,14 @@ RECIPES: dict[str, Recipe] = {
 					**_PROJECT,
 				),
 				Field(
+					"assigned_to",
+					"Assigned to",
+					"link",
+					required=True,
+					link_doctype="User",
+					link_label="full_name",
+				),
+				Field(
 					"due_date",
 					"Due",
 					"date",
@@ -447,7 +505,123 @@ RECIPES: dict[str, Recipe] = {
 				Field("description", "Notes", hint="extra detail, only if stated"),
 			),
 			build=_build_task,
+			defaults=lambda today: {
+				"assigned_to": frappe.session.user,
+				"due_date": (today + timedelta(days=3)).isoformat(),
+				"priority": "Medium",
+			},
 			done="Task added: {subject}.",
+		),
+		Recipe(
+			key="create_expense_claim",
+			short="expense claim",
+			label="New expense claim",
+			what="an expense claim",
+			doctype="Expense Claim",
+			fields=(
+				Field(
+					"employee",
+					"Employee",
+					"link",
+					required=True,
+					link_doctype="Employee",
+					link_label="employee_name",
+					ask="Which employee is this claim for?",
+				),
+				Field("expense_date", "Date", "date", required=True),
+				Field(
+					"expense_type",
+					"Expense type",
+					"link",
+					required=True,
+					link_doctype="Expense Claim Type",
+					ask="What type of expense was this?",
+				),
+				Field("amount", "Amount", "money", required=True),
+				Field("description", "Description", hint="what the expense was for, if stated"),
+			),
+			build=_build_expense_claim,
+			defaults=lambda today: {
+				"employee": _employee_for_user(),
+				"expense_date": today.isoformat(),
+			},
+			done="Expense claim added: {expense_type} for {amount} on {expense_date}.",
+		),
+		Recipe(
+			key="create_material_request",
+			short="material request",
+			label="New material request",
+			what="a material request",
+			doctype="Material Request",
+			fields=(
+				Field(
+					"item_code",
+					"Item",
+					"link",
+					required=True,
+					link_doctype="Item",
+					link_label="item_name",
+					ask="What item is needed?",
+				),
+				Field("qty", "Quantity", "number", required=True),
+				Field("schedule_date", "Needed by", "date", required=True, prefer="future"),
+				Field(
+					"material_request_type",
+					"Type",
+					"choice",
+					required=True,
+					choices=("Purchase", "Material Transfer", "Material Issue", "Manufacture"),
+				),
+				Field(
+					"warehouse",
+					"Warehouse",
+					"link",
+					link_doctype="Warehouse",
+					link_label="warehouse_name",
+				),
+			),
+			build=_build_material_request,
+			defaults=lambda today: {
+				"schedule_date": (today + timedelta(days=7)).isoformat(),
+				"material_request_type": "Purchase",
+			},
+			done="Material request added for {qty} × {item_code}, needed {schedule_date}.",
+		),
+		Recipe(
+			key="create_timesheet_detail",
+			short="time entry",
+			label="New timesheet entry",
+			what="a timesheet entry for a task or project",
+			doctype="Timesheet",
+			fields=(
+				Field(
+					"task",
+					"Task",
+					"link",
+					link_doctype="Task",
+					link_label="subject",
+				),
+				Field(
+					"project",
+					"Project",
+					"link",
+					link_filters={"status": "Open"},
+					**_PROJECT,
+				),
+				Field("hours", "Hours", "number", required=True),
+				Field("date", "Date", "date", required=True),
+				Field(
+					"activity_type",
+					"Activity",
+					"link",
+					link_doctype="Activity Type",
+				),
+			),
+			any_of=("task", "project"),
+			build=_build_timesheet_detail,
+			defaults=lambda today: {"date": today.isoformat(), "activity_type": "Execution"},
+			done="Logged {hours} on {subject} ({date}).",
+			subject_fields=("task", "project"),
 		),
 		Recipe(
 			key="create_project",

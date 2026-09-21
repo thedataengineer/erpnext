@@ -6,6 +6,34 @@
 // Import Google Font for better readability
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
+body.adhd-mode {
+	.adhd-wizard-banner {
+		background: var(--yellow-highlight, #fffbe6);
+		border-left: 4px solid var(--yellow-500, #eab308);
+		padding: 10px 16px;
+		border-radius: 4px;
+		margin-bottom: 8px;
+	}
+
+	.adhd-wizard-hint {
+		color: var(--text-muted);
+		font-size: 0.85rem;
+		margin-top: 4px;
+	}
+
+	.adhd-wizard-progress {
+		width: 100%;
+		height: 4px;
+		accent-color: var(--primary);
+	}
+
+	.adhd-wizard-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+	}
+}
+
 // Design tokens for ADHD mode
 body.adhd-mode {
 	--adhd-primary: #2D7D9A;
@@ -1793,5 +1821,197 @@ body.adhd-mode {
 	}
 	100% {
 		background-position: 0 50%;
+	}
+}
+
+@import "./adhd_help";
+@import "./adhd_list_view";
+@import "./adhd_deadline_banner";
+@import "./adhd_time_log";
+@import "./adhd_timebox";
+@import "./adhd_payment_digest";
+
+// ADHD-011 through ADHD-020 focused components
+.adhd-balance-meter {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 16px;
+	padding: 8px 12px;
+	background: var(--fg-color);
+	border-radius: 4px;
+	font-size: var(--text-sm);
+	margin-top: 6px;
+}
+
+.adhd-balanced {
+	color: var(--green-600);
+	font-weight: 600;
+}
+
+.adhd-unbalanced {
+	color: var(--red-600);
+	font-weight: 600;
+}
+
+.adhd-po-steps {
+	padding: 10px 16px;
+	background: var(--subtle-fg);
+	border-radius: 6px;
+	margin-bottom: 10px;
+}
+
+.adhd-po-step-row {
+	display: flex;
+	align-items: center;
+}
+
+.adhd-po-steps .adhd-step {
+	flex: 1;
+	text-align: center;
+	font-size: var(--text-sm);
+	color: var(--text-muted);
+	position: relative;
+}
+
+.adhd-po-steps .adhd-step--active {
+	color: var(--blue-500);
+	font-weight: 700;
+}
+
+.adhd-po-steps .adhd-step--done {
+	color: var(--green-600);
+	text-decoration: line-through;
+}
+
+.adhd-waiting-on {
+	font-size: var(--text-xs);
+	color: var(--text-muted);
+	margin: 4px 0;
+}
+
+.adhd-next-action {
+	margin-top: 8px;
+}
+
+.adhd-setting-row {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 8px 0;
+	border-bottom: 1px solid var(--border-color);
+}
+
+.adhd-settings-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-top: 12px;
+}
+
+.adhd-field-help-tip {
+	padding: 5px 8px;
+	margin-top: 4px;
+	border-left: 3px solid var(--blue-400);
+	background: var(--subtle-fg);
+	color: var(--text-muted);
+	font-size: var(--text-xs);
+}
+
+.adhd-month-end-checklist progress {
+	width: 100%;
+	margin: 6px 0 12px;
+}
+
+.adhd-month-end-step {
+	display: grid;
+	grid-template-columns: auto 1fr auto;
+	gap: 4px 8px;
+	align-items: center;
+	padding: 8px 0;
+	border-bottom: 1px solid var(--border-color);
+
+	small {
+		grid-column: 2 / 4;
+		color: var(--text-muted);
+	}
+
+	&.is-complete label {
+		text-decoration: line-through;
+	}
+}
+
+.adhd-time-badge,
+.adhd-auto-check {
+	font-size: var(--text-xs);
+	color: var(--text-muted);
+}
+
+.adhd-module-section,
+.adhd-suggestion-banner {
+	margin-bottom: 16px;
+	padding: 12px;
+	border: 1px solid var(--border-color);
+	border-radius: var(--border-radius);
+	background: var(--fg-color);
+}
+
+.adhd-suggestion-banner {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+
+	button {
+		border: 0;
+		background: transparent;
+		font-size: 18px;
+	}
+}
+
+.adhd-module-cards {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.adhd-module-card {
+	display: flex;
+	flex-direction: column;
+	padding: 8px 12px;
+	border: 1px solid var(--border-color);
+	border-radius: var(--border-radius);
+
+	small {
+		color: var(--text-muted);
+	}
+}
+
+.adhd-module-hidden {
+	display: none;
+}
+
+@keyframes adhd-done-glow {
+	0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
+	70% { box-shadow: 0 0 0 12px rgba(34, 197, 94, 0); }
+	100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+}
+
+@keyframes adhd-card-check {
+	0% { opacity: 1; transform: scale(1); }
+	40% { opacity: 1; transform: scale(1.05); }
+	100% { opacity: 0.6; transform: scale(1); }
+}
+
+.adhd-done-pulse {
+	animation: adhd-done-glow 0.6s ease-out;
+}
+
+.adhd-card-done {
+	animation: adhd-card-check 0.4s ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.adhd-done-pulse,
+	.adhd-card-done {
+		animation: none;
 	}
 }

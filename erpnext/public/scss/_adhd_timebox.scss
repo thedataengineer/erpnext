@@ -1,0 +1,25 @@
+body.adhd-mode {
+	.adhd-timebox-banner {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		justify-content: space-between;
+		margin-bottom: 8px;
+		padding: 8px 14px;
+		border-left: 4px solid var(--purple-400, #b37feb);
+		border-radius: 4px;
+		background: var(--purple-50, #f9f0ff);
+		font-size: 0.85rem;
+	}
+
+	.adhd-timebox-msg {
+		flex: 1;
+	}
+
+	.adhd-timebox-dismiss {
+		border: 0;
+		background: none;
+		color: inherit;
+		cursor: pointer;
+	}
+}

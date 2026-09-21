@@ -75,6 +75,13 @@ erpnext.adhd.FocusPanel = class FocusPanel {
 					</div>
 				</div>
 
+				<div class="afp-section">
+					<button type="button" class="btn btn-default btn-sm afp-month-end-toggle">
+						${__("📅 Month-End")}
+					</button>
+					<div class="afp-month-end" hidden></div>
+				</div>
+
 				<!-- Quick Note -->
 				<div class="afp-section">
 					<div class="afp-section-title">📝 Quick Note</div>
@@ -113,6 +120,13 @@ erpnext.adhd.FocusPanel = class FocusPanel {
 
 		document.getElementById("afp-timer-start")?.addEventListener("click", () => this._timerToggle());
 		document.getElementById("afp-timer-reset")?.addEventListener("click", () => this._timerReset());
+		document.querySelector(".afp-month-end-toggle")?.addEventListener("click", () => {
+			const container = document.querySelector(".afp-month-end");
+			if (!container) return;
+			container.hidden = !container.hidden;
+			this._activeTab = container.hidden ? "tasks" : "month_end";
+			if (!container.hidden) erpnext.adhd.initMonthEndChecklist?.(container);
+		});
 
 		document.querySelectorAll(".afp-preset").forEach((btn) => {
 			btn.addEventListener("click", () => {
@@ -167,6 +181,7 @@ erpnext.adhd.FocusPanel = class FocusPanel {
 	_renderTasks(tasks) {
 		const listEl = document.getElementById("afp-task-list");
 		if (!listEl) return;
+		this._tasks = tasks;
 
 		if (!tasks.length) {
 			listEl.innerHTML = `<div class="afp-empty">🎉 No open tasks! Time to plan your next steps.</div>`;
@@ -366,6 +381,7 @@ erpnext.adhd.FocusPanel = class FocusPanel {
 	show() {
 		if (this.panel) {
 			this.panel.classList.add("visible");
+			this._isOpen = true;
 			this._loadTasks();
 			localStorage.setItem("adhd_focus_panel_visible", "1");
 		}
@@ -374,6 +390,7 @@ erpnext.adhd.FocusPanel = class FocusPanel {
 	hide() {
 		if (this.panel) {
 			this.panel.classList.remove("visible");
+			this._isOpen = false;
 			localStorage.setItem("adhd_focus_panel_visible", "0");
 		}
 	}
@@ -386,6 +403,14 @@ erpnext.adhd.FocusPanel = class FocusPanel {
 				this.show();
 			}
 		}
+	}
+
+	getState() {
+		return {
+			isOpen: Boolean(this._isOpen),
+			activeTab: this._activeTab || "tasks",
+			taskCount: this._tasks?.length || 0,
+		};
 	}
 
 	destroy() {
@@ -402,6 +427,7 @@ erpnext.adhd.onStateChange && erpnext.adhd.onStateChange((active) => {
 	if (active) {
 		if (!erpnext.adhd.focusPanel) {
 			erpnext.adhd.focusPanel = new erpnext.adhd.FocusPanel();
+			window.FocusPanel = erpnext.adhd.focusPanel;
 		}
 
 		// Request notification permission

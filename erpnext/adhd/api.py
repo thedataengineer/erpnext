@@ -213,13 +213,17 @@ def get_action_queue(user=None):
 		)
 
 	workflow_filters = {"user": user, "status": "Open"}
-	if _has_field("Workflow Action", "workflow_state"):
+	has_workflow_state = _has_field("Workflow Action", "workflow_state")
+	if has_workflow_state:
 		workflow_filters["workflow_state"] = ("not in", ["Approved", "Rejected", "Cancelled"])
+	workflow_fields = ["name", "reference_doctype", "reference_name", "modified"]
+	if has_workflow_state:
+		workflow_fields.append("workflow_state")
 
 	for action in _get_list(
 		"Workflow Action",
 		filters=workflow_filters,
-		fields=["name", "reference_doctype", "reference_name", "workflow_state", "modified"],
+		fields=workflow_fields,
 		limit_page_length=MAX_ACTION_ITEMS,
 		order_by="modified desc",
 	):
@@ -230,7 +234,7 @@ def get_action_queue(user=None):
 					action.reference_doctype,
 					action.reference_name,
 					action.reference_name,
-					action.workflow_state,
+					action.get("workflow_state") or "Open",
 					action.modified,
 				)
 			)

@@ -4,29 +4,50 @@
 
 frappe.provide("erpnext.adhd");
 
-// Field explanations dictionary — plain English for common ERPNext fields
-const FIELD_HELP = {
-	"company": "The legal entity this record belongs to",
-	"currency": "The currency for money amounts in this document",
-	"exchange_rate": "How much 1 unit of foreign currency equals in your base currency",
-	"fiscal_year": "The accounting year period (often April–March or Jan–Dec)",
-	"naming_series": "The automatic ID/reference number format for this document",
-	"is_opening": "Check this if the entry is for an historical 'opening balance'",
-	"amended_from": "The previous version of this document before amendment",
-	"letter_head": "The letterhead/header to use when printing this document",
-	"print_language": "Language to use when printing this document",
-	"debit_to": "The accounting ledger where money is debited (received from customer)",
-	"credit_to": "The accounting ledger where money is credited (paid to supplier)",
-	"taxes_and_charges": "The tax template to apply automatically to this document",
-	"total_taxes_and_charges": "Total tax amount calculated from the items",
-	"grand_total": "The final total including all taxes and charges",
-	"net_total": "The total before taxes and charges are added",
-	"tax_category": "A grouping that determines which taxes apply",
-	"payment_terms_template": "How payment should be scheduled (e.g. Net 30 = pay within 30 days)",
-	"tc_name": "Terms and conditions document to attach",
-	"project": "The project this record is associated with",
-	"cost_center": "The budget/department this expense or income belongs to",
-};
+const FIELD_HELP = erpnext.adhd.FIELD_HELP || {};
+const fieldHelpCache = new Map();
+
+const TIMEBOX_DOCTYPES = ["Item", "Account", "BOM", "Print Format", "Custom Field"];
+const TIMEBOX_MINUTES = 10;
+
+function getFocusPanel() {
+	return frappe.focusPanel || (erpnext.adhd && erpnext.adhd.focusPanel);
+}
+
+function startPomodoro(minutes) {
+	const panel = getFocusPanel();
+	if (panel && typeof panel.startTimer === "function") {
+		panel.startTimer(minutes);
+		frappe.show_alert({ message: __("{0}-min timer started", [minutes]), indicator: "blue" });
+		return;
+	}
+	frappe.show_alert({ message: __("Open the Focus Panel to start your timer"), indicator: "blue" });
+}
+
+function renderTimeboxBanner(frm) {
+	frm.layout.$wrapper.find(".adhd-timebox-banner").remove();
+	if (!(frappe.boot && frappe.boot.adhd_mode) || frm.is_new()) return;
+	const dismissKey = `adhd_timebox_dismissed_${frm.doctype}_${frm.docname}`;
+	if (sessionStorage.getItem(dismissKey)) return;
+	const $banner = $(`
+		<div class="adhd-timebox-banner" role="status">
+			<span class="adhd-timebox-icon">⏱️</span>
+			<span class="adhd-timebox-msg">${__("Heads up: this form has a lot of options. Consider a {0}-min time-box.", [TIMEBOX_MINUTES])}</span>
+			<button type="button" class="btn btn-xs btn-default adhd-timebox-start">${__("Start {0}-min timer", [TIMEBOX_MINUTES])}</button>
+			<button type="button" class="adhd-timebox-dismiss" aria-label="${__("Dismiss")}">✕</button>
+		</div>
+	`);
+	const dismiss = () => {
+		sessionStorage.setItem(dismissKey, "1");
+		$banner.remove();
+	};
+	$banner.find(".adhd-timebox-start").on("click", () => {
+		startPomodoro(TIMEBOX_MINUTES);
+		dismiss();
+	});
+	$banner.find(".adhd-timebox-dismiss").on("click", dismiss);
+	frm.layout.$wrapper.prepend($banner);
+}
 
 erpnext.adhd.FormFocus = class FormFocus {
 	constructor() {
@@ -61,7 +82,11 @@ erpnext.adhd.FormFocus = class FormFocus {
 		}
 
 		// Remove ADHD form enhancements from current form
-		document.querySelectorAll(".adhd-field-help, .adhd-breadcrumb, .adhd-minimal-toggle").forEach(el => el.remove());
+		document
+			.querySelectorAll(
+				".adhd-field-help, .adhd-field-help-tip, .adhd-breadcrumb, .adhd-minimal-toggle"
+			)
+			.forEach((el) => el.remove());
 		document.querySelectorAll(".adhd-form-enhanced").forEach(el => el.classList.remove("adhd-form-enhanced"));
 	}
 
@@ -118,24 +143,66 @@ erpnext.adhd.FormFocus = class FormFocus {
 
 	_addFieldTooltips(frm) {
 		if (!frm.$wrapper) return;
+		if (frm._adhdHelpBound) return;
+		frm._adhdHelpBound = true;
 
-		// Add tooltips to known fields
-		frm.$wrapper.find(".frappe-control label").each(function () {
-			const fieldname = $(this).closest(".frappe-control").data("fieldname");
-			const help = FIELD_HELP[fieldname];
-			if (!help) return;
+		const hideTip = ($control, fieldname) => {
+			$control.find(".adhd-field-help-tip").remove();
+			const started = $control.data("adhd-help-start");
+			if (started && Date.now() - started > 2000) {
+				window.ADHDTelemetry?.emit({
+					event_type: "tooltip_dwell",
+					doctype_name: frm.doctype,
+					field_name: fieldname,
+					duration_ms: Date.now() - started,
+				});
+			}
+			$control.removeData("adhd-help-start");
+		};
 
-			if ($(this).find(".adhd-field-help").length) return;
+		const showTip = ($control, fieldname, text) => {
+			if (!text || !erpnext.adhd.isActive()) return;
+			hideTip($control, fieldname);
+			$("<div>").addClass("adhd-field-help-tip").text(text).appendTo($control);
+			$control.data("adhd-help-start", Date.now());
+		};
 
-			$(this).append(`
-				<span class="adhd-field-help" title="${help}" data-tippy-content="${help}">
-					<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-						<circle cx="12" cy="12" r="10"/>
-						<line x1="12" y1="16" x2="12" y2="12"/>
-						<line x1="12" y1="8" x2="12.01" y2="8"/>
-					</svg>
-				</span>
-			`);
+		frm.$wrapper.on("focusin.adhdFieldHelp", ".frappe-control :input", (event) => {
+			const $control = $(event.currentTarget).closest(".frappe-control");
+			const fieldname = $control.data("fieldname");
+			if (!fieldname) return;
+
+			const canonical = FIELD_HELP[frm.doctype]?.[fieldname];
+			if (canonical) {
+				showTip($control, fieldname, canonical);
+				return;
+			}
+
+			const key = `${frm.doctype}.${fieldname}`;
+			if (fieldHelpCache.has(key)) {
+				showTip($control, fieldname, fieldHelpCache.get(key));
+				return;
+			}
+			fieldHelpCache.set(key, null);
+			frappe.call({
+				method: "frappe.client.get_value",
+				args: {
+					doctype: "DocField",
+					filters: { parent: frm.doctype, fieldname },
+					fieldname: "description",
+				},
+				callback: (response) => {
+					const description = response.message?.description || null;
+					fieldHelpCache.set(key, description);
+					if (description && document.activeElement === event.currentTarget) {
+						showTip($control, fieldname, description);
+					}
+				},
+			});
+		});
+		frm.$wrapper.on("focusout.adhdFieldHelp", ".frappe-control :input", (event) => {
+			const $control = $(event.currentTarget).closest(".frappe-control");
+			hideTip($control, $control.data("fieldname"));
 		});
 	}
 
@@ -189,3 +256,21 @@ frappe.after_ajax(() => {
 		}, 600);
 	});
 });
+
+TIMEBOX_DOCTYPES.forEach((doctype) => {
+	frappe.ui.form.on(doctype, { refresh: renderTimeboxBanner });
+});
+
+document.addEventListener("focuspanel:timercomplete", () => {
+	if (!(frappe.boot && frappe.boot.adhd_mode)) return;
+	const route = frappe.get_route();
+	if (route[0] === "Form" && TIMEBOX_DOCTYPES.includes(route[1])) {
+		frappe.show_alert(
+			{ message: __("Time's up — did you get what you needed?"), indicator: "orange" },
+			10
+		);
+	}
+});
+
+erpnext.adhd.TIMEBOX_DOCTYPES = TIMEBOX_DOCTYPES;
+erpnext.adhd.renderTimeboxBanner = renderTimeboxBanner;
