@@ -29,6 +29,7 @@ class Kind:
 	label: Callable[[Row], str] | None = (
 		None  # how a name-matching conversation refers to it (defaults to title)
 	)
+	min_chars: int = 0  # search-as-you-type skips this kind until that many characters are typed
 
 	def label_of(self, row: Row) -> str:
 		return (self.label or self.title)(row)
@@ -105,10 +106,15 @@ KINDS: dict[str, Kind] = {
 			("subject", "sender", "sender_full_name"),
 			title=lambda r: _short(r.get("subject")) or _("(no subject)"),
 			subtitle=lambda r: _join(
-				_short(r.get("sender_full_name") or r.get("sender"), 60),
+				# a sender's name is whatever they chose to call themselves, so the address goes with it
+				f"{_short(r.get('sender_full_name'), 40)} <{_short(r.get('sender'), 50)}>"
+				if r.get("sender_full_name") and r.get("sender")
+				else _short(r.get("sender_full_name") or r.get("sender"), 60),
 				frappe.utils.formatdate(r["communication_date"]) if r.get("communication_date") else None,
 			),
 			filters={"communication_type": "Communication", "communication_medium": "Email"},
+			# a LIKE over subject and sender on a big mail table, on every keystroke: wait for a real word
+			min_chars=4,
 		),
 		Kind(
 			"Quotation",

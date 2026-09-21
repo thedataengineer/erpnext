@@ -62,6 +62,14 @@ class TestCues(unittest.TestCase):
 			"what should i do today",
 			"add an email to Acme's contact",
 			"i sent the proposal",
+			# found by the security review: they mention mail but are notes, tasks or other questions
+			"new email campaign for Acme",
+			"Have Sam email the client about pricing",
+			"Have Priya write the proposal",
+			"what mail server does Acme use",
+			"who wrote the SOW",
+			"Any update: she replied on Friday",
+			"Inbox Zero",
 		):
 			self.assertFalse(mail.is_email_question(text), text)
 
@@ -73,10 +81,24 @@ class TestCues(unittest.TestCase):
 			"email sync",
 			"hook up outlook",
 			"can you connect my mailbox jo@gmail.com",
+			"connect jo@gmail.com",
+			"please sync my email",
+			"connect jo@gmail.com password hunter2",
 		):
 			self.assertTrue(mail.is_connect_request(text), text)
-		for text in ("add an email address to Jo", "sync the timesheets", "my emails"):
+		for text in (
+			"add an email address to Jo",
+			"sync the timesheets",
+			"my emails",
+			# a customer whose name ends in "Sync" is not a request to sync email
+			"what did Acme Sync email me",
+			"link the email from Jo to the Acme lead",
+			"add outlook meeting invite for Jo",
+			"set up an inbox rule",
+			"connect the mail to the lead",
+		):
 			self.assertFalse(mail.is_connect_request(text), text)
+		self.assertTrue(mail.is_email_question("what did Acme Sync email me"))
 
 	def test_a_bare_fragment_is_left_to_the_model_not_the_cue(self):
 		# "emails about the proposal" reads like a query, but it is also how a note might start; while a draft
@@ -94,7 +116,11 @@ class TestCues(unittest.TestCase):
 			("any emails?", ""),
 			("show my emails", ""),
 			("what did the client say by email", ""),
-			("emails from 100%_abc", "100abc"),
+			("emails from 100%_abc", "100_abc"),
+			("what did Acme Sync email me", "Acme Sync"),
+			# a whole address is the term, not the part before its first dot or underscore
+			("emails from jo.smith@acme.com", "jo.smith@acme.com"),
+			("did john_smith@acme.com reply", "john_smith@acme.com"),
 		):
 			self.assertEqual(mail.term_of(text), term, text)
 
@@ -239,6 +265,51 @@ class TestMail(unittest.TestCase):
 		self.assertEqual(len(second["items"]), 3)
 		self.assertEqual(second["state"]["recipe"], "create_lead", "the open draft stays open")
 
+	def test_a_reply_the_owner_sent_is_not_listed_as_something_a_customer_wrote(self):
+		# Frappe stores an owner's reply that carries In-Reply-To as received mail
+		self.email("Re: quote (my reply)", sender="me@example.com", name="Me")
+		with patch.object(mail, "_own_addresses", return_value=["me@example.com"]):
+			subjects = [row["subject"] for row in mail.received_emails("")]
+		self.assertNotIn("Re: quote (my reply)", subjects)
+		self.assertIn("Re: quote", subjects)
+
+	def test_mail_the_person_may_not_read_is_dropped_even_when_the_list_query_returns_it(self):
+		# frappe.get_list applies roles and permission query conditions, not each document's own hook
+		with patch.object(mail, "_may_read", side_effect=lambda name: name != self.attached.name):
+			subjects = [row["subject"] for row in mail.received_emails("")]
+		self.assertNotIn("Following up", subjects)
+		self.assertIn("Lunch?", subjects)
+
+	def test_the_sender_is_shown_with_their_address(self):
+		# "Jane (CFO)" is whatever a sender chose to be called
+		self.email("Wire this today", sender="attacker@evil.example", name="Jane (CFO)")
+		row = next(r for r in mail.received_emails("wire") if r["subject"] == "Wire this today")
+		self.assertIn("<attacker@evil.example>", mail.email_items([row])[0]["meta"])
+
+	def test_a_mail_linked_through_the_timeline_opens_the_lead(self):
+		# Frappe links synced mail to the sender's Lead with a Communication Link row, not reference_*
+		mail_doc = self.email("Via the timeline", sender="jo@personal.example", name="Jo")
+		mail_doc.append("timeline_links", {"link_doctype": "Lead", "link_name": self.lead.name})
+		mail_doc.save(ignore_permissions=True)
+		row = next(r for r in mail.received_emails("timeline") if r["name"] == mail_doc.name)
+		self.assertEqual(mail.email_items([row])[0]["route"], ["Form", "Lead", self.lead.name])
+
+	def test_a_typed_password_is_not_used_kept_or_sent_to_the_model(self):
+		model = NoModel()
+		reply = engine.respond("my gmail password is hunter2", llm=model, today=TODAY)
+		self.assertEqual(model.calls, 0)
+		self.assertIn("password or key", reply["reply"])
+		self.assertNotIn("hunter2", json.dumps(reply))
+		self.assertIsNone(reply["state"]["recipe"])
+
+	def test_asking_to_connect_while_a_draft_is_open_keeps_the_drafts_card(self):
+		model = FakeLLM({"intent": "create_lead"}, {"lead_name": None, "company": "Initech", "email": None})
+		first = engine.respond("new lead at Initech", llm=model, today=TODAY)
+		second = engine.respond("connect my email", state=first["state"], llm=NoModel(), today=TODAY)
+		self.assertEqual(second["state"]["recipe"], "create_lead")
+		self.assertEqual(second["card"]["recipe"], "create_lead", "the draft's card, not the connect card")
+		self.assertIn("once this is done", second["reply"])
+
 	# --- searching ---
 
 	def test_searching_a_name_finds_mail_in_its_own_group(self):
@@ -248,6 +319,10 @@ class TestMail(unittest.TestCase):
 		item = groups["Communication"]["items"][0]
 		self.assertEqual(item["title"], "Following up")
 		self.assertNotIn("secret body text", json.dumps(search.search("Following")))
+
+	def test_the_bar_does_not_scan_the_mail_table_for_a_couple_of_letters(self):
+		self.assertNotIn("Communication", {g["doctype"] for g in search.search("Fo")["groups"]})
+		self.assertIn("Communication", {g["doctype"] for g in search.search("Follo")["groups"]})
 
 	def test_mail_is_not_in_the_recent_list(self):
 		recent = search.search("")
@@ -321,6 +396,39 @@ class TestConnect(unittest.TestCase):
 		self.assertIsNone(reply["card"])
 		self.assertIn("connected", reply["reply"])
 		self.assertEqual(reply["items"][0]["route"], ["Form", "Email Account", "Work"])
+
+	def test_a_password_typed_after_the_address_is_ignored_and_the_person_is_told(self):
+		with patch("frappe.get_all", return_value=[]):
+			reply = self.connect("connect jo@gmail.com password hunter2")
+		self.assertIn("ignored", reply["reply"])
+		self.assertNotIn("hunter2", json.dumps(reply))
+		self.assertIsNotNone(reply["card"])
+
+	def test_the_card_says_to_leave_outgoing_mail_off(self):
+		# picking a provider in Frappe's form switches outgoing mail on, so the person is told
+		with patch("frappe.get_all", return_value=[]):
+			reply = self.connect("connect my email")
+		self.assertIn("Enable Outgoing", " ".join(reply["card"]["problems"]))
+
+	def test_someone_who_cannot_create_an_email_account_is_not_given_the_card(self):
+		with patch(
+			"frappe.has_permission",
+			side_effect=lambda dt, ptype=None, *a, **k: not (dt == "Email Account" and ptype == "create"),
+		):
+			reply = self.connect("connect my email")
+		self.assertIsNone(reply["card"])
+		self.assertIn("administrator", reply["reply"])
+
+	def test_an_address_that_is_already_connected_says_so_instead_of_offering_a_duplicate(self):
+		account = frappe._dict(name="Work", email_id="me@work.example")
+		with (
+			patch("frappe.db.exists", side_effect=lambda dt, *a, **k: dt == "Email Account"),
+			patch("frappe.get_all", return_value=[account]),
+			patch("frappe.has_permission", return_value=True),
+		):
+			reply = self.connect("connect me@work.example")
+		self.assertIsNone(reply["card"])
+		self.assertIn("already connected", reply["reply"])
 
 	def test_the_password_never_reaches_the_saved_conversation_state(self):
 		with patch("frappe.get_all", return_value=[]):

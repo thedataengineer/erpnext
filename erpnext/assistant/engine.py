@@ -58,6 +58,10 @@ HELP_WORDS = {"help", "?", "hi", "hello", "hey"}
 
 # Phrases that are clearly a question, not an answer to whatever we just asked (works without the model)
 QUERY_CUES = {
+	# checked first, and in this order: "sync my email" is a request to connect, "any emails about my tasks" is
+	# about mail and not about the tasks
+	"connect_email": mail.CONNECT_CUE,
+	"emails": mail.EMAIL_CUE,
 	"my_day": re.compile(
 		r"\b(my (day|tasks?|plate|to-?do)|what('?s| is) on my|what (should|do) i (do|work))\b"
 	),
@@ -65,9 +69,6 @@ QUERY_CUES = {
 	"pipeline": re.compile(
 		r"\b(pipeline|open (deals|opportunities)|(deals|opportunities) (are )?open|the funnel)\b"
 	),
-	# checked in this order: "sync my email" is a request to connect, "my emails" a question about mail
-	"connect_email": mail.CONNECT_CUE,
-	"emails": mail.EMAIL_CUE,
 }
 # A message that opens like this is a new request, not a reply to our question
 NEW_REQUEST = re.compile(
@@ -925,7 +926,11 @@ def _mid_draft(
 		intent = classify(message, llm)
 
 	if intent in QUERY_HANDLERS:
-		result = QUERY_HANDLERS[intent](state, today, message)
+		if intent == "connect_email":
+			# the connect card and the draft's card cannot both be on screen: finish the draft first
+			result = _response(state, _("I can connect your email once this is done."))
+		else:
+			result = QUERY_HANDLERS[intent](state, today, message)
 		ev = evaluate(state, today)
 		question, chips, asking = compose(ev)
 		state["asking"] = asking
@@ -1001,6 +1006,13 @@ def respond(
 		if early := _apply_action(state, action, today, context):
 			return early
 	elif message:
+		if mail.mentions_a_secret(message) and not mail.CONNECT_CUE.search(message.casefold()):
+			# a password or key typed in the chat: not sent to the model, not used, and the person is told
+			return _response(
+				state,
+				_("That looks like a password or key. I haven't used it: please don't type those here."),
+				chips=_menu_chips() if not state["recipe"] else [],
+			)
 		spoken = message.casefold().strip(" .!")
 		if state["recipe"] and spoken in CANCEL_WORDS:
 			return _discard(state, today)

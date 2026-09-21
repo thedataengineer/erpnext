@@ -228,7 +228,10 @@ erpnext.assistant.Bar = class Bar {
 	_ghost() {
 		const typed = this.$input.val();
 		const row = this.mode === "search" ? this.rows[this.index] : null;
-		const title = row && row.type !== "ask" ? row.title : "";
+		// an email's subject is written by a stranger: never offer it as text to complete into the box, where
+		// pressing Enter would send it to the model as if the person had typed it
+		const isMail = row && Array.isArray(row.route) && row.route[1] === "Communication";
+		const title = row && row.type !== "ask" && !isMail ? row.title : "";
 		this.completion = "";
 		let rest = "";
 		if (

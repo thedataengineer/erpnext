@@ -236,6 +236,8 @@ def search(query: str | None = "", context: Any = None) -> dict[str, Any]:
 		if pages := _pages(text, kinds):
 			groups.append({"doctype": None, "label": _("Go to"), "items": pages[:2]})
 		for kind in kinds:
+			if len(text) < kind.min_chars:
+				continue
 			rows = fetch(kind, text, limit=15)
 			rows.sort(key=lambda row: -_rank(text, kind, row))
 			if rows:

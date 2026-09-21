@@ -4,8 +4,8 @@
 """Email in the conversation: ask what someone wrote, and connect a mailbox without a page of settings.
 
 Frappe already does the syncing. An Email Account with IMAP is pulled into Communications every ten minutes
-by the scheduler (`email_account.pull`), and each mail is shown on the lead, contact or customer it belongs
-to. This adds the two things that were missing:
+by the scheduler (`email_account.pull`), and each mail is linked (Communication Link) to the Contact, Lead and
+Prospect of whoever sent it. This adds the two things that were missing:
 
 - "what did Acme email me?": recent received email, optionally about one name, that the person may read;
 - "connect my email": a card that opens the Email Account form with the tedious settings already filled in.
@@ -35,31 +35,50 @@ MAX_EMAILS = 8
 SYNC_NEW_ONLY = "UNSEEN"
 INITIAL_SYNC = "100"  # how many old messages the first sync looks at (Frappe offers 100, 250 or 500)
 
-# --- what people say -----------------------------------------------------------------------------
+# Where a mail is opened from, best first: the deal or person it is about, then the company or contact.
+OPEN_ON = ("Lead", "Opportunity", "Prospect", "Customer", "Contact")
 
-# "email" alone is not a question about mail ("what is Jo's email?"), so the singular needs a "from/about"
-_MAIL_WORDS = re.compile(
-	r"\b(?:e-?mails|mail|inbox|messages|repl(?:y|ied|ies)|wrote|written back|write back|responded)\b"
-	r"|\be-?mail\b(?=\s+(?:from|by|about|regarding)\b)"
+_ADDRESS_RE = r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+"
+_ADDRESS = re.compile(_ADDRESS_RE)
+
+# --- what people say -----------------------------------------------------------------------------
+# These run before the language model, and also while a draft is open, where a match answers the question and
+# leaves the person's sentence unused. So they only match whole questions and commands, never a bare mention of
+# email inside a note ("new email campaign for Acme", "Have Sam email the client", "Inbox Zero").
+
+_LISTING = re.compile(
+	r"^(?:(?:show|list|check|find|see)\s+(?:me\s+)?(?:(?:my|the|any|all)\s+)?"
+	r"(?:(?:new|latest|recent|unread|last)\s+)?(?:e-?mails?|mail|inbox|messages)\b"
+	r"|(?:any|anything|are there|is there|do i have)\s+(?:(?:new|unread)\s+)?"
+	r"(?:e-?mails?|mail|messages|repl(?:y|ies))\b"
+	r"|(?:latest|recent|unread|new)\s+(?:e-?mails?|mail|messages)(?:\s+(?:from|about|by)\b|\s*[?.!]*$)"
+	r"|my\s+(?:e-?mails?|mail|inbox)\s*[?.!]*$"
+	r"|inbox\s*[?.!]*$)"
 )
-_QUESTION_START = re.compile(
-	r"^(?:show|list|check|find|see|any|anything|latest|recent|unread|inbox|what|which|who|did|has|have"
-	r"|do i have|are there|is there)\b"
-)
-_MY_MAIL = re.compile(r"^(?:my\s+(?:e-?mails?|mail|inbox)|(?:any\s+)?new\s+(?:e-?mails?|mail|messages?))\b")
 _WHO_DID = re.compile(
 	r"^(?:what|which)\s+did\s+.{1,60}?\b(?:e-?mail|write|wrote|send|sent|say|said|repl(?:y|ied)|respond)"
 )
+_WHO_WROTE = re.compile(r"^who\s+(?:e-?mailed|replied|wrote\s+(?:to|back)|sent\s+(?:me|us))\b")
 _DID_THEY = re.compile(
-	r"^(?:did|has|have)\s+.{1,60}?\b(?:e-?mail(?:ed)?|written|write|repl(?:y|ied)|respond(?:ed)?)\b"
+	r"^did\s+.{1,60}?\b(?:e-?mail|write\s+back|write\s+to\s+(?:me|us)|repl(?:y|ied)|respond)\b"
+	r"|^(?:has|have)\s+.{1,60}?\b(?:e-?mailed|written\s+back|replied|responded)\b"
 )
+# Anchored at both ends: "what did Acme Sync email me" and "link the email from Jo to the lead" are not requests
 _CONNECT = re.compile(
-	r"\b(?:connect|link|hook\s*up|sync)\s+(?:my\s+|an?\s+|the\s+|our\s+)?(?:e-?mails?|inbox|mailbox|gmail|outlook|mail)\b"
-	r"|\b(?:set\s*up|setup|add)\s+(?:my\s+|an?\s+|the\s+|our\s+)?(?:e-?mail\s+(?:account|sync)|inbox|mailbox|gmail|outlook)\b"
-	r"|\be-?mail\s+sync\b"
-	# "connect jo@gmail.com": the address itself says what is being connected
-	r"|\b(?:connect|link|sync)\s+[\w.+-]+@[\w-]+(?:\.[\w-]+)+"
+	r"^(?:(?:please|can you|could you|i want to|i'd like to|i would like to|let's)\s+)*"
+	r"(?:connect|link|hook\s*up|sync|set\s*up|setup|add)\s+(?:(?:my|our)\s+)?"
+	r"(?:e-?mails?(?:\s+account)?|inbox|mailbox|gmail|outlook)"
+	rf"(?:\s+to\s+(?:erpnext|the\s+crm|crm|here|this))?(?:\s+please)?(?:\s+{_ADDRESS_RE})?"
+	r"(?:\s+(?:with\s+)?(?:password|passwd|pwd|pw|pass)\b.*)?\s*[.!?]*$"
+	rf"|^(?:please\s+)?(?:connect|link|sync)\s+{_ADDRESS_RE}(?:\s+(?:with\s+)?(?:password|passwd|pwd|pw|pass)\b.*)?"
+	r"\s*[.!?]*$"
+	r"|^e-?mail\s+sync\s*[.!?]*$"
 )
+_SECRET = re.compile(
+	r"\b(?:password|passwd|pwd|passcode|pw|pass|api[ _-]?key|secret|token)\b\s*(?:is|are|=|:)\s*\S+",
+	re.IGNORECASE,
+)
+_PASSWORD_WORD = re.compile(r"\b(?:password|passwd|pwd|passcode|pw|pass)\b", re.IGNORECASE)
 
 _TERMS = (
 	re.compile(
@@ -104,15 +123,22 @@ _NO_ONE = {
 }
 
 
+def _normal(text: str) -> str:
+	return " ".join((text or "").casefold().split())
+
+
 def is_email_question(text: str) -> bool:
-	t = " ".join((text or "").casefold().split())
-	if _MY_MAIL.match(t) or _WHO_DID.match(t) or _DID_THEY.match(t):
-		return True
-	return bool(_QUESTION_START.match(t) and _MAIL_WORDS.search(t))
+	t = _normal(text)
+	return bool(_LISTING.match(t) or _WHO_DID.match(t) or _WHO_WROTE.match(t) or _DID_THEY.match(t))
 
 
 def is_connect_request(text: str) -> bool:
-	return bool(_CONNECT.search(" ".join((text or "").casefold().split())))
+	return bool(_CONNECT.match(_normal(text)))
+
+
+def mentions_a_secret(text: str) -> bool:
+	"""'the password is hunter2', 'pw: ...', 'token = ...': never worth sending to a model or keeping."""
+	return bool(_SECRET.search(text or ""))
 
 
 class Cue:
@@ -129,14 +155,21 @@ EMAIL_CUE = Cue(is_email_question)
 CONNECT_CUE = Cue(is_connect_request)
 
 
+def address_in(text: str) -> str:
+	match = _ADDRESS.search(text or "")
+	return match.group(0).lower() if match else ""
+
+
 def term_of(text: str) -> str:
 	"""Who or what the question is about ("what did Acme email me?" -> "Acme"); "" means any mail."""
+	if address := address_in(text):
+		return address  # a whole address is the term: cutting it at a dot or underscore would match half the world
 	for pattern in _TERMS:
 		if match := pattern.search(text or ""):
 			term = match.group(1).strip(" '\"“”.,?!")
 			term = re.sub(r"^(?:the|my|our)\s+", "", term, flags=re.I)
 			term = re.sub(r"[’']s$", "", term)
-			term = re.sub(r"[%_\\]", "", term)  # LIKE wildcards are not part of a name
+			term = term.replace("%", "")  # a LIKE wildcard is not part of a name
 			if term and term.casefold() not in _NO_ONE:
 				return _short(term, 60)
 	return ""
@@ -161,6 +194,24 @@ _FIELDS = [
 ]
 
 
+def _own_addresses() -> list[str]:
+	"""The connected mailboxes' own addresses. A reply the owner sent is stored as received mail (it carries
+	In-Reply-To), and must not be listed as something a customer wrote."""
+	return [
+		address.casefold()
+		for address in frappe.get_all("Email Account", pluck="email_id", limit_page_length=50)
+		if address
+	]
+
+
+def _may_read(name: str) -> bool:
+	# get_list applies roles and permission query conditions but not a document's own permission hook
+	try:
+		return bool(frappe.has_permission("Communication", "read", doc=name))
+	except frappe.DoesNotExistError:
+		return False
+
+
 def _matching_records(term: str) -> dict[str, list[str]]:
 	"""Leads, customers, opportunities and prospects the person may read whose name matches, by doctype."""
 	found: dict[str, list[str]] = {}
@@ -175,50 +226,50 @@ def received_emails(term: str = "", limit: int = MAX_EMAILS) -> list[dict[str, A
 	to a lead, customer, opportunity or prospect that matches it. None when they may not read email."""
 	if not frappe.has_permission("Communication", "read"):
 		return None
-	if not term:
-		return frappe.get_list(
-			"Communication",
-			filters=_BASE,
-			fields=_FIELDS,
-			order_by="communication_date desc",
-			limit_page_length=limit,
-		)
+	filters: dict[str, Any] = dict(_BASE)
+	if own := _own_addresses():
+		filters["sender"] = ["not in", own]
 
-	like = f"%{term}%"
-	linked = _matching_records(term)
-	pairs = {(doctype, name) for doctype, names in linked.items() for name in names}
+	or_filters = None
+	pairs: set[tuple[str, str]] = set()
 	on_timeline: set[str] = set()
-	if pairs:
-		on_timeline = set(
-			frappe.get_all(
-				"Communication Link",
-				filters={
-					"parenttype": "Communication",
-					"link_doctype": ["in", list(linked)],
-					"link_name": ["in", sorted({name for _doctype, name in pairs})],
-				},
-				pluck="parent",
-				limit_page_length=200,
+	if term:
+		linked = _matching_records(term)
+		pairs = {(doctype, name) for doctype, names in linked.items() for name in names}
+		if pairs:
+			on_timeline = set(
+				frappe.get_all(
+					"Communication Link",
+					filters={
+						"parenttype": "Communication",
+						"link_doctype": ["in", list(linked)],
+						"link_name": ["in", sorted({name for _doctype, name in pairs})],
+					},
+					pluck="parent",
+					limit_page_length=200,
+				)
 			)
-		)
+		like = f"%{term}%"
+		or_filters = [["sender", "like", like], ["sender_full_name", "like", like], ["subject", "like", like]]
+		if pairs:
+			or_filters.append(["reference_name", "in", sorted({name for _doctype, name in pairs})])
+		if on_timeline:
+			or_filters.append(["name", "in", sorted(on_timeline)])
 
-	or_filters = [["sender", "like", like], ["sender_full_name", "like", like], ["subject", "like", like]]
-	if pairs:
-		or_filters.append(["reference_name", "in", sorted({name for _doctype, name in pairs})])
-	if on_timeline:
-		or_filters.append(["name", "in", sorted(on_timeline)])
-
-	wanted = term.casefold()
 	rows = frappe.get_list(
 		"Communication",
-		filters=_BASE,
+		filters=filters,
 		or_filters=or_filters,
 		fields=_FIELDS,
 		order_by="communication_date desc",
 		limit_page_length=limit * 3,
 	)
 
+	wanted = term.casefold()
+
 	def belongs(row: dict[str, Any]) -> bool:
+		if not term:
+			return True
 		# a name that merely equals another doctype's name must not pull in that record's mail
 		text = " ".join(str(row.get(f) or "") for f in ("sender", "sender_full_name", "subject")).casefold()
 		return (
@@ -227,33 +278,78 @@ def received_emails(term: str = "", limit: int = MAX_EMAILS) -> list[dict[str, A
 			or row["name"] in on_timeline
 		)
 
-	return [row for row in rows if belongs(row)][:limit]
+	return [row for row in rows if belongs(row) and _may_read(row["name"])][:limit]
+
+
+def _links_by_mail(names: list[str]) -> dict[str, list[tuple[str, str]]]:
+	"""The records each mail is linked to (Frappe links a mail to the sender's Contact, Lead and Prospect)."""
+	if not names:
+		return {}
+	links: dict[str, list[tuple[str, str]]] = {}
+	for row in frappe.get_all(
+		"Communication Link",
+		filters={"parenttype": "Communication", "parent": ["in", names]},
+		fields=["parent", "link_doctype", "link_name"],
+		limit_page_length=500,
+	):
+		links.setdefault(row.parent, []).append((row.link_doctype, row.link_name))
+	return links
+
+
+def _can_open(doctype: str | None, name: str | None) -> bool:
+	try:
+		return bool(doctype and name and frappe.has_permission(doctype, "read", doc=name))
+	except frappe.DoesNotExistError:
+		return False
+
+
+def _open_target(row: dict[str, Any], links: list[tuple[str, str]]) -> list[str]:
+	"""Open the record the mail is about if it can be read (the lead, deal, company), else the mail itself."""
+	candidates = [(row.get("reference_doctype"), row.get("reference_name")), *links]
+	candidates.sort(key=lambda c: OPEN_ON.index(c[0]) if c[0] in OPEN_ON else len(OPEN_ON))
+	for doctype, name in candidates:
+		if doctype in OPEN_ON and _can_open(doctype, name):
+			return ["Form", doctype, name]
+	if _can_open(row.get("reference_doctype"), row.get("reference_name")):
+		return ["Form", row["reference_doctype"], row["reference_name"]]
+	return ["Form", "Communication", row["name"]]
+
+
+def _who(row: dict[str, Any]) -> str:
+	"""The sender's name is whatever they chose to call themselves ("Jane (CFO)"), so the address goes with it."""
+	name = _short(row.get("sender_full_name"), 50)
+	address = _short(row.get("sender"), 60)
+	if name and address and name.casefold() != address.casefold():
+		return f"{name} <{address}>"
+	return name or address
 
 
 def email_items(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+	links = _links_by_mail([row["name"] for row in rows])
 	items = []
 	for row in rows:
-		reference = (row.get("reference_doctype"), row.get("reference_name"))
-		opens = (
-			reference
-			if all(reference) and frappe.has_permission(reference[0], "read", doc=reference[1])
-			else None
-		)
-		who = _short(row.get("sender_full_name") or row.get("sender"), 60)
+		route = _open_target(row, links.get(row["name"], []))
 		when = formatdate(row["communication_date"]) if row.get("communication_date") else ""
+		about = _(route[1]) if route[1] != "Communication" else None
 		items.append(
 			{
 				"label": _short(row.get("subject")) or _("(no subject)"),
-				"meta": " · ".join(p for p in (who, when, _(reference[0]) if opens else None) if p),
-				"route": ["Form", opens[0], opens[1]] if opens else ["Form", "Communication", row["name"]],
+				"meta": " · ".join(p for p in (_who(row), when, about) if p),
+				"route": route,
 				"tone": "",
 			}
 		)
 	return items
 
 
-def _count(n: int, one: str, many: str) -> str:
-	return _(one) if n == 1 else _(many).format(n)
+def _count(n: int) -> str:
+	return _("1 email") if n == 1 else _("{0} emails").format(n)
+
+
+def _mailbox_connected() -> bool:
+	if not frappe.has_permission("Email Account", "read"):
+		return True  # they cannot tell, and connecting is not theirs to do: do not offer it
+	return bool(frappe.db.count("Email Account", {"enable_incoming": 1}))
 
 
 def emails_answer(term: str = "") -> dict[str, Any]:
@@ -263,31 +359,27 @@ def emails_answer(term: str = "") -> dict[str, Any]:
 	if rows is None:
 		return {"reply": _("You don't have access to email."), "items": [], "connect": False}
 
-	connected = bool(frappe.db.count("Email Account", {"enable_incoming": 1}))
 	if not rows:
-		if not connected:
+		if not _mailbox_connected():
 			return {
 				"reply": _("No email is connected yet, so there is nothing to show."),
 				"items": [],
-				"connect": True,
+				"connect": bool(frappe.has_permission("Email Account", "create")),
 			}
-		reply = _("Nothing from {0} yet.").format(term) if term else _("No emails yet.")
-		reply += " " + _("New mail is checked for every {0} minutes.").format(PULL_MINUTES)
+		reply = _("Nothing from {0} to show.").format(term) if term else _("No emails to show.")
+		reply += " " + _("New mail is checked every {0} minutes.").format(PULL_MINUTES)
 		return {"reply": reply, "items": [], "connect": False}
 
 	newest = formatdate(rows[0]["communication_date"]) if rows[0].get("communication_date") else ""
-	count = _count(len(rows), "1 email", "{0} emails")
 	reply = (
-		_("{0} from {1}, newest {2}.").format(count, term, newest)
+		_("The latest {0} from {1}, newest {2}.").format(_count(len(rows)), term, newest)
 		if term
-		else _("{0}, newest {1}.").format(count, newest)
+		else _("The latest {0}, newest {1}.").format(_count(len(rows)), newest)
 	)
 	return {"reply": reply, "items": email_items(rows), "connect": False}
 
 
 # --- connecting a mailbox ------------------------------------------------------------------------
-
-_ADDRESS = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
 
 # the provider names Frappe's Email Account form offers
 PROVIDERS = {
@@ -326,11 +418,6 @@ def _password_help(provider: str) -> str:
 	return _("Use the password or app password your provider gives for IMAP.")
 
 
-def address_in(text: str) -> str:
-	match = _ADDRESS.search(text or "")
-	return match.group(0).lower() if match else ""
-
-
 def connect_card(address: str = "") -> dict[str, Any]:
 	"""A card that opens the Email Account form, receive-only, with everything but the password (and, if it was
 	not given, the address) filled in."""
@@ -346,7 +433,11 @@ def connect_card(address: str = "") -> dict[str, Any]:
 		"create_contact": 0,  # do not turn every sender into a Contact
 		"enable_outgoing": 0,  # read only: nothing here sends mail
 	}
-	problems = [_password_help(provider)]
+	problems = [
+		_password_help(provider),
+		# picking a provider in the form runs Frappe's own defaults, which switch outgoing mail on
+		_("Leave “Enable Outgoing” off: this only reads mail."),
+	]
 	if address:
 		server = SERVERS.get(provider) or f"imap.{domain}"
 		prefill.update(
@@ -399,33 +490,59 @@ def connect_card(address: str = "") -> dict[str, Any]:
 	}
 
 
+def _account_items(filters: dict[str, Any]) -> list[dict[str, Any]]:
+	return [
+		{
+			"label": account.email_id or account.name,
+			"meta": _("Email account"),
+			"route": ["Form", "Email Account", account.name],
+			"tone": "",
+		}
+		for account in frappe.get_all(
+			"Email Account", filters=filters, fields=["name", "email_id"], limit_page_length=5
+		)
+		if frappe.has_permission("Email Account", "read", doc=account.name)
+	]
+
+
 def connect_answer(message: str = "") -> dict[str, Any]:
 	"""{reply, card, items}. Names the mailbox already connected, or offers the card for the address given."""
-	address = address_in(message)
-	accounts = frappe.get_all(
-		"Email Account",
-		filters={"enable_incoming": 1},
-		fields=["name", "email_id"],
-		limit_page_length=5,
-	)
-	if accounts and not address:
+	if not frappe.has_permission("Email Account", "create"):
 		return {
-			"reply": _("Email is connected. New mail is checked for every {0} minutes.").format(PULL_MINUTES),
+			"reply": _(
+				"Connecting a mailbox needs an administrator. Ask one to set it up, and its mail will show here."
+			),
 			"card": None,
-			"items": [
-				{
-					"label": account.email_id or account.name,
-					"meta": _("Email account"),
-					"route": ["Form", "Email Account", account.name],
-					"tone": "",
-				}
-				for account in accounts
-				if frappe.has_permission("Email Account", "read", doc=account.name)
-			],
+			"items": [],
 		}
+
+	address = address_in(message)
+	warning = ""
+	if _PASSWORD_WORD.search(message or ""):
+		warning = _("Please don't type a password in the chat: I ignored it. You add it in the form.") + " "
+
+	if address and frappe.db.exists("Email Account", {"email_id": address}):
+		return {
+			"reply": warning
+			+ _("{0} is already connected. New mail is checked every {1} minutes.").format(
+				address, PULL_MINUTES
+			),
+			"card": None,
+			"items": _account_items({"email_id": address}),
+		}
+	if not address:
+		accounts = _account_items({"enable_incoming": 1})
+		if accounts:
+			return {
+				"reply": warning
+				+ _("Email is connected. New mail is checked every {0} minutes.").format(PULL_MINUTES),
+				"card": None,
+				"items": accounts,
+			}
+
 	reply = (
 		_("Here is what I'll set up for {0}. Open the form to add the password and save.").format(address)
 		if address
 		else _("I'll set up reading your email. Open the form to add your address and password, then save.")
 	)
-	return {"reply": reply, "card": connect_card(address), "items": []}
+	return {"reply": warning + reply, "card": connect_card(address), "items": []}

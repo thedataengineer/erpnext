@@ -11,6 +11,11 @@
 frappe.provide("erpnext.assistant");
 
 erpnext.assistant.STORAGE_KEY = "erpnext_assistant_session";
+// The conversation (which can hold customer names, deal values and email subjects) is kept per signed-in
+// person: a shared key handed it to whoever signed in next in the same browser tab, since logging out does not
+// clear sessionStorage.
+erpnext.assistant.storageKey = () =>
+	`${erpnext.assistant.STORAGE_KEY}:${(frappe.session && frappe.session.user) || ""}`;
 erpnext.assistant.MAX_MESSAGES = 30;
 
 erpnext.assistant.Chat = class Chat {
@@ -294,7 +299,7 @@ erpnext.assistant.Chat = class Chat {
 					: { ...m, card: m.card && { ...m.card, prefill: null }, chips: null }
 			);
 			sessionStorage.setItem(
-				erpnext.assistant.STORAGE_KEY,
+				erpnext.assistant.storageKey(),
 				JSON.stringify({ messages: slim, state: this.state })
 			);
 		} catch (e) {
@@ -304,7 +309,9 @@ erpnext.assistant.Chat = class Chat {
 
 	_restore() {
 		try {
-			const saved = JSON.parse(sessionStorage.getItem(erpnext.assistant.STORAGE_KEY) || "null");
+			// the earlier, shared key is dropped once, unread: it may belong to someone else
+			sessionStorage.removeItem(erpnext.assistant.STORAGE_KEY);
+			const saved = JSON.parse(sessionStorage.getItem(erpnext.assistant.storageKey()) || "null");
 			if (saved && Array.isArray(saved.messages)) {
 				this.messages = saved.messages;
 				this.state = saved.state || null;
