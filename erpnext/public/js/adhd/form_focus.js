@@ -28,6 +28,48 @@ const FIELD_HELP = {
 	"cost_center": "The budget/department this expense or income belongs to",
 };
 
+const TIMEBOX_DOCTYPES = ["Item", "Account", "BOM", "Print Format", "Custom Field"];
+const TIMEBOX_MINUTES = 10;
+
+function getFocusPanel() {
+	return frappe.focusPanel || (erpnext.adhd && erpnext.adhd.focusPanel);
+}
+
+function startPomodoro(minutes) {
+	const panel = getFocusPanel();
+	if (panel && typeof panel.startTimer === "function") {
+		panel.startTimer(minutes);
+		frappe.show_alert({ message: __("{0}-min timer started", [minutes]), indicator: "blue" });
+		return;
+	}
+	frappe.show_alert({ message: __("Open the Focus Panel to start your timer"), indicator: "blue" });
+}
+
+function renderTimeboxBanner(frm) {
+	frm.layout.$wrapper.find(".adhd-timebox-banner").remove();
+	if (!(frappe.boot && frappe.boot.adhd_mode) || frm.is_new()) return;
+	const dismissKey = `adhd_timebox_dismissed_${frm.doctype}_${frm.docname}`;
+	if (sessionStorage.getItem(dismissKey)) return;
+	const $banner = $(`
+		<div class="adhd-timebox-banner" role="status">
+			<span class="adhd-timebox-icon">⏱️</span>
+			<span class="adhd-timebox-msg">${__("Heads up: this form has a lot of options. Consider a {0}-min time-box.", [TIMEBOX_MINUTES])}</span>
+			<button type="button" class="btn btn-xs btn-default adhd-timebox-start">${__("Start {0}-min timer", [TIMEBOX_MINUTES])}</button>
+			<button type="button" class="adhd-timebox-dismiss" aria-label="${__("Dismiss")}">✕</button>
+		</div>
+	`);
+	const dismiss = () => {
+		sessionStorage.setItem(dismissKey, "1");
+		$banner.remove();
+	};
+	$banner.find(".adhd-timebox-start").on("click", () => {
+		startPomodoro(TIMEBOX_MINUTES);
+		dismiss();
+	});
+	$banner.find(".adhd-timebox-dismiss").on("click", dismiss);
+	frm.layout.$wrapper.prepend($banner);
+}
+
 erpnext.adhd.FormFocus = class FormFocus {
 	constructor() {
 		this._boundHandler = null;
@@ -189,3 +231,21 @@ frappe.after_ajax(() => {
 		}, 600);
 	});
 });
+
+TIMEBOX_DOCTYPES.forEach((doctype) => {
+	frappe.ui.form.on(doctype, { refresh: renderTimeboxBanner });
+});
+
+document.addEventListener("focuspanel:timercomplete", () => {
+	if (!(frappe.boot && frappe.boot.adhd_mode)) return;
+	const route = frappe.get_route();
+	if (route[0] === "Form" && TIMEBOX_DOCTYPES.includes(route[1])) {
+		frappe.show_alert(
+			{ message: __("Time's up — did you get what you needed?"), indicator: "orange" },
+			10
+		);
+	}
+});
+
+erpnext.adhd.TIMEBOX_DOCTYPES = TIMEBOX_DOCTYPES;
+erpnext.adhd.renderTimeboxBanner = renderTimeboxBanner;
