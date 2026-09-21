@@ -75,6 +75,13 @@ erpnext.adhd.FocusPanel = class FocusPanel {
 					</div>
 				</div>
 
+				<div class="afp-section">
+					<button type="button" class="btn btn-default btn-sm afp-month-end-toggle">
+						${__("📅 Month-End")}
+					</button>
+					<div class="afp-month-end" hidden></div>
+				</div>
+
 				<!-- Quick Note -->
 				<div class="afp-section">
 					<div class="afp-section-title">📝 Quick Note</div>
@@ -113,6 +120,13 @@ erpnext.adhd.FocusPanel = class FocusPanel {
 
 		document.getElementById("afp-timer-start")?.addEventListener("click", () => this._timerToggle());
 		document.getElementById("afp-timer-reset")?.addEventListener("click", () => this._timerReset());
+		document.querySelector(".afp-month-end-toggle")?.addEventListener("click", () => {
+			const container = document.querySelector(".afp-month-end");
+			if (!container) return;
+			container.hidden = !container.hidden;
+			this._activeTab = container.hidden ? "tasks" : "month_end";
+			if (!container.hidden) erpnext.adhd.initMonthEndChecklist?.(container);
+		});
 
 		document.querySelectorAll(".afp-preset").forEach((btn) => {
 			btn.addEventListener("click", () => {
