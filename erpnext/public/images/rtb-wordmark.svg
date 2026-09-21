@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="376" height="118" viewBox="0 0 376 118">
+<title>RTB</title>
+<rect width="118" height="118" rx="20" fill="#115E59"/>
+<path d="M31 24H46V94H31Z" fill="#FFFFFF"/>
+<path fill-rule="evenodd" d="M43 24H60A19 19 0 0 1 60 62H43ZM46 38H60A5 5 0 0 1 60 48H46Z" fill="#FFFFFF"/>
+<path d="M56 66H71L89 94H74Z" fill="#FFC857"/>
+<g fill="#14201F">
+<path d="M156 24H171V94H156Z"/>
+<path fill-rule="evenodd" d="M168 24H185A19 19 0 0 1 185 62H168ZM171 38H185A5 5 0 0 1 185 48H171Z"/>
+<path d="M181 66H196L214 94H199Z" fill="#115E59"/>
+<path d="M232 24H292V38H269.5V94H254.5V38H232Z"/>
+<path d="M320 24H335V94H320Z"/>
+<path fill-rule="evenodd" d="M332 24H353.5A20.5 20.5 0 0 1 353.5 65H332ZM335 38H353.5A6.5 6.5 0 0 1 353.5 51H335Z"/>
+<path fill-rule="evenodd" d="M332 51H354.5A21.5 21.5 0 0 1 354.5 94H332ZM335 65H354.5A7.5 7.5 0 0 1 354.5 80H335Z"/>
+</g>
+</svg>

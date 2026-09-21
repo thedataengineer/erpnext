@@ -10,11 +10,11 @@
  "label": "Quality",
  "link_to": "Quality",
  "link_type": "Workspace Sidebar",
- "modified": "2026-07-03 20:07:01.239523",
+ "modified": "2026-09-21 23:00:00.000000",
  "modified_by": "Administrator",
  "name": "Quality",
  "owner": "Administrator",
- "parent_icon": "ERPNext",
+ "parent_icon": "RTB",
  "restrict_removal": 0,
  "roles": [],
  "standard": 1

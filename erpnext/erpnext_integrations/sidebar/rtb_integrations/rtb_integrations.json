@@ -115,12 +115,12 @@
    "type": "Link"
   }
  ],
- "modified": "2026-09-02 14:58:17.082794",
+ "modified": "2026-09-21 23:00:00.000000",
  "modified_by": "Administrator",
  "module": "ERPNext Integrations",
- "name": "ERPNext Integrations",
+ "name": "RTB Integrations",
  "owner": "Administrator",
  "sequence_id": 0.0,
  "standard": 1,
- "title": "ERPNext Integrations"
+ "title": "RTB Integrations"
 }

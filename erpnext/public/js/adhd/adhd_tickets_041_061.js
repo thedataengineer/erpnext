@@ -648,7 +648,7 @@ frappe.provide("erpnext.adhd");
 			const attributes = action
 				? `data-action="${action}"`
 				: `disabled aria-disabled="true"${
-						index === current ? "" : ` title="${esc(__("ERPNext updates this stage itself."))}"`
+						index === current ? "" : ` title="${esc(__("RTB updates this stage itself."))}"`
 				  }`;
 			return `<button type="button" class="adhd-pipeline-stage adhd-pipeline-stage--${state}" data-status="${
 				stage.status

@@ -1,11 +1,50 @@
 {
  "app": "erpnext",
- "creation": "2025-11-17 13:19:05.050624",
+ "charts": [
+  {
+   "chart_name": "Top Customers",
+   "label": "Top Customers"
+  }
+ ],
+ "content": "[{\"id\": \"1c097e6187\", \"type\": \"chart\", \"data\": {\"chart_name\": \"Top Customers\", \"col\": 12}}, {\"id\": \"719ae0d3bd\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Active Customers\", \"col\": 4}}, {\"id\": \"8058b27fbe\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Active Suppliers\", \"col\": 4}}, {\"id\": \"183d2da232\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Total Warehouses\", \"col\": 4}}]",
+ "creation": "2022-01-27 13:14:47.349433",
+ "custom_blocks": [],
  "docstatus": 0,
- "doctype": "Workspace Sidebar",
- "header_icon": "setting",
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "sliders-horizontal",
  "idx": 0,
- "items": [
+ "is_hidden": 0,
+ "label": "RTB Settings",
+ "links": [],
+ "modified": "2026-09-21 23:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Setup",
+ "name": "RTB Settings",
+ "number_cards": [
+  {
+   "label": "Active Customers",
+   "number_card_name": "Active Customers"
+  },
+  {
+   "label": "Active Suppliers",
+   "number_card_name": "Active Suppliers"
+  },
+  {
+   "label": "Total Warehouses",
+   "number_card_name": "Total Warehouses"
+  }
+ ],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "restrict_to_domain": "",
+ "roles": [],
+ "sequence_id": 19.0,
+ "shortcuts": [],
+ "sidebar_items": [
   {
    "child": 0,
    "collapsible": 1,
@@ -232,13 +271,119 @@
    "open_in_new_tab": 0,
    "show_arrow": 0,
    "type": "Link"
+  },
+  {
+   "child": 0,
+   "collapsible": 1,
+   "icon": "building-2",
+   "indent": 1,
+   "keep_closed": 1,
+   "label": "Organization",
+   "link_type": "DocType",
+   "open_in_new_tab": 0,
+   "show_arrow": 0,
+   "type": "Section Break"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "default_workspace": 1,
+   "icon": "building-2",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Company",
+   "link_to": "Company",
+   "link_type": "DocType",
+   "open_in_new_tab": 0,
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "default_workspace": 0,
+   "icon": "book-text",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Letter Head",
+   "link_to": "Letter Head",
+   "link_type": "DocType",
+   "open_in_new_tab": 0,
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "default_workspace": 0,
+   "icon": "file-user",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Department",
+   "link_to": "Department",
+   "link_type": "DocType",
+   "open_in_new_tab": 0,
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "default_workspace": 0,
+   "icon": "book-user",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Branch",
+   "link_to": "Branch",
+   "link_type": "DocType",
+   "open_in_new_tab": 0,
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "default_workspace": 0,
+   "icon": "users",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "User",
+   "link_to": "User",
+   "link_type": "DocType",
+   "open_in_new_tab": 0,
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "default_workspace": 0,
+   "icon": "user-round-check",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Role Permissions",
+   "link_to": "permission-manager",
+   "link_type": "Page",
+   "open_in_new_tab": 0,
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "default_workspace": 0,
+   "icon": "mail",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Email Account",
+   "link_to": "Email Account",
+   "link_type": "DocType",
+   "open_in_new_tab": 0,
+   "show_arrow": 0,
+   "type": "Link"
   }
  ],
- "modified": "2026-07-03 14:51:11.333051",
- "modified_by": "Administrator",
- "module": "Setup",
- "name": "ERPNext Settings",
- "owner": "Administrator",
  "standard": 1,
- "title": "ERPNext Settings"
+ "title": "RTB Settings",
+ "type": "Workspace"
 }

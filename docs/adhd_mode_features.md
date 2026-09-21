@@ -15,6 +15,8 @@ People see "Focus" everywhere: Focus Mode, Focus Settings, Focus Inbox, Focus Ho
 
 Sites created before the rename are moved by the patch `erpnext.patches.v17_0.rename_adhd_to_focus`, which runs before the model sync: the DocType and its table are renamed (rows kept), the usage-log module is replaced, and the old report and pages are removed.
 
+The product is called **RTB** (Run The Business; tagline "Run the business, not your ERP"). It is a fork of ERPNext, so the technical names stay `erpnext`: the Python package and module paths, `app_name`, the `ERPNext Integrations` module (its folder and imports are named after it) and the translation catalogues. What a person reads says RTB: the app title, logo and favicon, email and website footers, help texts and messages, the settings and integrations navigation, and the site's app name (set by `erpnext.patches.v17_0.rename_erpnext_to_rtb` when it still holds a default). The Frappe certification page under `erpnext/www/` is Frappe's own offer and is left as it is. `test_rtb_rename.py` fails if a translatable string names ERPNext again.
+
 ## Runtime architecture
 
 Client modules live under `erpnext/public/js/adhd/` and are imported in dependency order by `erpnext/public/js/erpnext.bundle.js`. `erpnext/hooks.py` includes that bundle; it does not register one `doctype_js` entry per ADHD feature.

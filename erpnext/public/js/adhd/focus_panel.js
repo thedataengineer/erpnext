@@ -430,12 +430,12 @@ erpnext.adhd.FocusPanel = class FocusPanel {
 
 		// Browser notification
 		if (Notification && Notification.permission === "granted") {
-			new Notification("⏰ ERPNext Focus Timer", {
+			new Notification("⏰ RTB Focus Timer", {
 				body:
 					this.timerMode === "break"
 						? "Work session done! Take a break."
 						: "Break over! Time to focus.",
-				icon: "/assets/erpnext/images/erpnext-logo.svg",
+				icon: "/assets/erpnext/images/rtb-logo.svg",
 			});
 		}
 

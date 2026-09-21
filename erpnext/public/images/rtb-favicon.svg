@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+<title>RTB</title>
+<rect width="32" height="32" rx="6" fill="#115E59"/>
+<path d="M7 5H12V27H7Z" fill="#FFFFFF"/>
+<path fill-rule="evenodd" d="M11 5H16A6 6 0 0 1 16 17H11ZM12 9H16A2 2 0 0 1 16 13H12Z" fill="#FFFFFF"/>
+<path d="M14.5 17H19.5L25 27H20Z" fill="#FFC857"/>
+</svg>

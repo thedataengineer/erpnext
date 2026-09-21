@@ -1,38 +1,26 @@
-
 <div align="center">
-    <a href="https://frappe.io/erpnext">
-	<img src="./erpnext/public/images/v16/erpnext.svg" alt="ERPNext Logo" height="80px" width="80px"/>
-    </a>
-    <h2>ERPNext</h2>
-    <div align="center">
-        <p>Powerful, Intuitive and Open-Source ERP</p>
-    </div>
-
-[![Learn on Frappe School](https://img.shields.io/badge/Frappe%20School-Learn%20ERPNext-blue?style=flat-square)](https://frappe.school)<br><br>
-[![CI](https://github.com/frappe/erpnext/actions/workflows/server-tests-mariadb.yml/badge.svg?event=schedule)](https://github.com/frappe/erpnext/actions/workflows/server-tests-mariadb.yml)
-[![docker pulls](https://img.shields.io/docker/pulls/frappe/erpnext.svg)](https://hub.docker.com/r/frappe/erpnext)
-
+	<img src="./erpnext/public/images/rtb-logo.svg" alt="RTB logo" height="80px" width="80px"/>
+	<h2>RTB</h2>
+	<div align="center">
+		<p><b>Run the business, not your ERP.</b></p>
+	</div>
 </div>
 
-<div align="center">
-	<img src="./erpnext/public/images/v16/hero_image.png" alt="ERPNext Hero Image"/>
-</div>
+## RTB
 
-<div align="center">
-	<a href="https://erpnext-demo.frappe.cloud/api/method/erpnext_demo.erpnext_demo.auth.login_demo">Live Demo</a>
-	-
-	<a href="https://frappe.io/erpnext">Website</a>
-	-
-	<a href="https://docs.frappe.io/erpnext/">Documentation</a>
-</div>
+An open-source ERP for people who want to run the business and not fight the software. RTB is built on ERPNext and keeps everything it does (accounting, selling, buying, stock, manufacturing, projects, assets, CRM, support), and adds a calmer, focus-first way of working with it.
 
-## ERPNext
+### What is different
 
-100% Open-Source ERP System to help you run your business.
+- **Focus Mode**: one switch (Alt+A) that quiets the screen and turns on the aids below. Each aid has its own switch in Focus Settings.
+- **Focus Inbox and Focus Panel**: what is overdue, what waits on you and where you left off, with a timer for time-boxed work.
+- **Guided forms**: a step-by-step save when mandatory fields are missing, contextual field help, an unsaved-draft restore, and banners for expiring quotations, stale opportunities and over-billed invoices.
+- **Ask, don't fill in**: a command bar (Cmd/Ctrl+K) and chat (Alt+J) that turn a sentence into a draft record. A local language model understands the sentence, the server checks it, and nothing is saved until you confirm.
+- **Your email, on the record**: mail from customers and leads is pulled in and filed with the person it came from.
 
-### Motivation
+### Built on ERPNext
 
-Running a business is a complex task - handling invoices, tracking stock, managing personnel, and other daily operations. In a market where software is sold separately to manage each of these tasks, ERPNext does all of the above and more, for free.
+RTB is a fork of [ERPNext](https://github.com/frappe/erpnext) by Frappe Technologies Pvt. Ltd., released under the same GNU GPL v3 licence. The Python package and the technical names are still `erpnext`, so it installs and updates like any Frappe app and other Frappe apps keep working with it. The installation notes below are for that app.
 
 ### Key Features
 
@@ -42,15 +30,6 @@ Running a business is a complex task - handling invoices, tracking stock, managi
 - **Asset Management**: From purchase to disposal, IT infrastructure to equipment. Covers every branch of your organization, all in one centralized system.
 - **Projects**: Deliver both internal and external projects on time, budget and profitability. Track tasks, timesheets, and issues by project.
 
-<details open>
-
-<summary>More</summary>
-	<img src="https://erpnext.com/files/v16_bom.png"/>
-	<img src="https://erpnext.com/files/v16_stock_summary.png"/>
-	<img src="https://erpnext.com/files/v16_job_card.png"/>
-	<img src="https://erpnext.com/files/v16_tasks.png"/>
-</details>
-
 ### Under the Hood
 
 - [**Frappe Framework**](https://github.com/frappe/frappe): A full-stack web application framework written in Python and JavaScript. The framework provides a robust foundation for building web applications, including a database abstraction layer, user authentication, and a REST API.
@@ -58,6 +37,8 @@ Running a business is a complex task - handling invoices, tracking stock, managi
 - [**Frappe UI**](https://github.com/frappe/frappe-ui): A Vue-based UI library, to provide a modern user interface. The Frappe UI library provides a variety of components that can be used to build single-page applications on top of the Frappe Framework.
 
 ## Production Setup
+
+The steps below are those of the upstream ERPNext app that RTB is built on.
 
 ### Managed Hosting
 

@@ -14,7 +14,7 @@ from erpnext.setup.doctype.incoterm.incoterm import create_incoterms
 from .default_success_action import get_default_success_action
 
 default_mail_footer = """<div style="padding: 7px; text-align: right; color: #888"><small>Sent via
-	<a style="color: #888" href="http://frappe.io/erpnext">ERPNext</a></div>"""
+	RTB</div>"""
 
 
 def after_install():
@@ -278,7 +278,7 @@ def add_standard_navbar_items():
 
 
 def add_app_name():
-	frappe.db.set_single_value("System Settings", "app_name", "ERPNext")
+	frappe.db.set_single_value("System Settings", "app_name", "RTB")
 
 
 def update_roles():
