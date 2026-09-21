@@ -1,5 +1,12 @@
 # ADHD-039: Stock Reconciliation "Variance Highlight"
 
+## Current implementation record
+
+- **Status:** Implemented.
+- **Implementation:** `erpnext/public/js/adhd/adhd_stock_reconciliation.js`, imported by the bundle.
+- **Verification:** `node --test erpnext/tests/adhd_tickets_031_040.test.js` provides structural and helper coverage; site behavior remains unverified.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 When ADHD mode is active on a Stock Reconciliation form, automatically compare user-entered quantities against ERPNext's fetched current quantities for each row, highlight rows with significant variance, and add a visible "Variance" column — catching accidental typos before submission.
 

@@ -1,5 +1,12 @@
 # ADHD-018: Personalized Focus Suggestions
 
+## Current implementation record
+
+- **Status:** Implemented.
+- **Implementation:** Personal ranking in `erpnext/public/js/adhd/adhd_smart_inbox.js`.
+- **Verification:** `node --test erpnext/tests/adhd_tickets_011_020.test.js` provides structural coverage; site behavior remains unverified.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 The Smart Inbox learns which modules the user actually visits and surfaces "you usually do X around this time" prompts to reduce the daily initiation cost of figuring out where to start.
 

@@ -1,5 +1,12 @@
 # ADHD-027: Purchase Receipt "Expected vs Received" Diff
 
+## Current implementation record
+
+- **Status:** Planned.
+- **Implementation:** No matching implementation or bundle registration exists on `iteration_3`.
+- **Verification:** No implementation test exists; original acceptance criteria remain pending.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 On submitted Purchase Receipt forms in ADHD mode, injects a "What's still open?" summary table below the items grid showing ordered qty, received qty for this receipt, and still-pending qty per item — so the user never needs to open the source Purchase Order to know what remains.
 

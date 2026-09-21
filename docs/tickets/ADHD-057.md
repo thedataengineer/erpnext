@@ -1,5 +1,12 @@
 # ADHD-057: Payroll Cycle Checklist
 
+## Current implementation record
+
+- **Status:** Blocked.
+- **Implementation:** HRMS is absent from this repository, including the payroll, leave, and expense doctypes and APIs required by this ticket. No application code was added.
+- **Verification:** No implementation or acceptance test exists. Implement and verify in the HRMS repository.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 A "Run Payroll" step-by-step checklist accessible from the HR workspace that guides ADHD users through the complete payroll cycle, auto-detecting completed steps where possible and persisting progress per payroll period.
 

@@ -1,5 +1,12 @@
 # ADHD-060: Quality Inspection "Pass/Fail at a Glance" on Source Document
 
+## Current implementation record
+
+- **Status:** Implemented.
+- **Implementation:** Source-document QI banners in `erpnext/public/js/adhd/adhd_tickets_041_061.js`, calling whitelisted `erpnext/stock/adhd_quality.py`.
+- **Verification:** `node --test erpnext/tests/adhd_tickets_041_061.test.js` provides structural and helper coverage; site behavior remains unverified.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 Inject a compact QI result banner on Purchase Receipts, Delivery Notes, and Stock Entries that have a linked Quality Inspection, showing pass/fail status and out-of-spec reading count without requiring the user to open the QI separately.
 

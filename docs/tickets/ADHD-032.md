@@ -1,5 +1,12 @@
 # ADHD-032: Payment Entry Invoice Shortlist
 
+## Current implementation record
+
+- **Status:** Implemented.
+- **Implementation:** `erpnext/public/js/adhd/adhd_payment_entry.js`, imported by the bundle.
+- **Verification:** `node --test erpnext/tests/adhd_tickets_031_040.test.js` provides structural and helper coverage; site behavior remains unverified.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 When ADHD mode is active on a Payment Entry form and a party is selected, automatically fetch outstanding invoices and display them as a priority-sorted shortlist — eliminating the invisible "click Get Outstanding Invoices" step and the cognitive effort of triaging a flat, unsorted list.
 

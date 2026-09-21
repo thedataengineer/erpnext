@@ -1,5 +1,12 @@
 # ADHD-012: Month-End Close Checklist
 
+## Current implementation record
+
+- **Status:** Implemented.
+- **Implementation:** `erpnext/public/js/adhd/adhd_month_end.js` calls whitelisted `erpnext/accounts/services/adhd_month_end.py`.
+- **Verification:** `node --test erpnext/tests/adhd_tickets_011_020.test.js` provides structural coverage; site behavior remains unverified.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 Provide a structured, auto-verifying Month-End Close checklist in the Accounts workspace so ADHD users can complete the close process step-by-step without losing track of what remains.
 

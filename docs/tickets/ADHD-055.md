@@ -1,5 +1,12 @@
 # ADHD-055: Depreciation Due Ambient Indicator
 
+## Current implementation record
+
+- **Status:** Implemented.
+- **Implementation:** Asset list urgency in `erpnext/public/js/adhd/adhd_list_view.js` using `next_depreciation_date`.
+- **Verification:** `node --test erpnext/tests/adhd_tickets_041_061.test.js` provides structural and helper coverage; site behavior remains unverified.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 Extend the ADHD-006 heat-map infrastructure to the Asset list view, coloring each row's border based on how soon depreciation is due, so overdue or imminent depreciation entries are impossible to miss.
 

@@ -1,5 +1,12 @@
 # ADHD-006: Ambient Due-Date Heat Map on List Views
 
+## Current implementation record
+
+- **Status:** Implemented.
+- **Implementation:** `erpnext/public/js/adhd/adhd_list_view.js`, imported by the bundle.
+- **Verification:** No ticket-specific automated test; site and browser behavior remain unverified.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 When ADHD mode is active, injects a coloured left-border indicator into list view rows for Sales Order, Purchase Order, Task, Sales Invoice, Leave Application, and Issue — red for overdue, amber for due within two days, green for due within seven days — computed purely client-side from existing date columns with no additional API calls.
 

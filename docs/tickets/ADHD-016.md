@@ -1,5 +1,12 @@
 # ADHD-016: ADHD Settings Panel
 
+## Current implementation record
+
+- **Status:** Implemented.
+- **Implementation:** `erpnext/public/js/adhd/adhd_settings.js` stores namespaced local preferences.
+- **Verification:** `node --test erpnext/tests/adhd_tickets_011_020.test.js` provides structural coverage; site behavior remains unverified.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 A per-user settings panel accessible from the ADHD mode toggle lets users enable or disable individual ADHD features without touching system configuration.
 

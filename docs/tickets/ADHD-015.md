@@ -1,5 +1,12 @@
 # ADHD-015: Field Help Coverage — Systematic Expansion
 
+## Current implementation record
+
+- **Status:** Implemented.
+- **Implementation:** `erpnext/public/js/adhd/adhd_field_help.js` supplies 80 entries across eight DocTypes; `form_focus.js` renders them.
+- **Verification:** `node --test erpnext/tests/adhd_tickets_011_020.test.js` provides structural coverage; site behavior remains unverified.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 Expand contextual field help to cover the 10 most important fields in 8 key doctypes and extract all field help into a dedicated, reviewable file with a fallback mechanism for fields not yet covered.
 

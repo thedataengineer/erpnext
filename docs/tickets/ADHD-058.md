@@ -1,5 +1,12 @@
 # ADHD-058: Leave Application "Balance at a Glance"
 
+## Current implementation record
+
+- **Status:** Blocked.
+- **Implementation:** HRMS is absent from this repository, including the payroll, leave, and expense doctypes and APIs required by this ticket. No application code was added.
+- **Verification:** No implementation or acceptance test exists. Implement and verify in the HRMS repository.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 Inject a compact leave balance card on the Leave Application form that shows entitlement, used, remaining, and the impact of the current application, so the user always knows their balance before submitting.
 

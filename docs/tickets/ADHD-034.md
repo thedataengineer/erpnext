@@ -1,5 +1,12 @@
 # ADHD-034: Period Closing Readiness Dashboard
 
+## Current implementation record
+
+- **Status:** Implemented.
+- **Implementation:** `erpnext/public/js/adhd/adhd_month_end.js` calls whitelisted `erpnext/accounts/services/adhd_period_close_check.py`.
+- **Verification:** `node --test erpnext/tests/adhd_tickets_031_040.test.js` provides structural and helper coverage; site behavior remains unverified.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 A one-click "Close Readiness" section added to the Month-End Close Checklist that runs a server-side check and returns a plain-English summary of all blocking issues — giving ADHD users a single authoritative signal about whether it is safe to close the period.
 

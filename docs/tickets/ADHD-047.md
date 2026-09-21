@@ -1,5 +1,12 @@
 # ADHD-047: Activity-Based Timesheet Pre-fill
 
+## Current implementation record
+
+- **Status:** Implemented.
+- **Implementation:** Timesheet prefill in `erpnext/public/js/adhd/adhd_tickets_041_061.js`.
+- **Verification:** `node --test erpnext/tests/adhd_tickets_041_061.test.js` provides structural and helper coverage; site behavior remains unverified.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 When ADHD mode is active and a new Timesheet is created, automatically pre-fill the first time log row's `activity_type`, `task`, and `project` fields from `localStorage` and route context — eliminating the repetitive manual entry that causes ADHD users to abandon timesheet logging mid-session.
 

@@ -1,5 +1,12 @@
 # ADHD-045: Plant Floor "Blocked Work Order" Alert
 
+## Current implementation record
+
+- **Status:** Blocked.
+- **Implementation:** `erpnext/public/js/adhd/adhd_tickets_041_061.js` contains a Shop Floor compatibility patch, but the ticket targets a Plant Floor card structure that the current implementation does not expose. Do not claim user-visible completion.
+- **Verification:** `node --test erpnext/tests/adhd_tickets_041_061.test.js` covers overdue classification only; Plant Floor integration is blocked and unverified.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 When ADHD mode is active on the Plant Floor visual page, Work Order cards whose Job Cards are overdue by more than 2 hours are highlighted in red with a "Blocked" badge — surfacing production bottlenecks at a glance without requiring a separate report.
 

@@ -1,5 +1,12 @@
 # ADHD-035: Stock Entry "Before / After" Preview
 
+## Current implementation record
+
+- **Status:** Implemented.
+- **Implementation:** `erpnext/public/js/adhd/adhd_stock_entry.js` calls whitelisted `erpnext/stock/adhd.py`.
+- **Verification:** `node --test erpnext/tests/adhd_tickets_031_040.test.js` provides structural and helper coverage; site behavior remains unverified.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 When ADHD mode is active on a Draft Stock Entry, inject a collapsible "Stock Impact Preview" section below the items child table that shows the current warehouse quantity, the change this entry will apply, and the resulting quantity after submission — making the effect of the entry visually obvious before committing.
 

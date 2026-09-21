@@ -1,5 +1,12 @@
 # ADHD-041: BOM Tree Breadcrumb Navigator
 
+## Current implementation record
+
+- **Status:** Implemented.
+- **Implementation:** `erpnext/public/js/adhd/adhd_tickets_041_061.js` calls whitelisted `erpnext/manufacturing/services/adhd_bom_ancestry.py`.
+- **Verification:** `node --test erpnext/tests/adhd_tickets_041_061.test.js` provides structural and helper coverage; site behavior remains unverified.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 When ADHD mode is active on a BOM form, inject a collapsible sidebar panel showing the ancestry chain ("Finished Product > Assembly A > This BOM") so users instantly know where the current BOM sits in the product hierarchy without mentally reconstructing it.
 

@@ -1,5 +1,12 @@
 # ADHD-036: Reorder Level "Almost There" Ambient Indicator
 
+## Current implementation record
+
+- **Status:** Implemented.
+- **Implementation:** `erpnext/public/js/adhd/adhd_list_view.js` calls whitelisted `erpnext/stock/adhd.py` for visible Item rows.
+- **Verification:** `node --test erpnext/tests/adhd_tickets_031_040.test.js` provides structural and helper coverage; site behavior remains unverified.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 When ADHD mode is active on the Item list view, extend the existing ADHD-006 heat-map infrastructure to colour-code each item row based on stock health relative to its reorder level — surfacing low-stock and near-reorder items at a glance without opening a separate report.
 

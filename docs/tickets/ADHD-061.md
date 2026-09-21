@@ -1,5 +1,12 @@
 # ADHD-061: Subcontracting Order Chain Status Panel
 
+## Current implementation record
+
+- **Status:** Implemented.
+- **Implementation:** Subcontracting progress and standard mapping actions in `erpnext/public/js/adhd/adhd_tickets_041_061.js`.
+- **Verification:** `node --test erpnext/tests/adhd_tickets_041_061.test.js` provides structural and helper coverage; site behavior remains unverified.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 Inject a horizontal chain status indicator on the Subcontracting Order form in ADHD mode, showing the current stage in the subcontracting workflow and providing a context-sensitive "Next action" button to drive the process forward.
 

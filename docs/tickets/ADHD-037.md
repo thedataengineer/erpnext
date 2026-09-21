@@ -1,5 +1,12 @@
 # ADHD-037: Batch & Serial Lookup Inline
 
+## Current implementation record
+
+- **Status:** Implemented.
+- **Implementation:** `erpnext/public/js/adhd/adhd_batch_picker.js` calls whitelisted `erpnext/stock/adhd.py` and retains standard search fallback.
+- **Verification:** `node --test erpnext/tests/adhd_tickets_031_040.test.js` provides structural and helper coverage; site behavior remains unverified.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 When ADHD mode is active and a user clicks into a `batch_no` cell in any items child table, replace the standard link dialog with a compact inline batch picker showing expiry-sorted batches with available quantities — eliminating the context-breaking popup and making FEFO selection effortless.
 

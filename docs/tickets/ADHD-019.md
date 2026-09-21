@@ -1,5 +1,12 @@
 # ADHD-019: "Done Well" Positive Reinforcement
 
+## Current implementation record
+
+- **Status:** Implemented.
+- **Implementation:** Completion feedback in `erpnext/public/js/adhd/adhd_mode.js` and ADHD styles.
+- **Verification:** `node --test erpnext/tests/adhd_tickets_011_020.test.js` provides structural coverage; site behavior remains unverified.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 Show a brief, unobtrusive confirmation animation and plain-text message when a document is submitted or a Kanban task is completed, providing the positive closure signal that ADHD users often miss from silent saves.
 

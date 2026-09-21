@@ -70,3 +70,105 @@ function initJournalEntryBalanceMeter(frm) {
 erpnext.adhd.initJournalEntryBalanceMeter = initJournalEntryBalanceMeter;
 erpnext.adhd.updateJournalEntryBalanceMeter = updateJournalEntryBalanceMeter;
 erpnext.adhd.removeJournalEntryBalanceMeter = removeJournalEntryBalanceMeter;
+
+// Last-used Cost Center and Accounting Dimension defaults.
+(() => {
+	let dimensionsPromise = null;
+	const originalSave = frappe.ui.form.Form.prototype.save;
+
+	function isActive() {
+		return Boolean(frappe.boot?.adhd_mode);
+	}
+
+	function getActiveDimensions() {
+		if (!dimensionsPromise) {
+			dimensionsPromise = frappe
+				.call({
+					method:
+						"erpnext.accounts.doctype.accounting_dimension.accounting_dimension.get_dimensions",
+				})
+				.then((response) => (response.message?.[0] || []).map((dimension) => dimension.fieldname))
+				.catch((error) => {
+					dimensionsPromise = null;
+					throw error;
+				});
+		}
+		return dimensionsPromise;
+	}
+
+	function markAsLastUsed(frm, fieldname) {
+		const field = frm.fields_dict[fieldname];
+		const $wrapper = $(field?.wrapper);
+		if (!$wrapper.length) return;
+		$wrapper.find(".adhd-last-used-tag").remove();
+		$wrapper.css("position", "relative").append(
+			`<span class="adhd-last-used-tag" style="font-size:.65rem;color:var(--text-muted);
+				position:absolute;right:4px;bottom:2px;pointer-events:none;">${__("← last used")}</span>`,
+		);
+		field.$input
+			?.off("change.adhdLastUsed")
+			.one("change.adhdLastUsed", () => $wrapper.find(".adhd-last-used-tag").remove());
+	}
+
+	async function accountingDefaultFields() {
+		return ["cost_center", ...(await getActiveDimensions())];
+	}
+
+	async function prefillLastUsed(frm) {
+		if (
+			!isActive() ||
+			!frm ||
+			frm.meta?.istable === 1 ||
+			frm.doc?.docstatus !== 0 ||
+			!frm.is_new?.()
+		) {
+			return;
+		}
+		const fields = await accountingDefaultFields();
+		await Promise.all(
+			fields.map(async (fieldname) => {
+				if (!Object.hasOwn(frm.fields_dict || {}, fieldname) || frm.doc[fieldname]) return;
+				const last = localStorage.getItem(`adhd_last_${fieldname}`);
+				if (!last) return;
+				await frm.set_value(fieldname, last);
+				markAsLastUsed(frm, fieldname);
+			}),
+		);
+	}
+
+	async function saveLastUsed(frm) {
+		if (!isActive() || frm.meta?.istable === 1 || frm.doc?.__unsaved) return;
+		const fields = await accountingDefaultFields();
+		fields.forEach((fieldname) => {
+			if (frm.doc[fieldname]) localStorage.setItem(`adhd_last_${fieldname}`, frm.doc[fieldname]);
+		});
+	}
+
+	frappe.ui.form.Form.prototype.save = function (...args) {
+		const result = originalSave.apply(this, args);
+		if (!result?.then) return result;
+		return result.then((value) => {
+			saveLastUsed(this);
+			return value;
+		});
+	};
+
+	$(document).on("form-load.adhdLastUsed form-refresh.adhdLastUsed", (_event, frm) => {
+		prefillLastUsed(frm || cur_frm);
+	});
+	frappe.router.on("change", () => {
+		frappe.after_ajax(() => prefillLastUsed(cur_frm));
+	});
+
+	window.adhdClearLastUsedDefaults = async function () {
+		const fields = await accountingDefaultFields();
+		fields.forEach((fieldname) => localStorage.removeItem(`adhd_last_${fieldname}`));
+		frappe.show_alert({
+			message: __("ADHD cost center and dimension defaults cleared."),
+			indicator: "blue",
+		});
+	};
+
+	erpnext.adhd.getActiveDimensions = getActiveDimensions;
+	erpnext.adhd.prefillLastUsed = prefillLastUsed;
+})();

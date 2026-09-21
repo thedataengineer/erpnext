@@ -1,8 +1,9 @@
 # ADHD-Friendly ERPNext: Product Roadmap
 
-> **Status**: Living document. Last updated after Phase 1 merge.
+> **Status**: Historical product roadmap. Implementation status is maintained in `docs/adhd_mode_features.md` and each `docs/tickets/ADHD-*.md` file.
 > **Audience**: Contributors, maintainers, and product stakeholders.
-> **Scope**: Everything beyond Phase 1 (shipped) and the Conversational CRM bar (in-flight).
+> **Scope**: Original product rationale and proposed sequencing. Sections 3-7 describe proposals, not current implementation state.
+> **Last reconciled**: 2026-09-21 on `iteration_3`.
 
 ---
 
@@ -88,27 +89,22 @@ ERPNext is powerful and comprehensive, and those two facts are exactly what make
 
 ## 2. What Has Already Shipped
 
-*Phase 1 — Foundation layer, merged to `develop`.*
+The original Phase 1 features remain in `erpnext/public/js/adhd/`. Current work extends beyond this roadmap:
 
-| Feature | File | What it does |
-|---|---|---|
-| ADHD Mode toggle | `public/js/adhd/adhd_mode.js` | `Alt+A` toggles body class + `data-adhd-mode`; persisted in `localStorage`; navbar 🧠 button |
-| Focus Panel | `public/js/adhd/focus_panel.js` | Slide-out panel with 25-min Pomodoro (work/break cycles) + priority task list from ERPNext `Task` doctype |
-| Task Kanban | `public/js/adhd/task_kanban.js` | Drag-drop board (To Do → In Progress → Review → Done), project filter, search, quick-add |
-| Form Focus | `public/js/adhd/form_focus.js` | Per-field help tooltips for ~25 known fields; color-coded breadcrumb for 9 doctypes; 60-second autosave |
-| ADHD Notifications | `public/js/adhd/adhd_notifications.js` | Timed, non-intrusive nudges |
+- ADHD-001 through ADHD-013 and ADHD-015 through ADHD-020 have implementations on `iteration_3`.
+- ADHD-021 through ADHD-030 remain planned.
+- ADHD-031 through ADHD-061 include implemented, partial, and blocked states. See `docs/adhd_mode_features.md` for the ticket-by-ticket catalog.
+- ADHD-014 and ADHD-057 through ADHD-059 are blocked because HRMS is absent.
+- ADHD-038 is schema-limited, ADHD-045 is blocked by current Plant Floor structure, and ADHD-048 is partial because CRM Note is a child DocType.
+- There is no ADHD-062 ticket file.
 
-*In-flight — branch ready, not yet merged.*
-
-| Feature | Files | What it does |
-|---|---|---|
-| Conversational CRM command bar | `public/js/assistant/`, `erpnext/assistant/` | `Cmd/Ctrl+K` opens a natural-language input; voice support; context-aware pre-fill from current page; local Ollama inference; draft preview before any save; 1,071 lines of tests |
+Client features load through imports in `erpnext/public/js/erpnext.bundle.js`. Server-backed features use whitelisted modules under Accounts, Manufacturing, Stock, and the ADHD usage-log DocType.
 
 ---
 
 ## 3. Gap Analysis
 
-Phase 1 nailed the foundation: the toggle infrastructure is solid, the Pomodoro and Kanban address focus and task management, and the command bar (in-flight) directly attacks initiation paralysis for CRM. What's still missing falls into five categories.
+This section records the analysis that produced the ticket backlog. It is retained for business context and must not be used as a status report. Several gaps below now have implementations; others remain planned or blocked. Use `docs/adhd_mode_features.md` for current state.
 
 ### 3.1 "What do I do next?" is still unanswered
 
@@ -171,7 +167,7 @@ The entire ADHD mode is binary (on/off). Different ADHD users have different pro
 
 **Theme**: Make it obvious what to do next, at every point in the UI. Attack task-initiation paralysis and working-memory overload in the workflows users hit every day.
 
-**Why this phase first**: Phases 1 + in-flight handle focus *during* work. Phase 2 handles the harder problem: *starting* work. Initiation paralysis is the most reported ADHD blocker in productivity software, and it compounds every other phase — if users can't start, nothing else matters. It also has a high surface-area-to-effort ratio: guided checklists and next-step prompts are relatively low-complexity to build but produce immediate, observable relief.
+**Why this phase first**: At roadmap authoring time, Phase 1 and the command bar handled focus *during* work. Phase 2 targeted the harder problem: *starting* work. Current status is recorded in the feature catalog.
 
 ---
 
@@ -222,7 +218,7 @@ No new backend required. Intercept `frappe.validated` on the client side.
 
 #### 2.4 Extend Command Bar Beyond CRM
 
-**Problem**: The conversational command bar (in-flight) only handles CRM records (Lead, Opportunity, Contact, CRM Note). Users in Accounts, Projects, and Buying have the same initiation problem.
+**Original problem**: The conversational command bar initially handled CRM records only. ADHD-004 now adds Task, Expense Claim, Material Request, and Timesheet recipes; the remaining text preserves the original proposal.
 
 **Feature**: Extend the existing `assistant/recipes.py` recipe system with recipes for:
 - **Task creation**: "add task: review Q3 budget for project Alpha, high priority" → `Task` draft
@@ -823,9 +819,9 @@ Logic reads `frm.doc.status`, `frm.doc.produced_qty`, and a `frappe.call` count 
 
 ### 7.7 CRM
 
-**Core ADHD friction in this module**: The CRM module's primary friction has already been addressed by the conversational command bar (in-flight) — creating Leads, Opportunities, and CRM Notes without touching a form is the correct solution to the initiation problem. What the command bar doesn't address is the follow-up burden: remembering to follow up on an Opportunity that went quiet, knowing which open Opportunities are stale, and tracking what was promised to whom across a pipeline.
+**Core ADHD friction in this module**: The command bar addresses record-creation initiation. Follow-up burden remains: remembering to follow up on an Opportunity that went quiet, identifying stale Opportunities, and tracking commitments across a pipeline.
 
-> Note: Lead/Opportunity/CRM Note creation via command bar is in-flight and fully specced. These features build on that foundation.
+> Historical note: This section predates the implemented ADHD-004 recipes. Use the feature catalog for current status.
 
 #### Opportunity Staleness Indicator
 **Problem**: An `Opportunity` that has had no activity (no CRM Note, no status change, no linked `Quotation`) in more than N days is effectively stalled — but the Opportunity list view shows it identically to an active one. Sales reps with ADHD miss stalled deals because there is no ambient urgency signal.

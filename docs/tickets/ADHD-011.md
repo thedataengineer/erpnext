@@ -1,5 +1,12 @@
 # ADHD-011: Journal Entry Balance Indicator
 
+## Current implementation record
+
+- **Status:** Implemented.
+- **Implementation:** `erpnext/public/js/adhd/adhd_accounts.js`, imported by the bundle.
+- **Verification:** `node --test erpnext/tests/adhd_tickets_011_020.test.js` provides structural coverage; site behavior remains unverified.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 Inject a live debit/credit balance meter into the Journal Entry form so users instantly see whether their entry is balanced without manually summing rows.
 

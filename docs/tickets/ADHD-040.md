@@ -1,5 +1,12 @@
 # ADHD-040: Delivery Trip "Stop Sequence" At-a-Glance
 
+## Current implementation record
+
+- **Status:** Implemented.
+- **Implementation:** `erpnext/public/js/adhd/adhd_delivery_trip.js` calls whitelisted `erpnext/stock/adhd.py`.
+- **Verification:** `node --test erpnext/tests/adhd_tickets_031_040.test.js` provides structural and helper coverage; site behavior remains unverified.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 When ADHD mode is active on a Delivery Trip form, inject a compact route summary above the Delivery Stops child table and add numbered sequence badges to each stop row — giving the driver or dispatcher an instant overview of the full route without scrolling through every row.
 

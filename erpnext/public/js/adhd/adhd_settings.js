@@ -85,6 +85,9 @@ erpnext.adhd.ADHDSettings = {
 			<div class="adhd-settings-list">${rows}</div>
 			<div class="adhd-settings-actions">
 				<button type="button" class="btn btn-default btn-sm adhd-settings-reset">${__("Reset to Defaults")}</button>
+				<button type="button" class="btn btn-default btn-sm adhd-clear-accounting-defaults">${__(
+					"Clear accounting defaults",
+				)}</button>
 				<button type="button" class="btn btn-default btn-sm adhd-clear-usage">${__("Clear usage history")}</button>
 			</div>
 		`);
@@ -100,6 +103,9 @@ erpnext.adhd.ADHDSettings = {
 		dialog.fields_dict.settings.$wrapper.on("click", ".adhd-clear-usage", () => {
 			this.clearUsageHistory();
 			frappe.show_alert({ message: __("Usage history cleared."), indicator: "green" }, 2);
+		});
+		dialog.fields_dict.settings.$wrapper.on("click", ".adhd-clear-accounting-defaults", () => {
+			window.adhdClearLastUsedDefaults?.();
 		});
 		dialog.show();
 	},
