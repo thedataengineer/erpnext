@@ -261,23 +261,26 @@ erpnext.adhd.TaskKanban = class TaskKanban {
 				</div>`
 				: "";
 
+		// subject and project are typed by people: escape everything that goes into the markup
+		const esc = (value) => frappe.utils.escape_html(String(value ?? ""));
+		const name = esc(task.name);
 		card.innerHTML = `
 			<div class="adhd-card-header">
 				<span class="adhd-card-priority">${emoji}</span>
 				<span class="adhd-card-drag-handle" title="${__("Drag to move")}">⠿</span>
 			</div>
 			<div class="adhd-card-subject">
-				<a href="/app/task/${task.name}" title="${__("Open task")}">
-					${task.subject}
+				<a href="${esc(frappe.utils.get_form_link("Task", task.name))}" title="${__("Open task")}">
+					${esc(task.subject)}
 				</a>
 			</div>
-			${task.project ? `<div class="adhd-card-project">📁 ${task.project}</div>` : ""}
+			${task.project ? `<div class="adhd-card-project">📁 ${esc(task.project)}</div>` : ""}
 			${dueHtml}
 			${progressHtml}
 			<div class="adhd-card-actions">
-				<button class="adhd-card-btn" data-action="done" data-task="${task.name}"
+				<button class="adhd-card-btn" data-action="done" data-task="${name}"
 					title="${__("Mark as done")}">✓</button>
-				<button class="adhd-card-btn" data-action="open" data-task="${task.name}"
+				<button class="adhd-card-btn" data-action="open" data-task="${name}"
 					title="${__("Open full form")}">↗</button>
 			</div>
 		`;

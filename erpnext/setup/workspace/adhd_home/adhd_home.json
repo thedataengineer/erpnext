@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\": \"adhd-inbox-link\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Open ADHD Inbox\", \"col\": 4}}]",
+ "content": "[{\"id\": \"adhd-inbox-link\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Open ADHD Inbox\", \"col\": 4}}, {\"id\": \"adhd-task-board-link\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Open ADHD Task Board\", \"col\": 4}}]",
  "creation": "2026-09-20 00:00:00.000000",
  "custom_blocks": [],
  "docstatus": 0,
@@ -35,6 +35,15 @@
    "format": "",
    "label": "Open ADHD Inbox",
    "link_to": "adhd-inbox",
+   "stats_filter": "[]",
+   "type": "Page"
+  },
+  {
+   "color": "Green",
+   "doc_view": "",
+   "format": "",
+   "label": "Open ADHD Task Board",
+   "link_to": "adhd-task-board",
    "stats_filter": "[]",
    "type": "Page"
   }

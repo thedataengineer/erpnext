@@ -15,7 +15,8 @@ erpnext.adhd.test = {
 	},
 	reset() {
 		Object.keys(localStorage)
-			.filter((key) => key.startsWith("adhd_") || key === erpnext.adhd.STORAGE_KEY)
+			// the mode is stored per user now ("erpnext_adhd_mode:<user>"), so match the prefix
+			.filter((key) => key.startsWith("adhd_") || key.startsWith(erpnext.adhd.STORAGE_KEY))
 			.forEach((key) => localStorage.removeItem(key));
 		window.ADHDMode?.deactivate();
 	},
