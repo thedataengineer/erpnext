@@ -1853,35 +1853,6 @@ body.adhd-mode {
 	font-weight: 600;
 }
 
-.adhd-month-end-checklist progress {
-	width: 100%;
-	margin: 6px 0 12px;
-}
-
-.adhd-month-end-step {
-	display: grid;
-	grid-template-columns: auto 1fr auto;
-	gap: 4px 8px;
-	align-items: center;
-	padding: 8px 0;
-	border-bottom: 1px solid var(--border-color);
-
-	small {
-		grid-column: 2 / 4;
-		color: var(--text-muted);
-	}
-
-	&.is-complete label {
-		text-decoration: line-through;
-	}
-}
-
-.adhd-time-badge,
-.adhd-auto-check {
-	font-size: var(--text-xs);
-	color: var(--text-muted);
-}
-
 .adhd-po-steps {
 	padding: 10px 16px;
 	background: var(--subtle-fg);
@@ -1922,15 +1893,6 @@ body.adhd-mode {
 	margin-top: 8px;
 }
 
-.adhd-field-help-tip {
-	padding: 5px 8px;
-	margin-top: 4px;
-	border-left: 3px solid var(--blue-400);
-	background: var(--subtle-fg);
-	color: var(--text-muted);
-	font-size: var(--text-xs);
-}
-
 .adhd-setting-row {
 	display: flex;
 	justify-content: space-between;
@@ -1944,6 +1906,44 @@ body.adhd-mode {
 	flex-wrap: wrap;
 	gap: 8px;
 	margin-top: 12px;
+}
+
+.adhd-field-help-tip {
+	padding: 5px 8px;
+	margin-top: 4px;
+	border-left: 3px solid var(--blue-400);
+	background: var(--subtle-fg);
+	color: var(--text-muted);
+	font-size: var(--text-xs);
+}
+
+.adhd-month-end-checklist progress {
+	width: 100%;
+	margin: 6px 0 12px;
+}
+
+.adhd-month-end-step {
+	display: grid;
+	grid-template-columns: auto 1fr auto;
+	gap: 4px 8px;
+	align-items: center;
+	padding: 8px 0;
+	border-bottom: 1px solid var(--border-color);
+
+	small {
+		grid-column: 2 / 4;
+		color: var(--text-muted);
+	}
+
+	&.is-complete label {
+		text-decoration: line-through;
+	}
+}
+
+.adhd-time-badge,
+.adhd-auto-check {
+	font-size: var(--text-xs);
+	color: var(--text-muted);
 }
 
 .adhd-module-section,

@@ -64,6 +64,7 @@ import "./adhd/adhd_form_wizard"; // Guided mandatory-field save
 import "./adhd/adhd_help"; // Keyboard shortcut reference
 import "./adhd/adhd_list_view"; // Due-date heat map
 import "./adhd/adhd_deadline_banner"; // Contextual deadline nudges
+import "./adhd/adhd_test_utils"; // Conditional developer test harness
 
 // Assistant: local-LLM chat that fills in forms from plain sentences
 import "./assistant/assistant_view";

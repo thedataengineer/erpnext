@@ -39,8 +39,16 @@ erpnext.adhd.ADHDMode = class ADHDMode {
 		this._apply(true, true);
 	}
 
+	activate() {
+		this.enable();
+	}
+
 	disable() {
 		this._apply(false, true);
+	}
+
+	deactivate() {
+		this.disable();
 	}
 
 	_apply(state, notify = true) {
@@ -96,9 +104,27 @@ erpnext.adhd.ADHDMode = class ADHDMode {
 	isActive() {
 		return this.active;
 	}
+
+	getState() {
+		const settings = window.ADHDSettings && erpnext.adhd.ADHD_FEATURES
+			? Object.fromEntries(
+					erpnext.adhd.ADHD_FEATURES.map((feature) => [
+						feature.key,
+						window.ADHDSettings.get(feature.key),
+					])
+				)
+			: {};
+		return {
+			isActive: this.active,
+			enabledSettings: settings,
+			pomodoroRunning: Boolean(erpnext.adhd.focusPanel?.timerRunning),
+			currentForm: window.cur_frm?.doctype || null,
+		};
+	}
 };
 
 erpnext.adhd.mode = new erpnext.adhd.ADHDMode();
+window.ADHDMode = erpnext.adhd.mode;
 
 frappe.after_ajax(() => {
 	_addNavbarToggle();

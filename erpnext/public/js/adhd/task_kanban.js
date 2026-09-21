@@ -367,6 +367,16 @@ erpnext.adhd.TaskKanban = class TaskKanban {
 		});
 	}
 
+	getState() {
+		return {
+			columns: this.columns.map((column) => ({
+				name: column.id,
+				cardCount: this.tasks.filter((task) => task.status === column.id).length,
+			})),
+			dragActive: Boolean(this.draggedTask),
+		};
+	}
+
 	_showQuickAdd(defaultStatus) {
 		this._currentAddStatus = defaultStatus;
 		const form = document.getElementById("adhd-quick-add-form");
@@ -427,5 +437,6 @@ frappe.pages["adhd-task-board"] = {
 			erpnext.adhd.enable();
 		}
 		erpnext.adhd.taskKanban = new erpnext.adhd.TaskKanban(wrapper);
+		window.TaskKanban = erpnext.adhd.taskKanban;
 	},
 };
