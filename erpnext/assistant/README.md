@@ -46,6 +46,7 @@ client sends back the `state` it received and the server re-validates everything
 | `create_opportunity` | Opportunity for a lead, customer or prospect, with value and closing date |
 | `follow_up` | a ToDo for you, optionally linked to a record |
 | `log_time`, `create_task`, `create_project`, `create_customer` | Timesheet, Task, Project, Customer |
+| `create_expense_claim`, `create_material_request`, `create_timesheet_detail` | Expense Claim, Material Request, a Timesheet row against a task |
 
 To add one: a `Recipe` (its few friendly `Field`s, a `build` function returning the real document, a `done`
 sentence), and a line in the classifier prompt in `engine._classify_prompt`. A link that can point at several
@@ -93,4 +94,9 @@ site it runs on).
 ```bash
 bench --site <test-site> run-tests --module erpnext.assistant.test_assistant
 bench --site <test-site> run-tests --module erpnext.assistant.test_crm
+bench --site <test-site> run-tests --module erpnext.assistant.test_recipes_extended
 ```
+
+These need a working bench with its database and Redis running. The expense-claim, material-request and
+timesheet-detail recipes (ADHD-004) are covered by `test_recipes_extended`; the Node ADHD suites don't reach
+server code.
