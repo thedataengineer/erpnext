@@ -1,5 +1,12 @@
 # ADHD-059: Expense Claim "Receipt Attached?" Ambient Check
 
+## Current implementation record
+
+- **Status:** Blocked.
+- **Implementation:** HRMS is absent from this repository, including the payroll, leave, and expense doctypes and APIs required by this ticket. No application code was added.
+- **Verification:** No implementation or acceptance test exists. Implement and verify in the HRMS repository.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 On an Expense Claim form in ADHD mode, display a "📎 No receipt" badge on each expense row lacking an attachment and a summary line showing how many expenses have receipts, preventing rejection-by-missing-receipt.
 

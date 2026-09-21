@@ -1,5 +1,12 @@
 # ADHD-008: Contextual Due-Date Nudges on Document Forms
 
+## Current implementation record
+
+- **Status:** Implemented.
+- **Implementation:** `erpnext/public/js/adhd/adhd_deadline_banner.js`, imported by the bundle.
+- **Verification:** No ticket-specific automated test; site and browser behavior remain unverified.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 When ADHD mode is active, injects a non-blocking, per-session-dismissible banner at the top of Sales Invoice, Sales Order, Task, and Purchase Order forms that shows a plain-English time-to-deadline message computed from existing date fields — reminding the user of urgency without interrupting their current action.
 

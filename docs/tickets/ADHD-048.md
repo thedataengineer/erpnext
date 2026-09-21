@@ -1,5 +1,12 @@
 # ADHD-048: CRM Note "Promised Action" Extractor
 
+## Current implementation record
+
+- **Status:** Partial.
+- **Implementation:** Detection lives in `erpnext/public/js/adhd/adhd_tickets_041_061.js` and attaches from `erpnext/public/js/utils/crm_activities.js`. CRM Note is a child DocType here, so it creates a parent-linked ToDo instead of the standalone flow described below.
+- **Verification:** `node --test erpnext/tests/adhd_tickets_041_061.test.js` covers extraction and attachment points; dialog behavior remains unverified.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 When a CRM Note is created or edited, scan the note text client-side for commitment language patterns (regex-based) and — if a match is found — offer a one-click "Create ToDo" button that pre-fills the ToDo with the matched phrase and any detected date, so verbal commitments made during calls never slip through the cracks.
 

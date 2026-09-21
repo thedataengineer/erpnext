@@ -1,4 +1,11 @@
-# ADHD-001: Workflow Wizard — Document Chain Navigator — DONE
+# ADHD-001: Workflow Wizard — Document Chain Navigator
+
+## Current implementation record
+
+- **Status:** Implemented.
+- **Implementation:** `erpnext/public/js/adhd/adhd_chain_navigator.js`, imported by `erpnext/public/js/erpnext.bundle.js`.
+- **Verification:** No ticket-specific automated test; site and browser behavior remain unverified.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
 
 ## Summary
 A persistent progress bar rendered on key transactional documents (Sales Order, Purchase Invoice, etc.) that shows every step in the document chain, marks completed steps, highlights the current one, and offers a pre-filled "Create Next Step" button — eliminating the cognitive load of remembering what comes next.

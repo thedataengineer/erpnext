@@ -1,5 +1,12 @@
 # ADHD-017: Friction Logger — Anonymous Behavioral Signal Collection
 
+## Current implementation record
+
+- **Status:** Implemented.
+- **Implementation:** `erpnext/public/js/adhd/adhd_telemetry.js`, `erpnext/adhd_usage_log/doctype/adhd_usage_log/`, and its report.
+- **Verification:** `node --test erpnext/tests/adhd_tickets_011_020.test.js` provides structural coverage; site behavior remains unverified.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 An opt-in friction logger records anonymised interaction signals (tooltip dwell time, form save duration, skipped wizard steps, command bar usage) to help maintainers understand which ADHD features are actually reducing friction.
 

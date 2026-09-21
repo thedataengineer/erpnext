@@ -1,5 +1,12 @@
 # ADHD-010: Payment Schedule Digest in Focus Panel
 
+## Current implementation record
+
+- **Status:** Implemented.
+- **Implementation:** `erpnext/public/js/adhd/adhd_payment_digest.js` calls whitelisted `erpnext/accounts/services/adhd_payment_digest.py`.
+- **Verification:** No ticket-specific automated test; site and browser behavior remain unverified.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 Adds a collapsible "Payment Summary" section to the ADHD Focus Panel showing total outstanding receivables, payments due this week grouped by customer, and overdue payments grouped by customer — each line with a one-click "Create Payment Entry" shortcut — so the user can manage cash flow without leaving the Focus Panel or navigating to the Accounts module.
 

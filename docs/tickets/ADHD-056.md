@@ -1,5 +1,12 @@
 # ADHD-056: Asset Capitalization Guided Flow
 
+## Current implementation record
+
+- **Status:** Implemented.
+- **Implementation:** Asset Capitalization guided steps in `erpnext/public/js/adhd/adhd_tickets_041_061.js`.
+- **Verification:** `node --test erpnext/tests/adhd_tickets_041_061.test.js` provides structural and helper coverage; site behavior remains unverified.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 When ADHD mode is active on a new Asset Capitalization form, replace the intimidating blank form with a three-step wizard that guides the user through type selection, item entry, and submission, with the full form still accessible via a toggle.
 

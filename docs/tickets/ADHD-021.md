@@ -1,5 +1,12 @@
 # ADHD-021: Quotation Expiry Ambient Warning
 
+## Current implementation record
+
+- **Status:** Planned.
+- **Implementation:** No matching implementation or bundle registration exists on `iteration_3`.
+- **Verification:** No implementation test exists; original acceptance criteria remain pending.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 Extends the Phase 3.1 heat-map infrastructure to the Quotation list view and injects a one-line expiry banner on the Quotation form, so users can see at a glance which open quotes are about to go cold.
 

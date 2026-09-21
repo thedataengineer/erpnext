@@ -1,5 +1,12 @@
 # ADHD-052: Warranty Claim "What's Covered" Inline Check
 
+## Current implementation record
+
+- **Status:** Implemented.
+- **Implementation:** Warranty coverage banner in `erpnext/public/js/adhd/adhd_tickets_041_061.js`.
+- **Verification:** `node --test erpnext/tests/adhd_tickets_041_061.test.js` provides structural and helper coverage; site behavior remains unverified.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 On a Warranty Claim form in ADHD mode, display a one-line banner that immediately tells the agent whether the item is still under warranty, eliminating the need to manually cross-reference dates.
 

@@ -1,5 +1,12 @@
 # ADHD-024: Installation Note Checklist
 
+## Current implementation record
+
+- **Status:** Planned.
+- **Implementation:** No matching implementation or bundle registration exists on `iteration_3`.
+- **Verification:** No implementation test exists; original acceptance criteria remain pending.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 Injects a "Confirmed installed?" checkbox column into the Installation Note items grid when ADHD mode is active, converting a blank, ambiguous form into a concrete, completable checklist that confirms each item has been physically installed.
 

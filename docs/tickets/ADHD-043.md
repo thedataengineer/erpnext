@@ -1,5 +1,12 @@
 # ADHD-043: Production Plan Demand Summary Banner
 
+## Current implementation record
+
+- **Status:** Implemented.
+- **Implementation:** Production Plan summary in `erpnext/public/js/adhd/adhd_tickets_041_061.js`.
+- **Verification:** `node --test erpnext/tests/adhd_tickets_041_061.test.js` provides structural and helper coverage; site behavior remains unverified.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 When ADHD mode is active on a Production Plan form, inject a compact summary bar above the items table showing total items, source Sales Orders, combined quantity, and earliest planned start date — computed client-side from already-loaded data so the user gets an instant demand overview without opening a report.
 

@@ -1,5 +1,12 @@
 # ADHD-030: Opportunity Staleness Indicator
 
+## Current implementation record
+
+- **Status:** Planned.
+- **Implementation:** No matching implementation or bundle registration exists on `iteration_3`.
+- **Verification:** No implementation test exists; original acceptance criteria remain pending.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 Extends the Phase 3.1 heat-map infrastructure to the Opportunity list view using days-since-last-modification as the staleness signal, and injects a "stale" badge on the Opportunity form itself when the record has not been updated in more than 14 days.
 

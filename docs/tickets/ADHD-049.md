@@ -1,5 +1,12 @@
 # ADHD-049: Pipeline Stage Progress Bar on Opportunity
 
+## Current implementation record
+
+- **Status:** Implemented.
+- **Implementation:** Opportunity pipeline rendering in `erpnext/public/js/adhd/adhd_tickets_041_061.js`.
+- **Verification:** `node --test erpnext/tests/adhd_tickets_041_061.test.js` provides structural and helper coverage; site behavior remains unverified.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 When ADHD mode is active on an Opportunity form, replace the status dropdown's abstract labels with a horizontal visual stage progress bar (Prospect → Qualified → Proposal → Negotiation → Closed Won/Lost) so users see exactly where this deal stands and can advance it with a single click.
 

@@ -1,5 +1,12 @@
 # ADHD-054: Asset Creation Prompt on Purchase Invoice Submit
 
+## Current implementation record
+
+- **Status:** Implemented.
+- **Implementation:** Purchase Invoice fixed-asset prompt in `erpnext/public/js/adhd/adhd_tickets_041_061.js`.
+- **Verification:** `node --test erpnext/tests/adhd_tickets_041_061.test.js` provides structural and helper coverage; site behavior remains unverified.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 When a Purchase Invoice containing fixed-asset items is submitted in ADHD mode, show a non-blocking banner prompting the user to create Asset records immediately, preventing the common failure of submitting and forgetting.
 

@@ -1,5 +1,12 @@
 # ADHD-050: Task Dependency "Blocked By" Inline Warning
 
+## Current implementation record
+
+- **Status:** Implemented.
+- **Implementation:** Task blocker warning in `erpnext/public/js/adhd/adhd_tickets_041_061.js`.
+- **Verification:** `node --test erpnext/tests/adhd_tickets_041_061.test.js` provides structural and helper coverage; site behavior remains unverified.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 When ADHD mode is active on a Task form and the task has incomplete blocking tasks in its `depends_on` child table, inject a prominent warning banner listing those blocking tasks with clickable links — preventing ADHD users from starting work they'll have to abandon when they discover the block mid-execution.
 

@@ -1,5 +1,12 @@
 # ADHD-002: Smart Inbox — "Your Day At a Glance"
 
+## Current implementation record
+
+- **Status:** Implemented.
+- **Implementation:** `erpnext/public/js/adhd/adhd_smart_inbox.js` and `erpnext/setup/page/adhd_inbox/`.
+- **Verification:** No ticket-specific automated test; site and browser behavior remain unverified.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 An opt-in ADHD Workspace homepage that consolidates overdue/due-today items, documents awaiting the user's action, and a "Resume" panel showing the last three edited documents — replacing the need to mentally reconstruct the day's priorities from scattered list views.
 

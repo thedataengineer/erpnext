@@ -1,5 +1,12 @@
 # ADHD-031: Bank Reconciliation Progress Saver
 
+## Current implementation record
+
+- **Status:** Implemented.
+- **Implementation:** `erpnext/public/js/adhd/adhd_bank_recon.js`, imported by the bundle.
+- **Verification:** `node --test erpnext/tests/adhd_tickets_031_040.test.js` provides structural and helper coverage; site behavior remains unverified.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 When ADHD mode is active on the Bank Reconciliation Tool, persist the current reconciliation session (bank account, date range, and all checked-off transaction IDs) to localStorage and automatically restore it on next page load — so a user interrupted mid-reconciliation never loses their place.
 

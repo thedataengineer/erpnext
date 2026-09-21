@@ -1,5 +1,12 @@
 # ADHD-046: Project Health Snapshot
 
+## Current implementation record
+
+- **Status:** Implemented.
+- **Implementation:** Project health metrics in `erpnext/public/js/adhd/adhd_tickets_041_061.js`.
+- **Verification:** `node --test erpnext/tests/adhd_tickets_041_061.test.js` provides structural and helper coverage; site behavior remains unverified.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 When ADHD mode is active on a Project form, inject a compact "Project Health" card showing four key metrics — overdue tasks, unassigned tasks, percent complete, and days to deadline — so the user can assess project status in one glance without drilling into the task list.
 

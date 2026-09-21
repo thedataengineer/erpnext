@@ -1,5 +1,12 @@
 # ADHD-038: Putaway Rule "Why Here?" Inline Explanation
 
+## Current implementation record
+
+- **Status:** Partial.
+- **Implementation:** `erpnext/public/js/adhd/adhd_stock_entry.js` contains the explanation UI, but this branch lacks the assumed `Stock Entry Detail.putaway_rule` field, so standard rows cannot activate it reliably.
+- **Verification:** `node --test erpnext/tests/adhd_tickets_031_040.test.js` checks safe field usage; site activation remains blocked by schema.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 When ADHD mode is active on a Stock Entry where rows have been auto-assigned by a putaway rule, add a "?" icon next to each assigned `t_warehouse` field that opens a plain-English tooltip-modal explaining why that location was chosen — eliminating the confusion of silently re-routed stock.
 

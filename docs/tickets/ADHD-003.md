@@ -1,5 +1,12 @@
 # ADHD-003: Mandatory Field Wizard — Guided Save
 
+## Current implementation record
+
+- **Status:** Implemented.
+- **Implementation:** `erpnext/public/js/adhd/adhd_form_wizard.js`, imported by the bundle.
+- **Verification:** `node --test erpnext/tests/adhd_form_wizard.test.js`; browser behavior remains unverified.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 Intercepts ERPNext's blocking mandatory-field error and replaces it with a step-by-step guided save mode that focuses each missing field in turn, displays a plain-English hint, and automatically retriggers save when all required fields are filled.
 

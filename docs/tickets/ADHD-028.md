@@ -1,5 +1,12 @@
 # ADHD-028: Purchase Invoice Three-Way Match Indicator
 
+## Current implementation record
+
+- **Status:** Planned.
+- **Implementation:** No matching implementation or bundle registration exists on `iteration_3`.
+- **Verification:** No implementation test exists; original acceptance criteria remain pending.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 Compares the Purchase Invoice `net_total` against the originating Purchase Order and Purchase Receipt totals in ADHD mode, displaying a colour-coded "Match Status" badge next to `grand_total` — converting a submit-time blocking validation error into an ambient, pre-submit signal the user can act on calmly.
 

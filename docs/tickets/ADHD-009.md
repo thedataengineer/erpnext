@@ -1,5 +1,12 @@
 # ADHD-009: Time-Box Suggestions for Hyperfocus-Prone Forms
 
+## Current implementation record
+
+- **Status:** Implemented.
+- **Implementation:** `erpnext/public/js/adhd/form_focus.js` and `adhd_timebox_timer.js`.
+- **Verification:** No ticket-specific automated test; site and browser behavior remain unverified.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 For a predefined set of "rabbit hole" doctypes (Item, Account, BOM, Print Format, Custom Field), shows a subtle dismissible banner in ADHD mode suggesting a 10-minute time-box, with a button that launches the Pomodoro timer in a 10-minute configuration — helping users enter these detail-heavy forms with a built-in exit strategy.
 

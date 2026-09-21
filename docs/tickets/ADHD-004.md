@@ -1,5 +1,12 @@
 # ADHD-004: Extend Command Bar Beyond CRM
 
+## Current implementation record
+
+- **Status:** Implemented.
+- **Implementation:** `erpnext/assistant/recipes.py` implements Task, Expense Claim, Material Request, and Timesheet recipes with confirm-before-save behavior.
+- **Verification:** `bench --site <site> run-tests --module erpnext.assistant.test_assistant`; requires a configured test site.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 Adds four new natural-language command recipes to the existing Conversational CRM command bar — Task creation, Expense Claim, Material Request, and Timesheet Detail — each following the existing confirm-before-save contract so users can create documents without navigating to their respective modules.
 

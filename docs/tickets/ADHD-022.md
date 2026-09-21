@@ -1,5 +1,12 @@
 # ADHD-022: Customer "Essentials Only" Tab
 
+## Current implementation record
+
+- **Status:** Planned.
+- **Implementation:** No matching implementation or bundle registration exists on `iteration_3`.
+- **Verification:** No implementation test exists; original acceptance criteria remain pending.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 Injects a persistent "Essentials" summary section onto the Customer form when ADHD mode is active, surfacing the four fields that answer "can I take this order?" — credit limit, payment terms, primary contact email, and outstanding amount — without scrolling or opening child tables.
 

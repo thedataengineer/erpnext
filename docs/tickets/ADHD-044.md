@@ -1,5 +1,12 @@
 # ADHD-044: Job Card Time-Logging Shortcut
 
+## Current implementation record
+
+- **Status:** Implemented.
+- **Implementation:** Job Card timer and time-log insertion in `erpnext/public/js/adhd/adhd_tickets_041_061.js`.
+- **Verification:** `node --test erpnext/tests/adhd_tickets_041_061.test.js` provides structural and helper coverage; site behavior remains unverified.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 When ADHD mode is active on a Job Card form, show a prominent "Start Work" / "Stop Work" toggle button above the standard fields so workers can log time with a single tap per direction — removing the cognitive burden of manually filling `from_time`, `to_time`, and `time_in_mins` fields in the child table.
 

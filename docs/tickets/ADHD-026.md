@@ -1,5 +1,12 @@
 # ADHD-026: Supplier Scorecard "Before You Order" Nudge
 
+## Current implementation record
+
+- **Status:** Planned.
+- **Implementation:** No matching implementation or bundle registration exists on `iteration_3`.
+- **Verification:** No implementation test exists; original acceptance criteria remain pending.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 When ADHD mode is active and a supplier is selected on a new Purchase Order, queries the Supplier Scorecard and displays a non-blocking one-line warning banner below the supplier field if the supplier's total score is below a configurable threshold — giving the user a passive "stop and think" signal without interrupting their flow.
 

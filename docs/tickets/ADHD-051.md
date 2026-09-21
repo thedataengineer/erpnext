@@ -1,5 +1,12 @@
 # ADHD-051: Issue SLA Countdown on Form and List
 
+## Current implementation record
+
+- **Status:** Implemented.
+- **Implementation:** Issue countdown in `erpnext/public/js/adhd/adhd_tickets_041_061.js`; list urgency in `adhd_list_view.js`.
+- **Verification:** `node --test erpnext/tests/adhd_tickets_041_061.test.js` provides structural and helper coverage; site behavior remains unverified.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 Display a live SLA countdown timer on the Issue form and color-coded row borders in the Issue list so support agents always know exactly how much time remains before a breach.
 

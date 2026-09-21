@@ -1,5 +1,12 @@
 # ADHD-025: RFQ Multi-Supplier Comparison Card
 
+## Current implementation record
+
+- **Status:** Planned.
+- **Implementation:** No matching implementation or bundle registration exists on `iteration_3`.
+- **Verification:** No implementation test exists; original acceptance criteria remain pending.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 Adds a "Compare Responses" button to submitted Request for Quotation forms in ADHD mode that opens a side-by-side modal showing all linked Supplier Quotations with rate, validity, and payment terms — and a direct "Select" button per row that navigates to that quotation and pre-focuses the Create PO action.
 

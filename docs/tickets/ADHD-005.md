@@ -1,5 +1,12 @@
 # ADHD-005: Keyboard Shortcut Reference Panel
 
+## Current implementation record
+
+- **Status:** Implemented.
+- **Implementation:** `erpnext/public/js/adhd/adhd_help.js`, imported by the bundle.
+- **Verification:** No ticket-specific automated test; site and browser behavior remain unverified.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 A searchable modal panel, triggered by `Alt+?`, that lists all ADHD-mode custom shortcuts plus the top 20 native ERPNext shortcuts grouped by context, giving users instant in-app access to the keyboard vocabulary without needing external documentation.
 

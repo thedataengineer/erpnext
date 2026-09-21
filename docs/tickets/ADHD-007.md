@@ -1,5 +1,12 @@
 # ADHD-007: Automatic Time-Log Prompt on Pomodoro Completion
 
+## Current implementation record
+
+- **Status:** Implemented.
+- **Implementation:** `erpnext/public/js/adhd/adhd_time_log.js` integrates with `focus_panel.js`.
+- **Verification:** No ticket-specific automated test; site and browser behavior remain unverified.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 When a Pomodoro work session completes and the Focus Panel has an active task, automatically surfaces a one-click time-log prompt pre-filled with the session's project, task, start/end times, and preferred activity type — so the user captures their time without having to remember to navigate to a Timesheet.
 

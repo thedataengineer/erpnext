@@ -1,5 +1,12 @@
 # ADHD-014: HR Employee Onboarding Wizard
 
+## Current implementation record
+
+- **Status:** Blocked.
+- **Implementation:** ERPNext no longer contains the HR/Payroll doctypes and workspace assumed by this ticket; HRMS is absent from this repository.
+- **Verification:** No implementation or acceptance test was run. Implement in the HRMS repository or add HRMS as a tested dependency.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 A guided multi-step wizard that creates all required HR documents for a new employee in sequence, so users never have to figure out the correct order or navigate between five separate forms.
 

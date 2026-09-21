@@ -1,5 +1,12 @@
 # ADHD-033: Cost Center & Accounting Dimension "Last Used" Pre-fill
 
+## Current implementation record
+
+- **Status:** Implemented.
+- **Implementation:** Last-used values in `erpnext/public/js/adhd/adhd_accounts.js`; clear action in `adhd_settings.js`.
+- **Verification:** `node --test erpnext/tests/adhd_tickets_031_040.test.js` provides structural and helper coverage; site behavior remains unverified.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 When ADHD mode is active, automatically pre-fill `cost_center` and all active Accounting Dimension fields on new documents with the user's last-used values — eliminating the repetitive lookup that forces ADHD users to re-navigate the same dropdown on every new document.
 

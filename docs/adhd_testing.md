@@ -1,10 +1,39 @@
 # ADHD Feature Testing
 
-## Overview
+Repository-level Node tests verify helper behavior, module registration, bundle imports, and selected schema contracts. They do not prove Desk rendering, site permissions, mapped-document actions, or RPC results.
 
-The browser harness exposes stable controls, serializable runtime state, and fixture factories for ADHD features. In developer mode, Cypress, or Playwright, access it through `window.adhdTest`.
+## Fast repository checks
 
-Call `reset()` before each browser test to clear ADHD-owned local storage and deactivate the mode. Fixture helpers insert test documents through `frappe.client.insert` and resolve to the created document name.
+Run from the repository root:
+
+```bash
+node --test erpnext/tests/adhd_form_wizard.test.js
+node --test erpnext/tests/adhd_tickets_011_020.test.js
+node --test erpnext/tests/adhd_tickets_031_040.test.js
+node --test erpnext/tests/adhd_tickets_041_061.test.js
+git diff --check
+```
+
+The 031-061 suites execute client modules in a Node VM with Frappe stubs. Treat a pass as contract coverage, not browser acceptance.
+
+## Bench checks
+
+Assistant recipes have Frappe tests:
+
+```bash
+bench --site <test-site> run-tests --module erpnext.assistant.test_assistant
+bench --site <test-site> run-tests --module erpnext.assistant.test_crm
+```
+
+These commands require a working bench, installed app, configured test site, and database services. If those prerequisites are unavailable, record the result as **not run**, not passed.
+
+Build validation also requires the parent bench asset pipeline. `package.json` in this repository only delegates build commands to the `banking` package, so `yarn build` here does not validate `erpnext/public/js/erpnext.bundle.js`.
+
+## Browser harness
+
+`erpnext/public/js/adhd/adhd_test_utils.js` exposes stable controls and fixture factories as `window.adhdTest` only when developer mode, Cypress, or Playwright is detected.
+
+Call `reset()` before each browser test to clear ADHD-owned local storage and deactivate the mode. Fixture helpers insert documents through `frappe.client.insert` and resolve to the created document name.
 
 ## Cypress example
 
@@ -36,7 +65,7 @@ expect(await page.evaluate(() => window.adhdTest.isActive())).toBe(true);
 
 Every ADHD class that keeps runtime state must implement `getState()`. The method returns a plain, serializable object with no DOM nodes, functions, circular references, or private record values. Tests should prefer this API over reading implementation properties.
 
-Current module names are `adhd_mode`, `focus_panel`, and `task_kanban`.
+Current state-bearing module names are `adhd_mode`, `focus_panel`, and `task_kanban`. New stateful classes should follow the same serializable contract.
 
 ## Wizard abandon behavior
 
@@ -47,3 +76,24 @@ Browser tests must track each created document and delete it in `afterEach` thro
 ## Adding fixtures
 
 Add fixture factories under `adhdTest.fixtures`. Supply minimal valid defaults, merge caller overrides last, call `frappe.client.insert`, and resolve only the created document name. Tests must remain responsible for cleanup and site-specific linked records.
+
+## Required site-level matrix
+
+Record each result as passed, failed, blocked, or not run:
+
+- Toggle ADHD mode, reload Desk, and confirm bundle modules initialize once.
+- Exercise forms, list views, dialogs, and page-level features with realistic permissions.
+- Verify whitelisted RPC calls for Accounts, Stock, Manufacturing, Quality, and telemetry.
+- Verify mapped-document actions for Sales, Buying, and Subcontracting.
+- Confirm local-storage restore and cleanup behavior in a supported browser.
+- Confirm reduced-motion behavior and keyboard access.
+
+Known constraints:
+
+- ADHD-038 cannot activate reliably because the current Stock Entry Detail schema lacks the assumed `putaway_rule` field.
+- ADHD-045 cannot reach the ticket's Plant Floor card structure in this ERPNext version.
+- ADHD-048 uses the parent CRM form because CRM Note is a child DocType.
+- ADHD-057 through ADHD-059 cannot run because HRMS is absent.
+- ADHD-014 has the same HRMS dependency and remains blocked.
+
+No site-level acceptance evidence is stored in this repository as of 2026-09-21.

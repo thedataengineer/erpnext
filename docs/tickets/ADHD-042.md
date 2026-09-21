@@ -1,5 +1,12 @@
 # ADHD-042: Work Order "What to Do Next" Status Prompt
 
+## Current implementation record
+
+- **Status:** Implemented.
+- **Implementation:** Work Order next actions in `erpnext/public/js/adhd/adhd_tickets_041_061.js`.
+- **Verification:** `node --test erpnext/tests/adhd_tickets_041_061.test.js` provides structural and helper coverage; site behavior remains unverified.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 When ADHD mode is active on a Work Order form, inject a one-line contextual "Next action" prompt below the document title that tells the user exactly what to do based on the Work Order's current state — eliminating the need to decode ERPNext's status fields to figure out the next step.
 

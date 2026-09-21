@@ -1,5 +1,12 @@
 # ADHD-023: Sales Order Interruption Restore
 
+## Current implementation record
+
+- **Status:** Planned.
+- **Implementation:** No matching implementation or bundle registration exists on `iteration_3`.
+- **Verification:** No implementation test exists; original acceptance criteria remain pending.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 Auto-saves Sales Order and Quotation form state (including items, taxes, and sales team rows) to localStorage every 30 seconds when ADHD mode is active, and offers a "Resume it?" banner on the next visit so interrupted drafts are never silently lost.
 

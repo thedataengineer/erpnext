@@ -1,5 +1,12 @@
 # ADHD-053: Issue Reply Draft Autosave
 
+## Current implementation record
+
+- **Status:** Implemented.
+- **Implementation:** Issue reply draft persistence in `erpnext/public/js/adhd/adhd_tickets_041_061.js`.
+- **Verification:** `node --test erpnext/tests/adhd_tickets_041_061.test.js` provides structural and helper coverage; site behavior remains unverified.
+- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+
 ## Summary
 Autosave a support agent's in-progress reply on an Issue to localStorage every 20 seconds and offer to restore it if the agent returns after navigating away, preventing catastrophic loss of composed text.
 
