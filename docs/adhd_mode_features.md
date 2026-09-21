@@ -15,7 +15,9 @@ Client modules live under `erpnext/public/js/adhd/` and are imported in dependen
 
 Server-backed features call whitelisted RPC modules:
 
-- Accounts: `erpnext/accounts/services/adhd_payment_digest.py`, `adhd_month_end.py`, and `adhd_period_close_check.py`
+- Accounts: `erpnext/accounts/services/adhd_payment_digest.py`, `adhd_month_end.py`, `adhd_period_close_check.py`, and `adhd_three_way_match.py`
+- Selling: `erpnext/selling/services/adhd_customer_essentials.py`
+- Buying: `erpnext/buying/services/adhd_rfq_compare.py` and `adhd_receipt_diff.py`
 - Manufacturing: `erpnext/manufacturing/services/adhd_bom_ancestry.py`
 - Stock: `erpnext/stock/adhd.py` and `erpnext/stock/adhd_quality.py`
 - Telemetry: `erpnext/adhd_usage_log/doctype/adhd_usage_log/adhd_usage_log.py`
@@ -45,18 +47,20 @@ Server-backed features call whitelisted RPC modules:
 
 ## ADHD-021 through ADHD-030
 
-These tickets remain **Planned**. No matching implementation or bundle registration exists on `iteration_3`:
+Built 2026-09-21 on `main`, each against the Frappe/ERPNext source it depends on. Every one is display or navigation only: none blocks a save or submit. None has been seen in a logged-in browser.
 
-- ADHD-021 Quotation expiry warning
-- ADHD-022 Customer essentials view
-- ADHD-023 Sales Order interruption restore (an earlier 60-second server auto-save in `form_focus.js` was removed: it saved half-edited forms and is not what the ticket specifies, which is a local snapshot)
-- ADHD-024 Installation Note checklist
-- ADHD-025 RFQ comparison card
-- ADHD-026 Supplier scorecard nudge
-- ADHD-027 Purchase Receipt expected-versus-received view
-- ADHD-028 Purchase Invoice three-way match indicator
-- ADHD-029 Sales Order delivery summary
-- ADHD-030 Opportunity staleness indicator
+- **ADHD-021, Implemented:** Quotation expiry banner, `adhd_quotation.js`, and expiry colouring in the Quotation list, `adhd_list_view.js` (`valid_till`; amber in the last 7 days, red on the last day and after). A quotation is still valid on its `valid_till` date, so that day is "Expires today", not "Expired".
+- **ADHD-022, Implemented:** Customer "Essentials" strip, `adhd_customer.js` and `erpnext/selling/services/adhd_customer_essentials.py`: credit limit, outstanding amount, payment terms and primary contact email. Neither the limit (a per-company child table) nor the outstanding amount (computed from the ledger) is a Customer column, so both come from the functions ERPNext's own credit-limit check uses, for one company in that company's currency. With several companies and no default the figures are withheld rather than guessed.
+- **ADHD-023, Implemented:** Sales Order / Quotation interruption restore, `adhd_draft_recovery.js`. A snapshot of the unsaved form is kept in `localStorage` every 30 seconds, per user (a week's expiry, at most 20 snapshots, none over 150k characters) and the next open asks "Resume it?". It never saves or calls the server. `create_new.js` marks every new document unsaved, so a new form is only snapshotted once a party or item exists. Quotation has no `customer` field (its party is `quotation_to` and `party_name`), so its field list differs from Sales Order's. The offer is triggered from the Smart Inbox's form hook and from the module's own `refresh` handler.
+- **ADHD-024, Implemented:** Installation Note checklist, `adhd_installation_note.js`. The column is a real Custom Field, `Installation Note Item-adhd_confirmed_installed` (Check, hidden by default), shipped in `erpnext/fixtures/custom_field.json`; the mode reveals it in the items grid and shows "3 of 5 confirmed". It needs `bench migrate` on an existing site. Frappe's Grid cannot add a column at run time (`add_custom_column` exists only on Query Report), which is why it is a field and not a client-only column. A user with custom grid columns may need "Add / Remove Columns" to see it.
+- **ADHD-025, Implemented:** RFQ "Compare Responses" dialog, `adhd_rfq.js` and `erpnext/buying/services/adhd_rfq_compare.py`. A Supplier Quotation does not name its RFQ on the header; the link is on its item rows, so quotations are found through those. Rates are ranked per stock UOM in company currency, and totals only between quotations that priced every item. Supplier Quotation has no payment terms, so the supplier's default is shown. "Select" opens the quotation and creates nothing.
+- **ADHD-026, Implemented:** Supplier scorecard nudge on a new Purchase Order, `adhd_purchase_order_scorecard.js` (threshold `SCORECARD_NUDGE_THRESHOLD`, 50). Supplier Scorecard is readable by System Manager only, so other roles see no nudge and no error.
+- **ADHD-027, Implemented:** Purchase Receipt open-quantity view, `adhd_purchase_receipt.js` and `erpnext/buying/services/adhd_receipt_diff.py`. The receipt has no `purchase_order` header field, so orders come from the item rows. Pending is `qty - received_qty`, which is already net of returns.
+- **ADHD-028, Implemented:** Purchase Invoice three-way match badge, `adhd_purchase_invoice_match.js` and `erpnext/accounts/services/adhd_three_way_match.py`. The invoice links to its Purchase Order and Receipt on the item rows (`po_detail`, `pr_detail`), not the header, so each referenced row is compared in the invoice's own currency. The ticket's fixed 5% tolerance is not used: the badge mirrors ERPNext's own rules (the Purchase Order overflow check on submit, the Purchase Receipt billing validation, the same-rate setting, the item's or Accounts Settings' over-billing allowance), so green never means "submit will throw". Draft invoices only, advisory, and no badge on returns.
+- **ADHD-029, Implemented:** Sales Order delivery summary, `adhd_sales_order.js`: delivered and remaining quantity per line and a "Create Delivery Note" shortcut. It needs no server call, since each item row carries `delivered_qty`.
+- **ADHD-030, Implemented:** Opportunity staleness, `adhd_opportunity.js` and `adhd_list_view.js`: a "stale" badge and list colouring once an opportunity has not been saved for two weeks (amber from one week). It counts from `modified`, so a note, call or email added to it does not reset the count.
+
+Form modules must use `frm.layout.wrapper` (jQuery) or `frm.$wrapper`. `frm.layout.$wrapper` does not exist; ten earlier modules used it and were fixed.
 
 ## ADHD-031 through ADHD-040
 

@@ -2,7 +2,7 @@
 
 ## Current implementation record
 
-- **Status:** Planned.
+- **Status:** Implemented (2026-09-21). See `docs/adhd_mode_features.md` for where it lives and how it differs from this ticket.
 - **Implementation:** No matching implementation or bundle registration exists on `iteration_3`.
 - **Verification:** No implementation test exists; original acceptance criteria remain pending.
 - **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.

@@ -92,7 +92,7 @@ ERPNext is powerful and comprehensive, and those two facts are exactly what make
 The original Phase 1 features remain in `erpnext/public/js/adhd/`. Current work extends beyond this roadmap:
 
 - ADHD-001 through ADHD-013 and ADHD-015 through ADHD-020 have implementations on `iteration_3`.
-- ADHD-021 through ADHD-030 remain planned.
+- ADHD-021 through ADHD-030 are implemented (2026-09-21).
 - ADHD-031 through ADHD-061 include implemented, partial, and blocked states. See `docs/adhd_mode_features.md` for the ticket-by-ticket catalog.
 - ADHD-014 and ADHD-057 through ADHD-059 are blocked because HRMS is absent.
 - ADHD-038 is schema-limited, ADHD-045 is blocked by current Plant Floor structure, and ADHD-048 is partial because CRM Note is a child DocType.
