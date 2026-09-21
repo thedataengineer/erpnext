@@ -71,19 +71,19 @@ function renderReadinessResults($body, data) {
 		.map(
 			(issue) => `
 				<li class="adhd-readiness-issue adhd-readiness-${issue.severity}" data-type="${frappe.utils.escape_html(
-					issue.type,
-				)}">
+				issue.type
+			)}">
 					<span class="adhd-readiness-label">${frappe.utils.escape_html(issue.label)}</span>
 					<a href="${frappe.utils.escape_html(issue.link)}">${__("View ›")}</a>
 					<button type="button" class="btn btn-xs btn-default adhd-recheck-btn"
 						data-type="${frappe.utils.escape_html(issue.type)}">${__("Recheck")}</button>
-				</li>`,
+				</li>`
 		)
 		.join("");
 	$body.html(`
 		<div class="adhd-readiness-summary ${summaryClass}">${summaryIcon} ${frappe.utils.escape_html(
-			data.summary,
-		)}</div>
+		data.summary
+	)}</div>
 		${issues ? `<ul class="adhd-readiness-list">${issues}</ul>` : ""}
 	`);
 }
@@ -152,9 +152,7 @@ function renderReadinessSection($container, context) {
 		<div id="adhd-close-readiness" class="adhd-readiness-section">
 			<div class="adhd-readiness-header">
 				<h5>${__("Close Readiness")}</h5>
-				<button type="button" class="btn btn-sm btn-default adhd-check-readiness-btn">${__(
-					"Check Now",
-				)}</button>
+				<button type="button" class="btn btn-sm btn-default adhd-check-readiness-btn">${__("Check Now")}</button>
 			</div>
 			<div class="adhd-readiness-body">
 				<span class="text-muted">${__('Click "Check Now" to scan for blocking issues.')}</span>
@@ -195,16 +193,18 @@ async function initMonthEndChecklist(container) {
 				<div class="adhd-month-end-step ${state[step.id] ? "is-complete" : ""}">
 					${
 						step.auto
-							? `<span class="adhd-auto-check">${state[step.id] ? __("✓ auto-detected") : __("Checking…")}</span>`
+							? `<span class="adhd-auto-check">${
+									state[step.id] ? __("✓ auto-detected") : __("Checking…")
+							  }</span>`
 							: `<input type="checkbox" id="adhd-me-${step.id}" data-step="${step.id}" ${
 									state[step.id] ? "checked" : ""
-								}>`
+							  }>`
 					}
 					<label for="adhd-me-${step.id}">${step.label}</label>
 					<small>${step.description}</small>
 					<span class="adhd-time-badge">~${step.estimatedMinutes} ${__("min")}</span>
 					<a class="btn btn-xs btn-default" href="${step.link}">${__("Open →")}</a>
-				</div>`,
+				</div>`
 		).join("");
 		$container.html(`
 			<div class="adhd-month-end-checklist">

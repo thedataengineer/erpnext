@@ -19,7 +19,7 @@ test("field help contains exactly eight doctypes and eighty translated entries",
 	assert.equal(Object.keys(help).length, 8);
 	assert.equal(
 		Object.values(help).reduce((count, fields) => count + Object.keys(fields).length, 0),
-		80,
+		80
 	);
 	for (const fields of Object.values(help)) {
 		for (const text of Object.values(fields)) {

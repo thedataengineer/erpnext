@@ -53,7 +53,7 @@ erpnext.adhd.ADHDSettings = {
 				(key) =>
 					key.startsWith("adhd_module_freq_") ||
 					key === "adhd_session_dates" ||
-					key.startsWith("adhd_suggestion_dismissed_"),
+					key.startsWith("adhd_suggestion_dismissed_")
 			)
 			.forEach((key) => localStorage.removeItem(key));
 		$(document).trigger("adhd_usage_history_cleared");
@@ -71,7 +71,7 @@ erpnext.adhd.ADHDSettings = {
 					<span>${frappe.utils.escape_html(feature.label)}</span>
 					<input class="adhd-toggle-switch" type="checkbox"
 						data-feature="${feature.key}" ${this.get(feature.key) ? "checked" : ""}>
-				</label>`,
+				</label>`
 		).join("");
 
 		const dialog = new frappe.ui.Dialog({
@@ -86,7 +86,7 @@ erpnext.adhd.ADHDSettings = {
 			<div class="adhd-settings-actions">
 				<button type="button" class="btn btn-default btn-sm adhd-settings-reset">${__("Reset to Defaults")}</button>
 				<button type="button" class="btn btn-default btn-sm adhd-clear-accounting-defaults">${__(
-					"Clear accounting defaults",
+					"Clear accounting defaults"
 				)}</button>
 				<button type="button" class="btn btn-default btn-sm adhd-clear-usage">${__("Clear usage history")}</button>
 			</div>

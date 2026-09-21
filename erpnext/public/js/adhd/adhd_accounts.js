@@ -23,7 +23,7 @@ function getJournalEntryTotals(rows) {
 			result.credit += flt(row.credit);
 			return result;
 		},
-		{ debit: 0, credit: 0 },
+		{ debit: 0, credit: 0 }
 	);
 }
 
@@ -110,8 +110,7 @@ erpnext.adhd.removeJournalEntryBalanceMeter = removeJournalEntryBalanceMeter;
 		if (!dimensionsPromise) {
 			dimensionsPromise = frappe
 				.call({
-					method:
-						"erpnext.accounts.doctype.accounting_dimension.accounting_dimension.get_dimensions",
+					method: "erpnext.accounts.doctype.accounting_dimension.accounting_dimension.get_dimensions",
 				})
 				.then((response) => (response.message?.[0] || []).map((dimension) => dimension.fieldname))
 				.catch((error) => {
@@ -129,7 +128,7 @@ erpnext.adhd.removeJournalEntryBalanceMeter = removeJournalEntryBalanceMeter;
 		$wrapper.find(".adhd-last-used-tag").remove();
 		$wrapper.css("position", "relative").append(
 			`<span class="adhd-last-used-tag" style="font-size:.65rem;color:var(--text-muted);
-				position:absolute;right:4px;bottom:2px;pointer-events:none;">${__("← last used")}</span>`,
+				position:absolute;right:4px;bottom:2px;pointer-events:none;">${__("← last used")}</span>`
 		);
 		field.$input
 			?.off("change.adhdLastUsed")
@@ -147,13 +146,7 @@ erpnext.adhd.removeJournalEntryBalanceMeter = removeJournalEntryBalanceMeter;
 	}
 
 	async function prefillLastUsed(frm) {
-		if (
-			!isActive() ||
-			!frm ||
-			frm.meta?.istable === 1 ||
-			frm.doc?.docstatus !== 0 ||
-			!frm.is_new?.()
-		) {
+		if (!isActive() || !frm || frm.meta?.istable === 1 || frm.doc?.docstatus !== 0 || !frm.is_new?.()) {
 			return;
 		}
 		const fields = await accountingDefaultFields();
@@ -164,7 +157,7 @@ erpnext.adhd.removeJournalEntryBalanceMeter = removeJournalEntryBalanceMeter;
 				if (!last) return;
 				await frm.set_value(fieldname, last);
 				markAsLastUsed(frm, fieldname);
-			}),
+			})
 		);
 	}
 
@@ -203,8 +196,8 @@ erpnext.adhd.removeJournalEntryBalanceMeter = removeJournalEntryBalanceMeter;
 			.filter((key) =>
 				fields.some(
 					(fieldname) =>
-						key === `adhd_last_${fieldname}` || key.startsWith(`adhd_last_${fieldname}::`),
-				),
+						key === `adhd_last_${fieldname}` || key.startsWith(`adhd_last_${fieldname}::`)
+				)
 			)
 			.forEach((key) => localStorage.removeItem(key));
 		frappe.show_alert({

@@ -19,9 +19,7 @@ frappe.provide("erpnext.adhd");
 			totalStops: stops.length,
 			totalPackages,
 			firstAddress: stops[0]?.customer_address || stops[0]?.address || "—",
-			totalDistance: frm.doc.total_distance
-				? `${frm.doc.total_distance} ${frm.doc.uom || "km"}`
-				: "—",
+			totalDistance: frm.doc.total_distance ? `${frm.doc.total_distance} ${frm.doc.uom || "km"}` : "—",
 		};
 	}
 
@@ -36,7 +34,7 @@ frappe.provide("erpnext.adhd");
 			$target.prepend(
 				`<span class="adhd-stop-badge" aria-label="${__("Stop {0}", [index + 1])}">${
 					index + 1
-				}</span>`,
+				}</span>`
 			);
 		});
 	}
@@ -47,8 +45,9 @@ frappe.provide("erpnext.adhd");
 		frm._adhdRouteObserver = new MutationObserver((mutations) => {
 			const rowsChanged = mutations.some((mutation) =>
 				[...mutation.addedNodes, ...mutation.removedNodes].some(
-					(node) => node.nodeType === 1 && ($(node).is(".grid-row") || $(node).find(".grid-row").length),
-				),
+					(node) =>
+						node.nodeType === 1 && ($(node).is(".grid-row") || $(node).find(".grid-row").length)
+				)
 			);
 			if (!rowsChanged) return;
 			clearTimeout(frm._adhdBadgeTimer);
@@ -76,11 +75,9 @@ frappe.provide("erpnext.adhd");
 					<span class="adhd-stat-value">${frappe.utils.escape_html(stats.totalDistance)}</span></div>
 				<div class="adhd-route-stat"><span class="adhd-stat-label">${__("Packages")}</span>
 					<span class="adhd-stat-value">${format_number(stats.totalPackages)}</span></div>
-				<div class="adhd-route-stat adhd-route-first-stop"><span class="adhd-stat-label">${__(
-					"First Stop",
-				)}</span>
+				<div class="adhd-route-stat adhd-route-first-stop"><span class="adhd-stat-label">${__("First Stop")}</span>
 					<span class="adhd-stat-value adhd-first-address" title="${frappe.utils.escape_html(
-						stats.firstAddress,
+						stats.firstAddress
 					)}">${frappe.utils.escape_html(stats.firstAddress)}</span></div>
 			</div>
 		`);

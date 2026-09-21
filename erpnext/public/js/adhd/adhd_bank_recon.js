@@ -47,7 +47,7 @@ frappe.provide("erpnext.adhd");
 				savedAt: new Date().toISOString(),
 				checkedIds: [...checkedIds(frm, key)],
 				total: transactions?.length ?? $wrapper.find(CHECKBOX).length,
-			}),
+			})
 		);
 	}
 
@@ -81,10 +81,11 @@ frappe.provide("erpnext.adhd");
 		const $banner = $(`
 			<div id="adhd-recon-banner" class="alert alert-info" role="status"
 				style="margin:8px 0;display:flex;justify-content:space-between;align-items:center;">
-				<span>${__(
-					"Resumed your reconciliation session from {0}. {1} of {2} transactions matched.",
-					[formattedTime, restored, state.total],
-				)}</span>
+				<span>${__("Resumed your reconciliation session from {0}. {1} of {2} transactions matched.", [
+					formattedTime,
+					restored,
+					state.total,
+				])}</span>
 				<a href="#" class="adhd-clear-recon-session">${__("Clear saved session")}</a>
 			</div>
 		`);
@@ -126,8 +127,8 @@ frappe.provide("erpnext.adhd");
 			if (!name || alreadyDecorated) return;
 			$button.before(
 				`<input type="checkbox" class="adhd-recon-checkbox" data-name="${frappe.utils.escape_html(
-					name,
-				)}" aria-label="${__("Mark transaction progress")}"> `,
+					name
+				)}" aria-label="${__("Mark transaction progress")}"> `
 			);
 		});
 		restoreState(frm);
@@ -161,10 +162,10 @@ frappe.provide("erpnext.adhd");
 		if (!$wrapper.length) return;
 
 		$wrapper.on("change.adhdBankRecon", CHECKBOX, (event) =>
-			setChecked(frm, event.currentTarget.dataset.name, event.currentTarget.checked),
+			setChecked(frm, event.currentTarget.dataset.name, event.currentTarget.checked)
 		);
 		frm._adhdReconObserver = new MutationObserver(
-			frappe.utils.debounce(() => decorateTransactions(frm), 100),
+			frappe.utils.debounce(() => decorateTransactions(frm), 100)
 		);
 		frm._adhdReconObserver.observe($wrapper[0], { childList: true, subtree: true });
 		setTimeout(() => decorateTransactions(frm), 450);

@@ -35,7 +35,7 @@ frappe.provide("erpnext.adhd");
 			(row) =>
 				row.reference_doctype === invoice.voucher_type &&
 				row.reference_name === invoice.voucher_no &&
-				(row.payment_term || "") === (invoice.payment_term || ""),
+				(row.payment_term || "") === (invoice.payment_term || "")
 		);
 	}
 
@@ -88,7 +88,7 @@ frappe.provide("erpnext.adhd");
 		const key = referenceKey(invoice);
 		const outstanding = Number(invoice.outstanding_amount) || 0;
 		const href = `/app/${frappe.router.slug(invoice.voucher_type)}/${encodeURIComponent(
-			invoice.voucher_no,
+			invoice.voucher_no
 		)}`;
 		const $row = $(`
 			<tr data-reference-key="${frappe.utils.escape_html(key)}">
@@ -96,7 +96,7 @@ frappe.provide("erpnext.adhd");
 				<td>${frappe.utils.escape_html(invoice.due_date || __("No due date"))}</td>
 				<td class="text-right">${format_currency(outstanding, partyAccountCurrency(frm))}</td>
 				<td><label><input type="checkbox" class="adhd-apply-invoice"> <span class="adhd-apply-label">${__(
-					"Apply full amount",
+					"Apply full amount"
 				)}</span></label></td>
 			</tr>
 		`);
@@ -125,7 +125,9 @@ frappe.provide("erpnext.adhd");
 		$content.append(invoiceTable(frm, invoices));
 		if (collapsed) {
 			const $details = $(
-				`<details><summary>${frappe.utils.escape_html(`${title} (${invoices.length})`)}</summary></details>`,
+				`<details><summary>${frappe.utils.escape_html(
+					`${title} (${invoices.length})`
+				)}</summary></details>`
 			);
 			$details.append($content);
 			$panel.append($details);
@@ -133,8 +135,8 @@ frappe.provide("erpnext.adhd");
 		}
 		$panel.append(
 			`<h6 class="adhd-bucket-label ${className}">${frappe.utils.escape_html(
-				`${title} (${invoices.length})`,
-			)}</h6>`,
+				`${title} (${invoices.length})`
+			)}</h6>`
 		);
 		$panel.append($content);
 	}
@@ -149,13 +151,13 @@ frappe.provide("erpnext.adhd");
 			const $header = $('<div class="adhd-shortlist-header">');
 			$header.append(
 				`<h6 class="adhd-bucket-label adhd-bucket--urgent">${frappe.utils.escape_html(
-					`⚠ ${__("Overdue / Due Today")} (${buckets.urgent.length})`,
-				)}</h6>`,
+					`⚠ ${__("Overdue / Due Today")} (${buckets.urgent.length})`
+				)}</h6>`
 			);
 			const $applyAll = $(
 				`<button type="button" class="btn btn-sm btn-danger adhd-apply-all-urgent">${__(
-					"Apply All Overdue",
-				)}</button>`,
+					"Apply All Overdue"
+				)}</button>`
 			);
 			$applyAll.on("click", () => {
 				buckets.urgent.forEach((invoice) => {
@@ -212,8 +214,7 @@ frappe.provide("erpnext.adhd");
 		frm.set_df_property("references", "description", __("Loading outstanding invoices…"));
 		try {
 			const response = await frappe.call({
-				method:
-					"erpnext.accounts.doctype.payment_entry.payment_entry.get_outstanding_reference_documents",
+				method: "erpnext.accounts.doctype.payment_entry.payment_entry.get_outstanding_reference_documents",
 				// silent: the server msgprints "No outstanding invoices…" when there are none
 				silent: true,
 				args: {

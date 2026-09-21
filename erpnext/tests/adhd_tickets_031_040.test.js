@@ -146,10 +146,7 @@ test("ADHD-031 builds account/date keys and discards corrupt saved state", () =>
 	const frm = {
 		doc: { bank_account: "Checking - EX", bank_statement_from_date: "2026-09-01" },
 	};
-	assert.equal(
-		sandbox.erpnext.adhd.bankReconStorageKey(frm),
-		"adhd_bank_recon_Checking - EX_2026-09-01",
-	);
+	assert.equal(sandbox.erpnext.adhd.bankReconStorageKey(frm), "adhd_bank_recon_Checking - EX_2026-09-01");
 	storage.set("broken", "{");
 	assert.equal(sandbox.erpnext.adhd.readBankReconState("broken"), null);
 	assert.equal(storage.has("broken"), false);
@@ -164,14 +161,20 @@ test("ADHD-032 buckets and sorts invoices at the exact date boundaries", () => {
 			{ voucher_no: "WEEK-END", due_date: "2026-09-26" },
 			{ voucher_no: "LATER", due_date: "2026-10-01" },
 		],
-		"2026-09-20",
+		"2026-09-20"
 	);
 	assert.deepEqual(
 		Array.from(result.urgent, (row) => row.voucher_no),
-		["LATE", "TODAY"],
+		["LATE", "TODAY"]
 	);
-	assert.deepEqual(Array.from(result.thisWeek, (row) => row.voucher_no), ["WEEK-END"]);
-	assert.deepEqual(Array.from(result.other, (row) => row.voucher_no), ["LATER"]);
+	assert.deepEqual(
+		Array.from(result.thisWeek, (row) => row.voucher_no),
+		["WEEK-END"]
+	);
+	assert.deepEqual(
+		Array.from(result.other, (row) => row.voucher_no),
+		["LATER"]
+	);
 });
 
 test("ADHD-035 deduplicates stock queries and uses stock-unit transfer quantity", () => {
@@ -203,7 +206,7 @@ test("ADHD-035 deduplicates stock queries and uses stock-unit transfer quantity"
 			["Transit", 4, 7],
 			// the second Stores row starts from what the first one left (10 - 4), not from the bin's 10
 			["Stores", -2, 4],
-		],
+		]
 	);
 });
 
@@ -251,7 +254,7 @@ test("ADHD-040 computes unique-note packages and first stop", async () => {
 test("tickets 034, 037, and 038 use valid server and schema contracts", () => {
 	const period = fs.readFileSync(
 		path.join(appRoot, "accounts/services/adhd_period_close_check.py"),
-		"utf8",
+		"utf8"
 	);
 	for (const doctype of ["Journal Entry", "Bank Transaction", "Purchase Invoice", "Sales Invoice"]) {
 		assert.match(period, new RegExp(`"${doctype}"`));

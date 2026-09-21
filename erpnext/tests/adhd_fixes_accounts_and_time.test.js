@@ -558,7 +558,7 @@ test("a background recheck is silent, skipped without read access and keeps the 
 			"2026-09-01",
 			"2026-09-30",
 			null,
-			options,
+			options
 		);
 	await check({});
 	const shown = failing.htmls.length;
@@ -569,7 +569,10 @@ test("a background recheck is silent, skipped without read access and keeps the 
 
 test("the month-end checklist follows the server on Period Close and never raises a dialog for it", async () => {
 	const date = new Date();
-	const key = `adhd_me_user@example.com_${date.getFullYear()}_${String(date.getMonth() + 1).padStart(2, "0")}`;
+	const key = `adhd_me_user@example.com_${date.getFullYear()}_${String(date.getMonth() + 1).padStart(
+		2,
+		"0"
+	)}`;
 
 	const open = loadMonthEnd({ call: async () => ({ message: false }) });
 	open.storage.setItem(key, JSON.stringify({ period_close: true }));

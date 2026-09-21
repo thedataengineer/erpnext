@@ -17,7 +17,7 @@ function chain() {
 				if (key === "is") return () => false;
 				return () => target;
 			},
-		},
+		}
 	);
 }
 
@@ -64,7 +64,9 @@ function loadModule() {
 					return date.toISOString().slice(0, 10);
 				},
 				get_diff: (later, earlier) =>
-					Math.floor((new Date(`${later}T00:00:00Z`) - new Date(`${earlier}T00:00:00Z`)) / 86400000),
+					Math.floor(
+						(new Date(`${later}T00:00:00Z`) - new Date(`${earlier}T00:00:00Z`)) / 86400000
+					),
 				get_today: () => "2026-09-20",
 				str_to_user: (value) => value,
 			},
@@ -90,7 +92,7 @@ test("ADHD-043 uses actual Production Plan quantity fields", () => {
 	});
 	assert.deepEqual(
 		{ count: summary.count, salesOrders: summary.salesOrders, qty: summary.qty, date: summary.date },
-		{ count: 2, salesOrders: 1, qty: 9, date: "2026-09-20" },
+		{ count: 2, salesOrders: 1, qty: 9, date: "2026-09-20" }
 	);
 });
 
@@ -100,7 +102,7 @@ test("ADHD-044 elapsed timer preserves hours, minutes, and seconds", () => {
 	const now = new Date("2026-09-20T13:02:03.000Z").getTime();
 	assert.deepEqual(
 		{ ...sandbox.erpnext.adhd.elapsedParts(start, now) },
-		{ hours: 1, minutes: 2, seconds: 3, totalSeconds: 3723 },
+		{ hours: 1, minutes: 2, seconds: 3, totalSeconds: 3723 }
 	);
 });
 
@@ -117,11 +119,11 @@ test("ADHD-045 uses Job Card expected_end_date at the exact two-hour boundary", 
 	const now = new Date("2026-09-20T14:00:00Z").getTime();
 	assert.equal(
 		sandbox.erpnext.adhd.isBlockedJobCard({ expected_end_date: "2026-09-20T12:00:00Z" }, now),
-		false,
+		false
 	);
 	assert.equal(
 		sandbox.erpnext.adhd.isBlockedJobCard({ expected_end_date: "2026-09-20T11:59:59Z" }, now),
-		true,
+		true
 	);
 });
 
@@ -145,7 +147,10 @@ test("ADHD-051 tracks response first and uses the 25-percent boundary", () => {
 	assert.equal(sandbox.erpnext.adhd.slaState(doc, new Date("2026-09-20T15:00:00Z")).tone, "amber");
 	assert.equal(sandbox.erpnext.adhd.slaState(doc, new Date("2026-09-20T16:00:01Z")).tone, "red");
 	doc.first_responded_on = "2026-09-20T13:00:00Z";
-	assert.equal(sandbox.erpnext.adhd.slaState(doc, new Date("2026-09-20T15:00:00Z")).target, doc.sla_resolution_by);
+	assert.equal(
+		sandbox.erpnext.adhd.slaState(doc, new Date("2026-09-20T15:00:00Z")).target,
+		doc.sla_resolution_by
+	);
 });
 
 test("ADHD-061 derives sent progress from supplied-item schema", () => {
@@ -160,9 +165,9 @@ test("ADHD-061 derives sent progress from supplied-item schema", () => {
 	assert.equal(
 		sandbox.erpnext.adhd.subcontractingState(
 			{ status: "Open", per_received: 0, supplied_items: [{ required_qty: 10, supplied_qty: 10 }] },
-			1,
+			1
 		).index,
-		3,
+		3
 	);
 });
 
@@ -193,10 +198,7 @@ test("forms in the safe in-repo scope are registered", () => {
 });
 
 test("BOM endpoint enforces permissions, cycle detection, and a depth cap", () => {
-	const source = fs.readFileSync(
-		path.join(appRoot, "manufacturing/services/adhd_bom_ancestry.py"),
-		"utf8",
-	);
+	const source = fs.readFileSync(path.join(appRoot, "manufacturing/services/adhd_bom_ancestry.py"), "utf8");
 	assert.match(source, /@frappe\.whitelist\(\)/);
 	assert.match(source, /frappe\.has_permission\("BOM", "read"/);
 	assert.match(source, /visited = \{bom_name\}/);
@@ -219,7 +221,10 @@ test("ADHD-060 batches QI summaries and rejected reading counts", () => {
 	assert.match(source, /"Quality Inspection Reading"/);
 	assert.match(source, /"status": "Rejected"/);
 	assert.match(source, /"docstatus"/);
-	assert.match(fs.readFileSync(modulePath, "utf8"), /erpnext\.stock\.adhd_quality\.get_quality_inspection_summaries/);
+	assert.match(
+		fs.readFileSync(modulePath, "utf8"),
+		/erpnext\.stock\.adhd_quality\.get_quality_inspection_summaries/
+	);
 });
 
 test("bundle includes the ticket module", () => {
