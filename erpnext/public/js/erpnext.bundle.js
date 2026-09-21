@@ -44,6 +44,7 @@ import "./sales_trends_filters.js";
 import "./purchase_trends_filters.js";
 
 // ADHD-Friendly Mode — load in dependency order
+import "./adhd/adhd_settings"; // Per-feature settings
 import "./adhd/adhd_mode";         // Core toggle (must be first)
 import "./adhd/focus_panel";       // Focus panel + Pomodoro timer
 import "./adhd/adhd_month_end"; // Month-end close checklist

@@ -1930,3 +1930,18 @@ body.adhd-mode {
 	color: var(--text-muted);
 	font-size: var(--text-xs);
 }
+
+.adhd-setting-row {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 8px 0;
+	border-bottom: 1px solid var(--border-color);
+}
+
+.adhd-settings-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-top: 12px;
+}

@@ -127,8 +127,34 @@ function _addNavbarToggle() {
 
 		navbarRight.parentNode && navbarRight.parentNode.insertBefore(li, navbarRight);
 
-		document.getElementById("adhd-mode-toggle").addEventListener("click", (e) => {
+		const toggle = document.getElementById("adhd-mode-toggle");
+		let longPressTimer = null;
+		let settingsOpened = false;
+		const cancelLongPress = () => {
+			clearTimeout(longPressTimer);
+			longPressTimer = null;
+		};
+		toggle.addEventListener("contextmenu", (e) => {
 			e.preventDefault();
+			window.ADHDSettings?.openPanel();
+		});
+		toggle.addEventListener("mousedown", () => {
+			settingsOpened = false;
+			longPressTimer = setTimeout(() => {
+				settingsOpened = true;
+				window.ADHDSettings?.openPanel();
+			}, 600);
+		});
+		["mouseup", "mouseleave"].forEach((eventName) =>
+			toggle.addEventListener(eventName, cancelLongPress)
+		);
+		toggle.addEventListener("click", (e) => {
+			e.preventDefault();
+			cancelLongPress();
+			if (settingsOpened) {
+				settingsOpened = false;
+				return;
+			}
 			erpnext.adhd.mode.toggle();
 		});
 
