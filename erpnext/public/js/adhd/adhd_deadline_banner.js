@@ -11,8 +11,8 @@ frappe.provide("erpnext.adhd");
 				days < 0
 					? `⚠️ ${__("Payment overdue by {0} day{1}", [Math.abs(days), plural(days)])}`
 					: days === 0
-						? __("⚠️ Payment due today")
-						: `💳 ${__("Payment due in {0} day{1}", [days, plural(days)])}`,
+					? __("⚠️ Payment due today")
+					: `💳 ${__("Payment due in {0} day{1}", [days, plural(days)])}`,
 			showWhen: (doc) => cint(doc.docstatus) !== 2 && flt(doc.outstanding_amount) > 0,
 		},
 		"Sales Order": {
@@ -21,8 +21,8 @@ frappe.provide("erpnext.adhd");
 				days < 0
 					? `⚠️ ${__("Delivery overdue by {0} day{1}", [Math.abs(days), plural(days)])}`
 					: days === 0
-						? __("⚠️ Delivery due today")
-						: `📦 ${__("Delivery due in {0} day{1}", [days, plural(days)])}`,
+					? __("⚠️ Delivery due today")
+					: `📦 ${__("Delivery due in {0} day{1}", [days, plural(days)])}`,
 			showWhen: (doc) => cint(doc.docstatus) === 1 && doc.status !== "Closed",
 		},
 		Task: {
@@ -31,10 +31,10 @@ frappe.provide("erpnext.adhd");
 				days < 0
 					? `⚠️ ${__("Deadline was {0} day{1} ago", [Math.abs(days), plural(days)])}`
 					: days === 0
-						? __("⏰ Deadline: today")
-						: days === 1
-							? __("⏰ Deadline: tomorrow")
-							: `📋 ${__("Deadline in {0} days", [days])}`,
+					? __("⏰ Deadline: today")
+					: days === 1
+					? __("⏰ Deadline: tomorrow")
+					: `📋 ${__("Deadline in {0} days", [days])}`,
 			showWhen: (doc) => !["Completed", "Cancelled"].includes(doc.status),
 		},
 		"Purchase Order": {
@@ -43,8 +43,8 @@ frappe.provide("erpnext.adhd");
 				days < 0
 					? `⚠️ ${__("Expected delivery overdue by {0} day{1}", [Math.abs(days), plural(days)])}`
 					: days === 0
-						? __("⚠️ Expected delivery today")
-						: `🚚 ${__("Expected delivery in {0} day{1}", [days, plural(days)])}`,
+					? __("⚠️ Expected delivery today")
+					: `🚚 ${__("Expected delivery in {0} day{1}", [days, plural(days)])}`,
 			showWhen: (doc) => cint(doc.docstatus) === 1 && doc.status !== "Closed",
 		},
 	};

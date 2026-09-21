@@ -53,6 +53,42 @@ frappe.provide("erpnext.adhd");
 		return null;
 	}
 
+	// List views keep their fetch set as [fieldname, doctype] pairs
+	function hasListField(listview, fieldname) {
+		return (listview.fields || []).some((field) =>
+			Array.isArray(field) ? field[0] === fieldname : (field.fieldname || field) === fieldname
+		);
+	}
+
+	function ensureListField(listview, fieldname) {
+		if (hasListField(listview, fieldname)) return false;
+		if (typeof listview._add_field === "function") {
+			// validates the field against the doctype meta before adding it
+			listview._add_field(fieldname);
+		} else {
+			listview.fields.push([fieldname, listview.doctype]);
+		}
+		return hasListField(listview, fieldname);
+	}
+
+	// frappe.views.list_view is a map keyed by route; the list on screen is cur_list
+	function resolveCurrentList(route, curList) {
+		if (!route || route[0] !== "List" || !curList || curList.doctype !== route[1]) return null;
+		return curList;
+	}
+
+	async function getCurrentListView() {
+		const listview = resolveCurrentList(frappe.get_route(), window.cur_list);
+		if (!listview) return null;
+		// fields and $result only exist once the list view has initialised
+		for (let attempt = 0; attempt < 50 && !listview.init_promise; attempt++) {
+			await new Promise((resolve) => setTimeout(resolve, 100));
+		}
+		await Promise.resolve(listview.init_promise).catch(() => null);
+		// the user may have navigated away while it was loading
+		return window.cur_list === listview && listview.view === "List" ? listview : null;
+	}
+
 	function applyHeat(listview) {
 		if (!(frappe.boot && frappe.boot.adhd_mode) || !listview) return;
 		const dateField = DATE_FIELD_MAP[listview.doctype];
@@ -68,15 +104,15 @@ frappe.provide("erpnext.adhd");
 					listview.doctype === "Issue"
 						? getIssueUrgency(row)
 						: listview.doctype === "Asset"
-							? getAssetUrgency(row)
-							: getUrgencyClass(row[dateField]);
+						? getAssetUrgency(row)
+						: getUrgencyClass(row[dateField]);
 				if (heatClass) $row.addClass(heatClass);
 				if (listview.doctype === "Asset" && row.next_depreciation_date) {
 					$row.attr(
 						"title",
 						__("Next depreciation: {0}", [
 							frappe.datetime.str_to_user(row.next_depreciation_date),
-						]),
+						])
 					);
 				}
 			}
@@ -96,11 +132,7 @@ frappe.provide("erpnext.adhd");
 				: [dateField];
 		let fieldsAdded = false;
 		for (const fieldname of fields) {
-			const hasField = listview.fields.some((field) => (field.fieldname || field) === fieldname);
-			if (!hasField) {
-				listview.fields.push(fieldname);
-				fieldsAdded = true;
-			}
+			if (ensureListField(listview, fieldname)) fieldsAdded = true;
 		}
 
 		const wrapper = listview.$result && listview.$result[0];
@@ -144,7 +176,12 @@ frappe.provide("erpnext.adhd");
 	}
 
 	function classifyStockHealth(actualQty, reorderLevel) {
-		if (actualQty === null || actualQty === undefined || reorderLevel === null || reorderLevel === undefined) {
+		if (
+			actualQty === null ||
+			actualQty === undefined ||
+			reorderLevel === null ||
+			reorderLevel === undefined
+		) {
 			return "adhd-stock-unknown";
 		}
 		if (actualQty <= reorderLevel) return "adhd-stock-critical";
@@ -161,12 +198,10 @@ frappe.provide("erpnext.adhd");
 			if (healthClass) $row.addClass(healthClass);
 			return;
 		}
-		$row
-			.addClass(healthClass)
-			.attr(
-				"title",
-				`Stock: ${actualQty} units | Reorder at: ${reorderLevel} | Warehouse: ${warehouse}`,
-			);
+		$row.addClass(healthClass).attr(
+			"title",
+			`Stock: ${actualQty} units | Reorder at: ${reorderLevel} | Warehouse: ${warehouse}`
+		);
 		if (!$subject.find(".adhd-stock-dot").length) {
 			$subject.prepend('<span class="adhd-stock-dot" aria-hidden="true"></span>');
 		}
@@ -187,7 +222,14 @@ frappe.provide("erpnext.adhd");
 			}
 			return;
 		}
-		const itemNames = [...new Set($rows.map((_, row) => row.dataset.name).get().filter(Boolean))];
+		const itemNames = [
+			...new Set(
+				$rows
+					.map((_, row) => row.dataset.name)
+					.get()
+					.filter(Boolean)
+			),
+		];
 		if (!itemNames.length) return;
 		const requestId = (listview._adhdStockRequest || 0) + 1;
 		listview._adhdStockRequest = requestId;
@@ -218,10 +260,7 @@ frappe.provide("erpnext.adhd");
 		}
 		const wrapper = listview.$result?.[0];
 		if (!wrapper) return;
-		const refresh = frappe.utils.debounce(
-			() => applyItemStockHealth(listview).catch(() => null),
-			300,
-		);
+		const refresh = frappe.utils.debounce(() => applyItemStockHealth(listview).catch(() => null), 300);
 		stockObserver = new MutationObserver(refresh);
 		stockObserver.observe(wrapper, { childList: true, subtree: true });
 		applyItemStockHealth(listview).catch(() => null);
@@ -234,8 +273,8 @@ frappe.provide("erpnext.adhd");
 		heatInterval = null;
 		if (stockObserver) stockObserver.disconnect();
 		stockObserver = null;
-		frappe.after_ajax(() => {
-			const listview = frappe.views && frappe.views.list_view;
+		frappe.after_ajax(async () => {
+			const listview = await getCurrentListView();
 			if (listview) {
 				attachHeatMap(listview);
 				attachItemStockHealth(listview);
@@ -244,6 +283,9 @@ frappe.provide("erpnext.adhd");
 	});
 
 	erpnext.adhd.DATE_FIELD_MAP = DATE_FIELD_MAP;
+	erpnext.adhd.hasListField = hasListField;
+	erpnext.adhd.ensureListField = ensureListField;
+	erpnext.adhd.resolveCurrentList = resolveCurrentList;
 	erpnext.adhd.getUrgencyClass = getUrgencyClass;
 	erpnext.adhd.applyHeat = applyHeat;
 	erpnext.adhd.classifyStockHealth = classifyStockHealth;

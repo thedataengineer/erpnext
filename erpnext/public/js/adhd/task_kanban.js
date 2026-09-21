@@ -125,6 +125,10 @@ erpnext.adhd.TaskKanban = class TaskKanban {
 		});
 	}
 
+	refresh() {
+		return this._loadTasks();
+	}
+
 	async _loadTasks() {
 		try {
 			const result = await frappe.call({
@@ -132,9 +136,18 @@ erpnext.adhd.TaskKanban = class TaskKanban {
 				args: {
 					doctype: "Task",
 					filters: [["status", "in", ["Open", "Working", "Pending Review", "Completed"]]],
-					fields: ["name", "subject", "status", "priority", "exp_end_date", "project", "progress", "color"],
+					fields: [
+						"name",
+						"subject",
+						"status",
+						"priority",
+						"exp_end_date",
+						"project",
+						"progress",
+						"color",
+					],
 					order_by: "modified desc",
-					limit: 100,
+					limit_page_length: 100,
 				},
 			});
 
@@ -152,7 +165,7 @@ erpnext.adhd.TaskKanban = class TaskKanban {
 				args: {
 					doctype: "Project",
 					fields: ["name"],
-					limit: 50,
+					limit_page_length: 50,
 				},
 			});
 
@@ -177,9 +190,7 @@ erpnext.adhd.TaskKanban = class TaskKanban {
 
 	_renderCards() {
 		const projectFilter = document.getElementById("adhd-kanban-project")?.value || "";
-		const filtered = projectFilter
-			? this.tasks.filter((t) => t.project === projectFilter)
-			: this.tasks;
+		const filtered = projectFilter ? this.tasks.filter((t) => t.project === projectFilter) : this.tasks;
 
 		this.columns.forEach((col) => {
 			const colTasks = filtered.filter((t) => t.status === col.id);
@@ -234,7 +245,7 @@ erpnext.adhd.TaskKanban = class TaskKanban {
 		const now = new Date();
 		const dueDate = task.exp_end_date ? new Date(task.exp_end_date) : null;
 		const isOverdue = dueDate && dueDate < now && task.status !== "Completed";
-		const dueSoon = dueDate && (dueDate - now) < 2 * 24 * 60 * 60 * 1000 && !isOverdue;
+		const dueSoon = dueDate && dueDate - now < 2 * 24 * 60 * 60 * 1000 && !isOverdue;
 
 		const dueHtml = dueDate
 			? `<div class="adhd-card-due ${isOverdue ? "overdue" : dueSoon ? "due-soon" : ""}">
@@ -299,9 +310,9 @@ erpnext.adhd.TaskKanban = class TaskKanban {
 
 		card.addEventListener("dragend", () => {
 			card.classList.remove("dragging");
-			document.querySelectorAll(".adhd-kanban-cards.drag-over").forEach((el) =>
-				el.classList.remove("drag-over")
-			);
+			document
+				.querySelectorAll(".adhd-kanban-cards.drag-over")
+				.forEach((el) => el.classList.remove("drag-over"));
 		});
 	}
 
@@ -430,13 +441,6 @@ erpnext.adhd.TaskKanban = class TaskKanban {
 	}
 };
 
-// Register as a page on the desk
-frappe.pages["adhd-task-board"] = {
-	on_load: function (wrapper) {
-		if (!erpnext.adhd.isActive()) {
-			erpnext.adhd.enable();
-		}
-		erpnext.adhd.taskKanban = new erpnext.adhd.TaskKanban(wrapper);
-		window.TaskKanban = erpnext.adhd.taskKanban;
-	},
-};
+// The page itself lives in erpnext/setup/page/adhd_task_board/. Frappe builds it from that
+// standard Page record and calls on_page_load/on_page_show there; nothing may be assigned to
+// frappe.pages["adhd-task-board"] here, or Frappe treats the page as already created.

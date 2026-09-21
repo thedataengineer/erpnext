@@ -19,9 +19,14 @@ frappe.provide("erpnext.adhd");
 					df.reqd &&
 					!df.hidden &&
 					df.fieldtype !== "Table" &&
-					!hasValue(frm.doc[df.fieldname]),
+					!hasValue(frm.doc[df.fieldname])
 			)
 			.map((df) => ({ fieldname: df.fieldname, label: df.label || df.fieldname }));
+	}
+
+	// A cancel only holds while the same fields are still missing
+	function missingSignature(fields) {
+		return fields.map((item) => item.fieldname).join(",");
 	}
 
 	function cleanupWizard() {
@@ -32,17 +37,31 @@ frappe.provide("erpnext.adhd");
 		wizardState = null;
 	}
 
+	// The promise handed to whoever called save() settles with the real save
 	function finishWizard() {
 		const state = wizardState;
 		if (!state) return;
-		const { frm, saveArgs } = state;
+		const { frm, saveArgs, settle } = state;
 		cleanupWizard();
-		return originalSave.apply(frm, saveArgs);
+		const saved = Promise.resolve(originalSave.apply(frm, saveArgs));
+		if (settle) saved.then(settle.resolve, settle.reject);
+		return saved;
 	}
 
 	function cancelWizard() {
-		if (wizardState) wizardState.frm.__adhd_guided_save_cancelled = true;
+		const state = wizardState;
+		if (!state) return;
+		state.frm.__adhd_guided_save_cancelled = missingSignature(state.fields);
 		cleanupWizard();
+		if (state.settle) state.settle.reject(new Error("ADHD guided save cancelled"));
+	}
+
+	// The form object is reused across documents; drop a wizard that belongs to another one
+	function abandonWizard(reason) {
+		const state = wizardState;
+		if (!state) return;
+		cleanupWizard();
+		if (state.settle) state.settle.reject(new Error(reason));
 	}
 
 	function showStep() {
@@ -66,10 +85,7 @@ frappe.provide("erpnext.adhd");
 		}
 		frm.layout.$wrapper.find(".adhd-wizard-banner").remove();
 
-		const hint =
-			window.ADHD_FIELD_HELP?.[frm.doctype]?.[item.fieldname] ||
-			item.label ||
-			item.fieldname;
+		const hint = window.ADHD_FIELD_HELP?.[frm.doctype]?.[item.fieldname] || item.label || item.fieldname;
 		const $banner = $(`
 			<div class="adhd-wizard-banner" role="status">
 				<progress class="adhd-wizard-progress" max="${fields.length}" value="${index}"></progress>
@@ -114,21 +130,53 @@ frappe.provide("erpnext.adhd");
 		setTimeout(() => field.$input && field.$input.trigger("focus"), 150);
 	}
 
-	function startGuidedSave(frm, fields, saveArgs) {
-		cleanupWizard();
-		wizardState = { frm, fields, index: 0, saveArgs, input: null, changeHandler: null };
+	function startGuidedSave(frm, fields, saveArgs, settle) {
+		abandonWizard("ADHD guided save replaced by a new save");
+		wizardState = {
+			frm,
+			docname: frm.doc && frm.doc.name,
+			fields,
+			index: 0,
+			saveArgs,
+			settle,
+			input: null,
+			changeHandler: null,
+		};
 		showStep();
 	}
 
 	frappe.ui.form.Form.prototype.save = function (...args) {
-		if (!(frappe.boot && frappe.boot.adhd_mode) || this.__adhd_guided_save_cancelled) {
+		if (!(frappe.boot && frappe.boot.adhd_mode)) {
 			return originalSave.apply(this, args);
 		}
 		const missing = getMissingRequiredFields(this);
 		if (!missing.length) return originalSave.apply(this, args);
-		startGuidedSave(this, missing, args);
-		return Promise.resolve();
+
+		// cancelled earlier and nothing about the missing fields has changed since
+		if (this.__adhd_guided_save_cancelled === missingSignature(missing)) {
+			return originalSave.apply(this, args);
+		}
+		this.__adhd_guided_save_cancelled = null;
+
+		const promise = new Promise((resolve, reject) => {
+			startGuidedSave(this, missing, args, { resolve, reject });
+		});
+		// a cancelled save rejects; callers that ignore the result must not log an unhandled rejection
+		promise.catch(() => null);
+		return promise;
 	};
+
+	frappe.ui.form.on("*", {
+		refresh(frm) {
+			frm.__adhd_guided_save_cancelled = null;
+			if (wizardState && wizardState.frm === frm && wizardState.docname !== (frm.doc && frm.doc.name)) {
+				abandonWizard("ADHD guided save abandoned: the form moved to another document");
+			}
+		},
+		after_save(frm) {
+			frm.__adhd_guided_save_cancelled = null;
+		},
+	});
 
 	erpnext.adhd.getMissingRequiredFields = getMissingRequiredFields;
 	erpnext.adhd.startGuidedSave = startGuidedSave;

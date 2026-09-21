@@ -35,8 +35,8 @@ erpnext.adhd.FIELD_HELP = {
 		received_amount: __("Amount received after exchange rate conversion."),
 		reference_date: __("Date of the bank transaction or cheque."),
 		mode_of_payment: __("How money moves, such as bank transfer, cheque, or cash."),
-		account_paid_from: __("Bank or cash account money leaves from."),
-		account_paid_to: __("Bank or cash account money arrives in."),
+		paid_from: __("Bank or cash account money leaves from."),
+		paid_to: __("Bank or cash account money arrives in."),
 		difference_amount: __("Rounding or exchange difference; normally zero."),
 	},
 	"Salary Slip": {

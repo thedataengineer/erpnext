@@ -5,7 +5,7 @@
 frappe.provide("erpnext.adhd");
 
 const CHAIN_MAP = {
-	"Quotation": [
+	Quotation: [
 		{ label: "Quotation", doctype: "Quotation", link_field: null },
 		{
 			label: "Sales Order",
@@ -18,12 +18,14 @@ const CHAIN_MAP = {
 			doctype: "Delivery Note",
 			link_field: "against_sales_order",
 			map_method: "erpnext.selling.doctype.sales_order.mapper.make_delivery_note",
+			source_doctype: "Sales Order",
 		},
 		{
 			label: "Sales Invoice",
 			doctype: "Sales Invoice",
 			link_field: "sales_order",
 			map_method: "erpnext.selling.doctype.sales_order.mapper.make_sales_invoice",
+			source_doctype: "Sales Order",
 		},
 		{
 			label: "Payment Entry",
@@ -132,18 +134,26 @@ const CHAIN_MAP = {
 	"Payment Entry": [],
 };
 
-const PAYMENT_REFERENCE_DOCTYPES = [
-	"Sales Order",
-	"Sales Invoice",
-	"Purchase Order",
-	"Purchase Invoice",
-];
+const PAYMENT_REFERENCE_DOCTYPES = ["Sales Order", "Sales Invoice", "Purchase Order", "Purchase Invoice"];
 const LINKED_DOC_CACHE = {};
 const DOCSTATUS_CACHE = {};
 const REGISTERED_DOCTYPES = Object.keys(CHAIN_MAP);
 
 function isADHDModeActive() {
 	return Boolean(frappe.boot && frappe.boot.adhd_mode);
+}
+
+// Drop cached link/docstatus lookups. With no argument (a save, submit or cancel
+// changed some document's state) everything goes; otherwise only the given form's own entries.
+function invalidateChainCaches(frm) {
+	if (!frm) {
+		Object.keys(LINKED_DOC_CACHE).forEach((key) => delete LINKED_DOC_CACHE[key]);
+		Object.keys(DOCSTATUS_CACHE).forEach((key) => delete DOCSTATUS_CACHE[key]);
+		return;
+	}
+	if (!frm.doc || !frm.doc.name) return;
+	delete LINKED_DOC_CACHE[getLinkedCacheKey(frm)];
+	delete DOCSTATUS_CACHE[`${frm.doctype}::${frm.doc.name}`];
 }
 
 function removeChainNav(frm) {
@@ -159,7 +169,9 @@ function getChainForForm(frm) {
 	}
 
 	const references = getPaymentReferences(frm.doc);
-	const firstReference = references.find((row) => PAYMENT_REFERENCE_DOCTYPES.includes(row.reference_doctype));
+	const firstReference = references.find((row) =>
+		PAYMENT_REFERENCE_DOCTYPES.includes(row.reference_doctype)
+	);
 	if (!firstReference) {
 		return [
 			{ label: "Reference Document", doctype: "Reference Document", link_field: "reference_name" },
@@ -268,23 +280,41 @@ async function getDocstatus(doctype, name) {
 	return DOCSTATUS_CACHE[cacheKey];
 }
 
+// linked_with already returns docstatus for every linked doc, so only names that
+// come from the form's own fields need a separate lookup.
+async function getLinkedDocstatus(doctype, linkedDoc) {
+	if (linkedDoc.docstatus !== undefined && linkedDoc.docstatus !== null) {
+		return cint(linkedDoc.docstatus);
+	}
+	return getDocstatus(doctype, getDocName(linkedDoc));
+}
+
+async function findSubmittedLinkedName(frm, doctype, linkedDocs) {
+	const knownStatus = new Map();
+	const linkedNames = getLocalLinkedNames(frm.doc, doctype);
+	getDocsForDoctype(linkedDocs, doctype).forEach((linkedDoc) => {
+		const name = getDocName(linkedDoc);
+		if (!name) return;
+		linkedNames.add(name);
+		if (linkedDoc.docstatus !== undefined && linkedDoc.docstatus !== null) {
+			knownStatus.set(name, cint(linkedDoc.docstatus));
+		}
+	});
+
+	for (const name of linkedNames) {
+		const status = knownStatus.has(name) ? knownStatus.get(name) : await getDocstatus(doctype, name);
+		if (status === 1) return name;
+	}
+
+	return null;
+}
+
 async function getStepStatus(frm, step, linkedDocs) {
 	if (!isADHDModeActive()) return "pending";
 	if (!frm || !frm.doc || !step) return "pending";
 	if (step.doctype === frm.doctype) return "current";
 
-	const linkedNames = getLocalLinkedNames(frm.doc, step.doctype);
-	getDocsForDoctype(linkedDocs, step.doctype).forEach((linkedDoc) => {
-		const name = getDocName(linkedDoc);
-		if (name) linkedNames.add(name);
-	});
-
-	for (const name of linkedNames) {
-		const status = await getDocstatus(step.doctype, name);
-		if (status === 1) return "done";
-	}
-
-	return "pending";
+	return (await findSubmittedLinkedName(frm, step.doctype, linkedDocs)) ? "done" : "pending";
 }
 
 async function getStepStatuses(frm, chain) {
@@ -313,11 +343,16 @@ function getNextPendingStep(frm, chain, statuses) {
 	return null;
 }
 
-function getMappedSource(frm, nextStep) {
-	if (!nextStep) return null;
-	if (nextStep.map_method) return frm;
+// The mapper runs on `source_doctype` (default: the document on screen). When the
+// form is a different document, use the submitted one from the chain instead of
+// passing this form's name to a mapper that expects another doctype.
+async function resolveMapSource(frm, nextStep) {
+	if (!nextStep || !nextStep.map_method) return null;
+	if (!nextStep.source_doctype || nextStep.source_doctype === frm.doctype) return { frm };
 
-	return frm;
+	const linkedDocs = await getLinkedDocs(frm);
+	const name = await findSubmittedLinkedName(frm, nextStep.source_doctype, linkedDocs);
+	return name ? { source_name: name } : null;
 }
 
 async function resolvePaymentReference(frm, nextStep) {
@@ -331,7 +366,7 @@ async function resolvePaymentReference(frm, nextStep) {
 		const linked = getDocsForDoctype(linkedDocs, doctype);
 		for (const linkedDoc of linked) {
 			const name = getDocName(linkedDoc);
-			if (name && (await getDocstatus(doctype, name)) === 1) {
+			if (name && (await getLinkedDocstatus(doctype, linkedDoc)) === 1) {
 				return { doctype, name };
 			}
 		}
@@ -417,11 +452,14 @@ function getFallbackPrefill(frm) {
 	return prefill;
 }
 
-function openNextStep(frm, nextStep) {
+async function openNextStep(frm, nextStep) {
 	if (!isADHDModeActive() || !nextStep) return;
 
 	if (frm.doc.__islocal === true) {
-		frappe.show_alert({ message: __("Save this document before creating the next step."), indicator: "orange" });
+		frappe.show_alert({
+			message: __("Save this document before creating the next step."),
+			indicator: "orange",
+		});
 		return;
 	}
 
@@ -429,11 +467,18 @@ function openNextStep(frm, nextStep) {
 		return createPaymentEntry(frm, nextStep);
 	}
 
-	const sourceFrm = getMappedSource(frm, nextStep);
-	if (nextStep.map_method && sourceFrm) {
+	if (nextStep.map_method) {
+		const source = await resolveMapSource(frm, nextStep);
+		if (!source) {
+			frappe.show_alert({
+				message: __("Create and submit the {0} first.", [__(nextStep.source_doctype)]),
+				indicator: "orange",
+			});
+			return;
+		}
 		return frappe.model.open_mapped_doc({
 			method: nextStep.map_method,
-			frm: sourceFrm,
+			...source,
 			freeze: true,
 		});
 	}
@@ -467,10 +512,13 @@ async function renderChainNav(frm) {
 	const chain = getChainForForm(frm);
 	if (!chain.length) return;
 
+	// after_save is followed by refresh, so renders overlap: only the newest one may insert
+	const token = (frm._adhdChainToken || 0) + 1;
+	frm._adhdChainToken = token;
 	removeChainNav(frm);
 
 	const statuses = await getStepStatuses(frm, chain);
-	if (!isADHDModeActive()) return;
+	if (token !== frm._adhdChainToken || !isADHDModeActive()) return;
 
 	const $nav = $('<div class="adhd-chain-nav" role="navigation" aria-label="Document workflow chain">');
 	const $steps = $('<div class="adhd-chain-steps">');
@@ -496,15 +544,26 @@ async function renderChainNav(frm) {
 		$nav.append($button);
 	}
 
+	removeChainNav(frm);
 	insertChainNav(frm, $nav);
 }
 
 REGISTERED_DOCTYPES.forEach((doctype) => {
 	frappe.ui.form.on(doctype, {
 		refresh(frm) {
+			invalidateChainCaches(frm);
 			renderChainNav(frm);
 		},
 		after_save(frm) {
+			invalidateChainCaches();
+			renderChainNav(frm);
+		},
+		on_submit(frm) {
+			invalidateChainCaches();
+			renderChainNav(frm);
+		},
+		after_cancel(frm) {
+			invalidateChainCaches();
 			renderChainNav(frm);
 		},
 	});
@@ -512,4 +571,7 @@ REGISTERED_DOCTYPES.forEach((doctype) => {
 
 erpnext.adhd.CHAIN_MAP = CHAIN_MAP;
 erpnext.adhd.renderChainNav = renderChainNav;
+erpnext.adhd.invalidateChainCaches = invalidateChainCaches;
+erpnext.adhd.findSubmittedLinkedName = findSubmittedLinkedName;
+erpnext.adhd.resolveMapSource = resolveMapSource;
 erpnext.adhd.getStepStatus = getStepStatus;

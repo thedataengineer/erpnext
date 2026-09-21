@@ -5,7 +5,6 @@
 frappe.provide("erpnext.adhd");
 
 const FIELD_HELP = erpnext.adhd.FIELD_HELP || {};
-const fieldHelpCache = new Map();
 
 const TIMEBOX_DOCTYPES = ["Item", "Account", "BOM", "Print Format", "Custom Field"];
 const TIMEBOX_MINUTES = 10;
@@ -32,8 +31,13 @@ function renderTimeboxBanner(frm) {
 	const $banner = $(`
 		<div class="adhd-timebox-banner" role="status">
 			<span class="adhd-timebox-icon">⏱️</span>
-			<span class="adhd-timebox-msg">${__("Heads up: this form has a lot of options. Consider a {0}-min time-box.", [TIMEBOX_MINUTES])}</span>
-			<button type="button" class="btn btn-xs btn-default adhd-timebox-start">${__("Start {0}-min timer", [TIMEBOX_MINUTES])}</button>
+			<span class="adhd-timebox-msg">${__(
+				"Heads up: this form has a lot of options. Consider a {0}-min time-box.",
+				[TIMEBOX_MINUTES]
+			)}</span>
+			<button type="button" class="btn btn-xs btn-default adhd-timebox-start">${__("Start {0}-min timer", [
+				TIMEBOX_MINUTES,
+			])}</button>
 			<button type="button" class="adhd-timebox-dismiss" aria-label="${__("Dismiss")}">✕</button>
 		</div>
 	`);
@@ -52,12 +56,19 @@ function renderTimeboxBanner(frm) {
 erpnext.adhd.FormFocus = class FormFocus {
 	constructor() {
 		this._boundHandler = null;
+		this._enhancedForms = new Set();
 		this._applyToCurrentForm = this._applyToCurrentForm.bind(this);
 	}
 
 	enable() {
 		// Hook into frappe's form rendering
 		frappe.ui.form.on_each_form && frappe.ui.form.on_each_form(this._applyToCurrentForm);
+
+		// Enabling twice must not stack listeners
+		if (this._boundHandler) {
+			$(document).off("frappe.route_change", this._boundHandler);
+			$(document).off("page-change", this._boundHandler);
+		}
 
 		// Apply to current form if one is open
 		if (cur_frm) {
@@ -81,59 +92,77 @@ erpnext.adhd.FormFocus = class FormFocus {
 			$(document).off("page-change", this._boundHandler);
 		}
 
+		// Stop the field-help listener on every form that got one
+		this._enhancedForms.forEach((frm) => {
+			if (frm.$wrapper) frm.$wrapper.off(".adhdFieldHelp");
+			frm._adhdHelpBound = false;
+		});
+		this._enhancedForms.clear();
+
 		// Remove ADHD form enhancements from current form
 		document
 			.querySelectorAll(
 				".adhd-field-help, .adhd-field-help-tip, .adhd-breadcrumb, .adhd-minimal-toggle"
 			)
 			.forEach((el) => el.remove());
-		document.querySelectorAll(".adhd-form-enhanced").forEach(el => el.classList.remove("adhd-form-enhanced"));
+		document
+			.querySelectorAll(".adhd-form-enhanced")
+			.forEach((el) => el.classList.remove("adhd-form-enhanced"));
 	}
 
 	_applyToCurrentForm(frm) {
-		if (!frm || !frm.$wrapper) return;
-		if (frm.$wrapper.find(".adhd-form-enhanced").length) return; // Already enhanced
+		if (!frm || !frm.$wrapper || !frm.doc) return;
+
+		// The wrapper itself carries the class, so check it directly. The form
+		// object is reused across documents, so keep the breadcrumb current
+		// even when the rest is already enhanced.
+		this._addBreadcrumb(frm);
+		if (frm.$wrapper.hasClass("adhd-form-enhanced")) return; // Already enhanced
 
 		frm.$wrapper.addClass("adhd-form-enhanced");
+		this._enhancedForms.add(frm);
 
-		this._addBreadcrumb(frm);
 		this._addFieldTooltips(frm);
-		this._setupAutosave(frm);
 	}
 
 	_addBreadcrumb(frm) {
-		const existing = frm.$wrapper.find(".adhd-breadcrumb");
-		if (existing.length) {
-			existing.find(".adhd-bc-doctype").text(frm.doctype);
-			existing.find(".adhd-bc-docname").text(frm.docname || "New");
-			return;
-		}
-
 		const isNew = !frm.docname || frm.is_new();
 		const colors = {
-			"Task": "#4CAF50",
-			"Project": "#2196F3",
+			Task: "#4CAF50",
+			Project: "#2196F3",
 			"Sales Invoice": "#FF9800",
 			"Purchase Invoice": "#9C27B0",
-			"Customer": "#00BCD4",
-			"Supplier": "#F44336",
+			Customer: "#00BCD4",
+			Supplier: "#F44336",
 			"Sales Order": "#FF5722",
 			"Purchase Order": "#795548",
 			"Payment Entry": "#607D8B",
 		};
 
 		const color = colors[frm.doctype] || "#2D7D9A";
-		const statusBadge = frm.doc.docstatus === 1 ? '<span class="adhd-bc-badge submitted">Submitted</span>'
-			: frm.doc.docstatus === 2 ? '<span class="adhd-bc-badge cancelled">Cancelled</span>'
-			: isNew ? '<span class="adhd-bc-badge draft new">New</span>'
-			: '<span class="adhd-bc-badge draft">Draft</span>';
+		const statusBadge =
+			frm.doc.docstatus === 1
+				? '<span class="adhd-bc-badge submitted">Submitted</span>'
+				: frm.doc.docstatus === 2
+				? '<span class="adhd-bc-badge cancelled">Cancelled</span>'
+				: isNew
+				? '<span class="adhd-bc-badge draft new">New</span>'
+				: '<span class="adhd-bc-badge draft">Draft</span>';
+
+		const existing = frm.$wrapper.find(".adhd-breadcrumb");
+		if (existing.length) {
+			existing.find(".adhd-bc-doctype").text(__(frm.doctype));
+			existing.find(".adhd-bc-docname").text(frm.docname || __("New"));
+			existing.find(".adhd-bc-badge").replaceWith(statusBadge);
+			return;
+		}
 
 		const bc = $(`
 			<div class="adhd-breadcrumb" style="--adhd-bc-color: ${color}">
 				<span class="adhd-bc-icon">📄</span>
 				<span class="adhd-bc-doctype">${__(frm.doctype)}</span>
 				<span class="adhd-bc-sep">›</span>
-				<span class="adhd-bc-docname">${frm.docname || __("New")}</span>
+				<span class="adhd-bc-docname">${frappe.utils.escape_html(frm.docname || __("New"))}</span>
 				${statusBadge}
 			</div>
 		`);
@@ -168,6 +197,7 @@ erpnext.adhd.FormFocus = class FormFocus {
 		};
 
 		frm.$wrapper.on("focusin.adhdFieldHelp", ".frappe-control :input", (event) => {
+			if (!erpnext.adhd.isActive()) return;
 			const $control = $(event.currentTarget).closest(".frappe-control");
 			const fieldname = $control.data("fieldname");
 			if (!fieldname) return;
@@ -178,72 +208,36 @@ erpnext.adhd.FormFocus = class FormFocus {
 				return;
 			}
 
-			const key = `${frm.doctype}.${fieldname}`;
-			if (fieldHelpCache.has(key)) {
-				showTip($control, fieldname, fieldHelpCache.get(key));
-				return;
-			}
-			fieldHelpCache.set(key, null);
-			frappe.call({
-				method: "frappe.client.get_value",
-				args: {
-					doctype: "DocField",
-					filters: { parent: frm.doctype, fieldname },
-					fieldname: "description",
-				},
-				callback: (response) => {
-					const description = response.message?.description || null;
-					fieldHelpCache.set(key, description);
-					if (description && document.activeElement === event.currentTarget) {
-						showTip($control, fieldname, description);
-					}
-				},
-			});
+			// Fall back to the field description already in the client-side meta
+			// (no server call, so no DocField permission is needed).
+			const df = (frappe.get_meta(frm.doctype)?.fields || []).find(
+				(field) => field.fieldname === fieldname
+			);
+			if (df?.description) showTip($control, fieldname, __(df.description));
 		});
 		frm.$wrapper.on("focusout.adhdFieldHelp", ".frappe-control :input", (event) => {
 			const $control = $(event.currentTarget).closest(".frappe-control");
 			hideTip($control, $control.data("fieldname"));
 		});
 	}
-
-	_setupAutosave(frm) {
-		if (frm._adhd_autosave_interval) return;
-
-		frm._adhd_autosave_interval = setInterval(() => {
-			if (!erpnext.adhd.isActive()) {
-				clearInterval(frm._adhd_autosave_interval);
-				return;
-			}
-
-			if (frm.doc && frm.is_dirty() && !frm.doc.__islocal) {
-				frm.save("Save", () => {
-					// Show subtle autosave indicator
-					const indicator = document.querySelector(".adhd-autosave-indicator");
-					if (indicator) {
-						indicator.classList.add("saved");
-						setTimeout(() => indicator.classList.remove("saved"), 2000);
-					}
-				});
-			}
-		}, 60000); // Autosave every 60 seconds
-	}
 };
 
 // Initialize
 let formFocusInstance = null;
 
-erpnext.adhd.onStateChange && erpnext.adhd.onStateChange((active) => {
-	if (active) {
-		if (!formFocusInstance) {
-			formFocusInstance = new erpnext.adhd.FormFocus();
+erpnext.adhd.onStateChange &&
+	erpnext.adhd.onStateChange((active) => {
+		if (active) {
+			if (!formFocusInstance) {
+				formFocusInstance = new erpnext.adhd.FormFocus();
+			}
+			formFocusInstance.enable();
+		} else {
+			if (formFocusInstance) {
+				formFocusInstance.disable();
+			}
 		}
-		formFocusInstance.enable();
-	} else {
-		if (formFocusInstance) {
-			formFocusInstance.disable();
-		}
-	}
-});
+	});
 
 // Also apply when a new form loads while ADHD mode is already on
 frappe.after_ajax(() => {
@@ -255,6 +249,15 @@ frappe.after_ajax(() => {
 			}
 		}, 600);
 	});
+});
+
+// Keep the breadcrumb (name and status badge) current after every refresh
+frappe.ui.form.on("*", {
+	refresh(frm) {
+		if (formFocusInstance && erpnext.adhd.isActive()) {
+			formFocusInstance._applyToCurrentForm(frm);
+		}
+	},
 });
 
 TIMEBOX_DOCTYPES.forEach((doctype) => {
