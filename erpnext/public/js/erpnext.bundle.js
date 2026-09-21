@@ -50,6 +50,7 @@ import "./adhd/form_focus";        // Form simplification & tooltips
 import "./adhd/task_kanban";       // Task Kanban board
 import "./adhd/adhd_notifications"; // Enhanced notifications
 import "./adhd/adhd_chain_navigator"; // Workflow document chain navigator
+import "./adhd/adhd_smart_inbox"; // Daily priorities and resume panel
 
 // Assistant: local-LLM chat that fills in forms from plain sentences
 import "./assistant/assistant_view";

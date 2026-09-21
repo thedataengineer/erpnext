@@ -7,7 +7,10 @@ function is_smart_inbox_enabled() {
 }
 
 frappe.pages["adhd-inbox"].on_page_load = function (wrapper) {
-	if (!is_smart_inbox_enabled()) return;
+	if (!is_smart_inbox_enabled()) {
+		frappe.set_route("Workspaces");
+		return;
+	}
 
 	const page = frappe.ui.make_app_page({
 		parent: wrapper,
@@ -23,7 +26,11 @@ frappe.pages["adhd-inbox"].on_page_load = function (wrapper) {
 };
 
 frappe.pages["adhd-inbox"].on_page_show = function () {
-	if (!is_smart_inbox_enabled() || !(erpnext.adhd && erpnext.adhd.smartInbox)) return;
+	if (!is_smart_inbox_enabled()) {
+		frappe.set_route("Workspaces");
+		return;
+	}
+	if (!(erpnext.adhd && erpnext.adhd.smartInbox)) return;
 
 	if (frappe.adhd_inbox_page && !frappe.adhd_inbox_page.__adhd_inbox_rendered && erpnext.adhd.renderSmartInbox) {
 		erpnext.adhd.renderSmartInbox(frappe.adhd_inbox_page);
