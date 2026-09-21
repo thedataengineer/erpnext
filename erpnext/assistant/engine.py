@@ -27,6 +27,7 @@ from rapidfuzz import fuzz, process
 from rapidfuzz import utils as fuzz_utils
 
 from erpnext.assistant import llm as llm_module
+from erpnext.assistant import mail
 from erpnext.assistant.parsing import (
 	clean_text,
 	find_amount,
@@ -64,6 +65,9 @@ QUERY_CUES = {
 	"pipeline": re.compile(
 		r"\b(pipeline|open (deals|opportunities)|(deals|opportunities) (are )?open|the funnel)\b"
 	),
+	# checked in this order: "sync my email" is a request to connect, "my emails" a question about mail
+	"connect_email": mail.CONNECT_CUE,
+	"emails": mail.EMAIL_CUE,
 }
 # A message that opens like this is a new request, not a reply to our question
 NEW_REQUEST = re.compile(
@@ -130,6 +134,8 @@ def _classify_prompt() -> str:
 		f"- my_day: {QUERIES['my_day']}\n"
 		f"- hours_summary: {QUERIES['hours_summary']}\n"
 		f"- pipeline: {QUERIES['pipeline']}\n"
+		f"- emails: {QUERIES['emails']}\n"
+		f"- connect_email: {QUERIES['connect_email']}\n"
 		"- help: anything else, greetings, or unclear\n"
 		"Examples:\n"
 		'"2h on the acme rollout" -> log_time\n'
@@ -717,7 +723,7 @@ def _help(state: dict[str, Any], *, confused: bool = False) -> dict[str, Any]:
 _PRIORITY_RANK = {"Urgent": 0, "High": 1, "Medium": 2, "Low": 3}
 
 
-def my_day(state: dict[str, Any], today: date) -> dict[str, Any]:
+def my_day(state: dict[str, Any], today: date, message: str = "") -> dict[str, Any]:
 	user = frappe.session.user
 	try:
 		tasks = frappe.get_list(
@@ -765,7 +771,7 @@ def my_day(state: dict[str, Any], today: date) -> dict[str, Any]:
 	return _response(state, reply, items=items)
 
 
-def hours_summary(state: dict[str, Any], today: date) -> dict[str, Any]:
+def hours_summary(state: dict[str, Any], today: date, message: str = "") -> dict[str, Any]:
 	if not frappe.has_permission("Timesheet", "read"):
 		return _response(state, _("You don't have access to timesheets."))
 
@@ -808,7 +814,7 @@ def hours_summary(state: dict[str, Any], today: date) -> dict[str, Any]:
 	return _response(state, reply, items=items)
 
 
-def pipeline(state: dict[str, Any], today: date) -> dict[str, Any]:
+def pipeline(state: dict[str, Any], today: date, message: str = "") -> dict[str, Any]:
 	if not frappe.has_permission("Opportunity", "read"):
 		return _response(state, _("You don't have access to opportunities."))
 	try:
@@ -862,7 +868,27 @@ def pipeline(state: dict[str, Any], today: date) -> dict[str, Any]:
 	return _response(state, reply, items=items)
 
 
-QUERY_HANDLERS = {"my_day": my_day, "hours_summary": hours_summary, "pipeline": pipeline}
+def emails(state: dict[str, Any], today: date, message: str = "") -> dict[str, Any]:
+	"""Recent received email, or what one name sent. What an email says is only ever shown, never sent to the
+	model (see mail.py)."""
+	answer = mail.emails_answer(mail.term_of(message))
+	chips = [_chip(_("Connect my email"), type="query", name="connect_email")] if answer["connect"] else []
+	return _response(state, answer["reply"], items=answer["items"], chips=chips)
+
+
+def connect_email(state: dict[str, Any], today: date, message: str = "") -> dict[str, Any]:
+	"""A card that opens the Email Account form, filled in but for the password, which is typed there."""
+	answer = mail.connect_answer(message)
+	return _response(state, answer["reply"], card=answer["card"], items=answer["items"])
+
+
+QUERY_HANDLERS = {
+	"my_day": my_day,
+	"hours_summary": hours_summary,
+	"pipeline": pipeline,
+	"emails": emails,
+	"connect_email": connect_email,
+}
 
 
 # --- the turn ------------------------------------------------------------------------------------
@@ -899,7 +925,7 @@ def _mid_draft(
 		intent = classify(message, llm)
 
 	if intent in QUERY_HANDLERS:
-		result = QUERY_HANDLERS[intent](state, today)
+		result = QUERY_HANDLERS[intent](state, today, message)
 		ev = evaluate(state, today)
 		question, chips, asking = compose(ev)
 		state["asking"] = asking
@@ -948,7 +974,7 @@ def _apply_action(
 	elif kind == "discard":
 		return _discard(state, today)
 	elif kind == "query" and action.get("name") in QUERY_HANDLERS:
-		return QUERY_HANDLERS[action["name"]](state, today)
+		return QUERY_HANDLERS[action["name"]](state, today, clean_text(action.get("q"), MAX_MESSAGE))
 	return None
 
 
@@ -992,7 +1018,7 @@ def respond(
 			intent = next((name for name, cue in QUERY_CUES.items() if cue.search(message.casefold())), None)
 			intent = intent or classify(message, llm)
 			if intent in QUERY_HANDLERS:
-				return QUERY_HANDLERS[intent](state, today)
+				return QUERY_HANDLERS[intent](state, today, message)
 			if intent not in RECIPES:
 				return _help(state, confused=True)
 			state.update(recipe=intent, values={}, asking=None)

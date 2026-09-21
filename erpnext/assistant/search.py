@@ -91,6 +91,20 @@ def catalogue() -> list[Do]:
 			("Task", "read"),
 		),
 		Do(
+			_("My emails"),
+			_("What people have written to you"),
+			("emails", "email", "inbox", "mail", "replies", "messages"),
+			{"type": "query", "name": "emails"},
+			("Communication", "read"),
+		),
+		Do(
+			_("Connect my email"),
+			_("Sync a mailbox so its mail shows on your leads"),
+			("connect email", "sync email", "email sync", "mailbox", "gmail", "outlook", "imap"),
+			{"type": "query", "name": "connect_email"},
+			("Email Account", "create"),
+		),
+		Do(
 			_("Log time"),
 			_("Hours worked on a project"),
 			("log time", "time", "hours", "timesheet"),

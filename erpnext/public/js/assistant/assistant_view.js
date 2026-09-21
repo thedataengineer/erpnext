@@ -94,9 +94,18 @@ erpnext.assistant.view = {
 			<div class="erp-assistant-card-title">${v.esc(card.title)}</div>
 			${rows}${problems}
 			<div class="erp-assistant-card-actions">
-				<button type="button" class="btn btn-primary btn-xs" data-card="create"
-					${live && card.ready ? "" : "disabled"}>${__("Create")}</button>
-				<button type="button" class="btn btn-default btn-xs" data-card="open"${off}>${__("Open in form")}</button>
+				${
+					// a form-only card (connecting a mailbox) has nothing safe to create from here: its password is typed in the form
+					card.form_only
+						? ""
+						: `<button type="button" class="btn btn-primary btn-xs" data-card="create"
+							${live && card.ready ? "" : "disabled"}>${__("Create")}</button>`
+				}
+				<button type="button" class="btn btn-${
+					card.form_only ? "primary" : "default"
+				} btn-xs" data-card="open"${off}>${
+			card.form_only ? __("Open the form") : __("Open in form")
+		}</button>
 				<button type="button" class="btn btn-default btn-xs" data-card="discard"${off}>${__("Discard")}</button>
 			</div>
 		</div>`;

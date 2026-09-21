@@ -38,6 +38,14 @@ def _join(*parts: Any) -> str:
 	return " · ".join(str(p) for p in parts if p not in (None, "", 0))
 
 
+def _short(text: Any, limit: int = 120) -> str:
+	"""Text somebody else wrote, on one line and cut short: control characters (which can hide or reorder
+	what a line says) are dropped along with the line breaks."""
+	cleaned = "".join(ch if ch.isprintable() else " " for ch in str(text or ""))
+	cleaned = " ".join(cleaned.split())
+	return cleaned if len(cleaned) <= limit else cleaned[: limit - 1].rstrip() + "…"
+
+
 def _amount(row: Row, field: str = "opportunity_amount") -> str:
 	value = row.get(field)
 	return f"{frappe.utils.fmt_money(value, currency=row.get('currency'))}" if value else ""
@@ -87,6 +95,20 @@ KINDS: dict[str, Kind] = {
 			("full_name", "company_name", "email_id", "name"),
 			title=lambda r: r.get("full_name") or r["name"],
 			subtitle=lambda r: _join(r.get("company_name"), r.get("email_id")),
+		),
+		# What an email says is written by whoever sent it, so only its subject and sender are shown, cut short
+		# (the client escapes them), and they are never handed to the language model.
+		Kind(
+			"Communication",
+			"Emails",
+			("subject", "sender", "sender_full_name", "communication_date"),
+			("subject", "sender", "sender_full_name"),
+			title=lambda r: _short(r.get("subject")) or _("(no subject)"),
+			subtitle=lambda r: _join(
+				_short(r.get("sender_full_name") or r.get("sender"), 60),
+				frappe.utils.formatdate(r["communication_date"]) if r.get("communication_date") else None,
+			),
+			filters={"communication_type": "Communication", "communication_medium": "Email"},
 		),
 		Kind(
 			"Quotation",

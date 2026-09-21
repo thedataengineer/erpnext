@@ -60,6 +60,35 @@ browser vendor's service**, so the bar says so while it listens; nothing else le
 appear and search as you speak, and you still press Enter. Where the browser has no speech recognition the
 mic is hidden. A fully local option (e.g. whisper.cpp) would need an extra server.
 
+## Email
+
+Frappe already syncs mail: an **Email Account** with IMAP (a password, or OAuth through a Connected App) is
+pulled into Communications every ten minutes by the scheduler, and each mail shows on the lead, contact or
+customer it belongs to. The assistant adds the two things that were missing (`mail.py`):
+
+- **Ask.** "What did Acme email me?", "any emails from Globex", "did Jo reply", "my inbox". It lists received
+  mail that the person may read, newest first, and finds it by sender, subject, or the lead, customer,
+  opportunity or prospect it is attached to. Typing a name in the bar also finds mail, in an "Emails" group.
+- **Connect.** "Connect my email" (or "connect jo@gmail.com") shows a card with the provider's settings filled
+  in: receive-only, new mail only, checked every ten minutes, no Contact made for every sender. "Open the
+  form" opens the Email Account form, and the person adds the password there and saves.
+
+Two rules, both tested:
+
+1. **What an email says is only ever shown.** It is written by strangers, so it is cut to one plain line
+   (control and bidi characters dropped), escaped by the client, and never given to the language model or
+   acted on. Replies to "what did Acme email me" are built from counts and dates. Questions about mail are
+   recognised without the model (`mail.EMAIL_CUE`), so the model sees nothing but what the person typed.
+2. **A mailbox password never goes through the conversation.** The card asks for it in the form. It is not in
+   the chat, the model prompt or the saved conversation state.
+
+Nothing here sends mail. The card leaves outgoing mail off, and replying stays a decision made in the form.
+
+Limits worth knowing: Gmail needs an app password (2-step verification on) or OAuth; Microsoft accounts
+usually need OAuth, which an administrator sets up once as a Connected App. A provider not in
+`mail.PROVIDERS` gets a guessed IMAP server, which the card says. The mail pipeline is tested on raw messages
+(`test_mail_sync.py`); no real mailbox has been connected to this repository's tests.
+
 ## Configuration (site config, all optional)
 
 | Key | Default |
@@ -95,6 +124,8 @@ site it runs on).
 bench --site <test-site> run-tests --module erpnext.assistant.test_assistant
 bench --site <test-site> run-tests --module erpnext.assistant.test_crm
 bench --site <test-site> run-tests --module erpnext.assistant.test_recipes_extended
+bench --site <test-site> run-tests --module erpnext.assistant.test_mail
+bench --site <test-site> run-tests --module erpnext.assistant.test_mail_sync
 ```
 
 These need a working bench with its database and Redis running. The expense-claim, material-request and

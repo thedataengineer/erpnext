@@ -696,6 +696,8 @@ QUERIES = {
 	"my_day": "what is on my plate today, my tasks, what to do next",
 	"hours_summary": "how many hours I have logged, my timesheet totals",
 	"pipeline": "my sales pipeline, open deals or opportunities, what is in the funnel",
+	"emails": "recent emails I received, what someone wrote or said, whether someone replied",
+	"connect_email": "connect or set up my email inbox so it syncs, sync my mail",
 }
 
 # What to offer when a name does not match anything: link doctype -> (recipe to start, its name field, noun)
