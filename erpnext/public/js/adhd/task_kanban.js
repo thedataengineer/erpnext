@@ -279,7 +279,7 @@ erpnext.adhd.TaskKanban = class TaskKanban {
 			const taskName = btn.dataset.task;
 
 			if (action === "done") {
-				this._moveTask(taskName, "Completed");
+				this._moveTask(taskName, "Completed", card);
 				card.classList.add("adhd-card-completing");
 				setTimeout(() => this._loadTasks(), 700);
 			} else if (action === "open") {
@@ -327,7 +327,10 @@ erpnext.adhd.TaskKanban = class TaskKanban {
 
 				const newStatus = col.dataset.status;
 				if (newStatus && newStatus !== this.draggedTask.status) {
-					this._moveTask(this.draggedTask.name, newStatus);
+					const card = document.querySelector(
+						`.adhd-kanban-card[data-task-name="${CSS.escape(this.draggedTask.name)}"]`
+					);
+					this._moveTask(this.draggedTask.name, newStatus, card);
 				}
 
 				this.draggedTask = null;
@@ -335,7 +338,7 @@ erpnext.adhd.TaskKanban = class TaskKanban {
 		});
 	}
 
-	async _moveTask(taskName, newStatus) {
+	async _moveTask(taskName, newStatus, cardElement) {
 		try {
 			await frappe.call({
 				method: "frappe.client.set_value",
@@ -346,11 +349,11 @@ erpnext.adhd.TaskKanban = class TaskKanban {
 			const task = this.tasks.find((t) => t.name === taskName);
 			if (task) task.status = newStatus;
 
-			this._renderCards();
-
 			if (newStatus === "Completed") {
-				frappe.show_alert({ message: "✅ Task completed! Great work!", indicator: "green" }, 3);
+				const title = task?.subject || taskName;
+				erpnext.adhd.showDoneWell?.(__('Task "{0}" done.', [title]), cardElement);
 			}
+			setTimeout(() => this._renderCards(), newStatus === "Completed" ? 450 : 0);
 		} catch (e) {
 			frappe.msgprint(__("Could not update task status. Please try again."));
 		}
