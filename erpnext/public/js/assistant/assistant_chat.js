@@ -93,7 +93,9 @@ erpnext.assistant.Chat = class Chat {
 		});
 
 		$(document).on("keydown", (e) => {
-			if (e.altKey && !e.ctrlKey && !e.metaKey && e.key.toLowerCase() === "j") {
+			// event.code, not event.key: on macOS Option changes the key (Option+J types "∆"), so a key
+			// check never matches there
+			if (e.altKey && !e.ctrlKey && !e.metaKey && e.code === "KeyJ") {
 				e.preventDefault();
 				this.toggle();
 			}

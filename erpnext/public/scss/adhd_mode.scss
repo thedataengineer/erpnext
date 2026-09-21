@@ -3,8 +3,9 @@
 // Activated when body has class "adhd-mode" (data-adhd-mode="on")
 // =============================================================================
 
-// Import Google Font for better readability
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+// No web font is imported: an @import of fonts.googleapis.com made every desk user's browser call Google on
+// every page load, ADHD mode or not. --adhd-font uses Inter when it is installed and the system UI font
+// otherwise.
 
 body.adhd-mode {
 	.adhd-wizard-banner {
@@ -2009,7 +2010,19 @@ body.adhd-mode {
 	animation: adhd-card-check 0.4s ease-out forwards;
 }
 
+// Motion is one of the things ADHD mode is meant to calm, so honour the system "reduce motion" setting for
+// everything the mode animates, not only the two celebration classes.
 @media (prefers-reduced-motion: reduce) {
+	body.adhd-mode,
+	body.adhd-mode *,
+	body.adhd-mode *::before,
+	body.adhd-mode *::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+		scroll-behavior: auto !important;
+	}
+
 	.adhd-done-pulse,
 	.adhd-card-done {
 		animation: none;
