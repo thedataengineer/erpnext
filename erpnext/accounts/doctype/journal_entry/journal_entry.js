@@ -42,6 +42,7 @@ frappe.ui.form.on("Journal Entry", {
 				erpnext.journal_entry.set_exchange_rate(frm, row.doctype, row.name)
 			);
 		}
+		erpnext.adhd?.initJournalEntryBalanceMeter?.(frm);
 	},
 
 	before_save(frm) {
@@ -159,10 +160,12 @@ frappe.ui.form.on("Journal Entry Account", {
 
 	debit_in_account_currency(frm, cdt, cdn) {
 		erpnext.journal_entry.set_exchange_rate(frm, cdt, cdn);
+		frm._adhdUpdateBalanceMeter?.();
 	},
 
 	credit_in_account_currency(frm, cdt, cdn) {
 		erpnext.journal_entry.set_exchange_rate(frm, cdt, cdn);
+		frm._adhdUpdateBalanceMeter?.();
 	},
 
 	debit(frm) {
@@ -213,10 +216,16 @@ frappe.ui.form.on("Journal Entry Account", {
 		erpnext.journal_entry.set_balancing_amount(row, frm.doc.difference);
 		erpnext.journal_entry.update_totals(frm);
 		erpnext.accounts.dimensions.copy_dimension_from_first_row(frm, cdt, cdn, "accounts");
+		frm._adhdUpdateBalanceMeter?.();
 	},
 
 	accounts_remove(frm) {
 		erpnext.journal_entry.update_totals(frm);
+		frm._adhdUpdateBalanceMeter?.();
+	},
+
+	accounts_move(frm) {
+		frm._adhdUpdateBalanceMeter?.();
 	},
 });
 
