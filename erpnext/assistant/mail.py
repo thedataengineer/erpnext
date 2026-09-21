@@ -346,10 +346,15 @@ def _count(n: int) -> str:
 	return _("1 email") if n == 1 else _("{0} emails").format(n)
 
 
-def _mailbox_connected() -> bool:
+def _mailbox_state() -> str:
+	"""'live' (a mailbox is being pulled), 'waiting' (set up but its password is not entered yet, so Frappe
+	does not pull it) or 'none'."""
 	if not frappe.has_permission("Email Account", "read"):
-		return True  # they cannot tell, and connecting is not theirs to do: do not offer it
-	return bool(frappe.db.count("Email Account", {"enable_incoming": 1}))
+		return "live"  # they cannot tell, and connecting is not theirs to do: do not offer it
+	if frappe.db.count("Email Account", {"enable_incoming": 1, "awaiting_password": 0}):
+		return "live"
+	waiting = frappe.db.count("Email Account", {"enable_incoming": 1, "awaiting_password": 1})
+	return "waiting" if waiting else "none"
 
 
 def emails_answer(term: str = "") -> dict[str, Any]:
@@ -360,7 +365,16 @@ def emails_answer(term: str = "") -> dict[str, Any]:
 		return {"reply": _("You don't have access to email."), "items": [], "connect": False}
 
 	if not rows:
-		if not _mailbox_connected():
+		state = _mailbox_state()
+		if state == "waiting":
+			return {
+				"reply": _(
+					"Your mailbox is set up but still waiting for its password, so no mail is coming in yet."
+				),
+				"items": [],
+				"connect": True,
+			}
+		if state == "none":
 			return {
 				"reply": _("No email is connected yet, so there is nothing to show."),
 				"items": [],
@@ -490,18 +504,28 @@ def connect_card(address: str = "") -> dict[str, Any]:
 	}
 
 
-def _account_items(filters: dict[str, Any]) -> list[dict[str, Any]]:
+def _accounts(filters: dict[str, Any]) -> list[Any]:
+	return [
+		account
+		for account in frappe.get_all(
+			"Email Account",
+			filters=filters,
+			fields=["name", "email_id", "awaiting_password"],
+			limit_page_length=5,
+		)
+		if frappe.has_permission("Email Account", "read", doc=account.name)
+	]
+
+
+def _account_items(accounts: list[Any]) -> list[dict[str, Any]]:
 	return [
 		{
 			"label": account.email_id or account.name,
-			"meta": _("Email account"),
+			"meta": _("Waiting for its password") if account.get("awaiting_password") else _("Email account"),
 			"route": ["Form", "Email Account", account.name],
 			"tone": "",
 		}
-		for account in frappe.get_all(
-			"Email Account", filters=filters, fields=["name", "email_id"], limit_page_length=5
-		)
-		if frappe.has_permission("Email Account", "read", doc=account.name)
+		for account in accounts
 	]
 
 
@@ -521,24 +545,27 @@ def connect_answer(message: str = "") -> dict[str, Any]:
 	if _PASSWORD_WORD.search(message or ""):
 		warning = _("Please don't type a password in the chat: I ignored it. You add it in the form.") + " "
 
-	if address and frappe.db.exists("Email Account", {"email_id": address}):
+	accounts = _accounts({"email_id": address} if address else {"enable_incoming": 1})
+	if waiting := [account for account in accounts if account.get("awaiting_password")]:
+		name = waiting[0].email_id or waiting[0].name
 		return {
 			"reply": warning
-			+ _("{0} is already connected. New mail is checked every {1} minutes.").format(
-				address, PULL_MINUTES
-			),
+			+ _(
+				"{0} is set up but waiting for its password, so no mail is coming in yet. Open it, untick "
+				"“Awaiting Password”, add the password and save."
+			).format(name),
 			"card": None,
-			"items": _account_items({"email_id": address}),
+			"items": _account_items(accounts),
 		}
-	if not address:
-		accounts = _account_items({"enable_incoming": 1})
-		if accounts:
-			return {
-				"reply": warning
-				+ _("Email is connected. New mail is checked every {0} minutes.").format(PULL_MINUTES),
-				"card": None,
-				"items": accounts,
-			}
+	if accounts:
+		reply = (
+			_("{0} is already connected. New mail is checked every {1} minutes.").format(
+				address, PULL_MINUTES
+			)
+			if address
+			else _("Email is connected. New mail is checked every {0} minutes.").format(PULL_MINUTES)
+		)
+		return {"reply": warning + reply, "card": None, "items": _account_items(accounts)}
 
 	reply = (
 		_("Here is what I'll set up for {0}. Open the form to add the password and save.").format(address)

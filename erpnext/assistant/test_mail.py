@@ -430,6 +430,30 @@ class TestConnect(unittest.TestCase):
 		self.assertIsNone(reply["card"])
 		self.assertIn("already connected", reply["reply"])
 
+	def test_a_mailbox_still_waiting_for_its_password_is_not_called_connected(self):
+		waiting = frappe._dict(name="erp", email_id="erp@work.example", awaiting_password=1)
+		with (
+			patch("frappe.get_all", return_value=[waiting]),
+			patch("frappe.has_permission", return_value=True),
+		):
+			for message in ("connect my email", "connect erp@work.example"):
+				reply = self.connect(message)
+				self.assertIsNone(reply["card"], message)
+				self.assertIn("waiting for its password", reply["reply"], message)
+				self.assertEqual(reply["items"][0]["meta"], "Waiting for its password")
+				self.assertEqual(reply["items"][0]["route"], ["Form", "Email Account", "erp"])
+
+	def test_asking_for_mail_while_the_only_mailbox_waits_for_its_password_says_so(self):
+		frappe.db.delete("Communication", {"communication_medium": "Email"})
+
+		def count(doctype, filters=None, *args, **kwargs):
+			return 1 if doctype == "Email Account" and (filters or {}).get("awaiting_password") == 1 else 0
+
+		with patch("frappe.db.count", side_effect=count):
+			reply = engine.respond("show my emails", llm=NoModel(), today=TODAY)
+		self.assertIn("waiting for its password", reply["reply"])
+		self.assertEqual([c["label"] for c in reply["chips"]], ["Connect my email"])
+
 	def test_the_password_never_reaches_the_saved_conversation_state(self):
 		with patch("frappe.get_all", return_value=[]):
 			reply = self.connect("set up my inbox me@work.example pw: correct-horse-battery")
