@@ -11,7 +11,25 @@ frappe.provide("erpnext.adhd");
 		"Leave Application": "to_date",
 		Issue: "sla_resolution_by",
 		Asset: "next_depreciation_date",
+		Quotation: "valid_till",
+		// how long ago it was last saved, not a due date (see getStalenessHeat)
+		Opportunity: "modified",
 	};
+	// Once a quotation is ordered, lost or expired, or an opportunity is converted or lost, its date is no longer a
+	// deadline, so those rows get no heat.
+	const CLOSED_STATUSES = {
+		Quotation: ["Ordered", "Lost", "Expired"],
+		Opportunity: ["Converted", "Lost"],
+	};
+	// A quotation can still be accepted on its valid_till date (the server marks it Expired only once that date is
+	// before today), so its last day is red along with the days after it, and the week before is amber.
+	const EXPIRY_AMBER_DAYS = 7;
+	// An opportunity nobody has saved for more than a week is amber, and for more than two weeks red. The form
+	// badge in adhd_opportunity.js uses the same red line.
+	const STALE_AMBER_DAYS = 7;
+	const STALE_RED_DAYS = 14;
+	// Doctypes whose rows also get a tooltip saying why they are marked
+	const TITLED_DOCTYPES = ["Asset", "Quotation", "Opportunity"];
 	const HEAT_CLASSES = "adhd-heat--overdue adhd-heat--soon adhd-heat--upcoming";
 	const STOCK_CLASSES = "adhd-stock-critical adhd-stock-low adhd-stock-unknown";
 	let observer = null;
@@ -35,8 +53,12 @@ frappe.provide("erpnext.adhd");
 		return null;
 	}
 
-	function isClosed(row) {
-		return cint(row.docstatus) === 2 || ["Closed", "Completed", "Cancelled", "Paid"].includes(row.status);
+	function isClosed(row, doctype) {
+		return (
+			cint(row.docstatus) === 2 ||
+			["Closed", "Completed", "Cancelled", "Paid"].includes(row.status) ||
+			(CLOSED_STATUSES[doctype] || []).includes(row.status)
+		);
 	}
 
 	function getIssueUrgency(row, now = Date.now()) {
@@ -59,6 +81,44 @@ frappe.provide("erpnext.adhd");
 		if (days <= 30) return "adhd-heat--upcoming";
 		return null;
 	}
+
+	function describeQuotationExpiry(days) {
+		if (days < -1) return __("Expired {0} days ago", [-days]);
+		if (days === -1) return __("Expired yesterday");
+		if (days === 0) return __("Expires today");
+		if (days === 1) return __("Expires tomorrow");
+		return __("Expires in {0} days", [days]);
+	}
+
+	function getQuotationHeat(row, today = frappe.datetime.get_today()) {
+		if (!row.valid_till) return null;
+		const days = frappe.datetime.get_diff(row.valid_till, today);
+		if (!Number.isFinite(days) || days > EXPIRY_AMBER_DAYS) return null;
+		return {
+			heatClass: days <= 0 ? "adhd-heat--overdue" : "adhd-heat--soon",
+			title: describeQuotationExpiry(days),
+		};
+	}
+
+	// `modified` is a server datetime in the system time zone, while get_today() is the user's date: move it into
+	// the user's zone first, so a save late in the evening is not counted a day early or late.
+	function getDaysSinceModified(modified, today = frappe.datetime.get_today()) {
+		if (!modified) return null;
+		const modifiedDay = frappe.datetime.convert_to_user_tz(modified, false).format("YYYY-MM-DD");
+		const days = frappe.datetime.get_diff(today, modifiedDay);
+		return Number.isFinite(days) ? days : null;
+	}
+
+	function getStalenessHeat(row, today = frappe.datetime.get_today()) {
+		const days = getDaysSinceModified(row.modified, today);
+		if (days === null || days <= STALE_AMBER_DAYS) return null;
+		return {
+			heatClass: days > STALE_RED_DAYS ? "adhd-heat--overdue" : "adhd-heat--soon",
+			title: __("No activity for {0} days.", [days]),
+		};
+	}
+
+	const HEAT_BY_DOCTYPE = { Quotation: getQuotationHeat, Opportunity: getStalenessHeat };
 
 	// List views keep their fetch set as [fieldname, doctype] pairs
 	function hasListField(listview, fieldname) {
@@ -96,33 +156,49 @@ frappe.provide("erpnext.adhd");
 		return window.cur_list === listview && listview.view === "List" ? listview : null;
 	}
 
+	// data-name is on the checkbox and the subject link inside a row, not on the row itself, and the heat CSS
+	// styles .list-row: the mark goes on the row that holds the element with that name.
+	function findRow(listview, name) {
+		const $match = listview.$result
+			.find("[data-name]")
+			.filter((_, element) => element.getAttribute("data-name") === name)
+			.first();
+		const $row = $match.closest?.(".list-row");
+		return $row && $row.length ? $row : $match;
+	}
+
 	// Takes off everything applyHeat put on the rows.
 	function clearHeat(listview) {
-		const $rows = listview && listview.$result && listview.$result.find("[data-name]");
+		const $rows =
+			listview && listview._adhdHeatOn && listview.$result && listview.$result.find(".list-row");
 		if (!$rows) return;
+		listview._adhdHeatOn = false;
 		$rows.removeClass(HEAT_CLASSES);
-		// the next-depreciation title is the only attribute the heat map sets, and only on Asset rows
-		if (listview.doctype === "Asset") $rows.removeAttr("title");
+		// the tooltips are the only attribute the heat map sets, and only on these doctypes' rows
+		if (TITLED_DOCTYPES.includes(listview.doctype)) $rows.removeAttr("title");
 	}
 
 	function applyHeat(listview) {
 		if (!(frappe.boot && frappe.boot.adhd_mode) || !isHeatMapOn() || !listview) return;
 		const dateField = DATE_FIELD_MAP[listview.doctype];
 		if (!dateField || !listview.$result) return;
+		listview._adhdHeatOn = true;
 		(listview.data || []).forEach((row) => {
-			const $row = listview.$result
-				.find("[data-name]")
-				.filter((_, element) => element.getAttribute("data-name") === row.name)
-				.first();
+			const $row = findRow(listview, row.name);
 			$row.removeClass(HEAT_CLASSES);
-			if ($row.length && !isClosed(row)) {
-				const heatClass =
-					listview.doctype === "Issue"
-						? getIssueUrgency(row)
-						: listview.doctype === "Asset"
-						? getAssetUrgency(row)
-						: getUrgencyClass(row[dateField]);
+			const getHeat = HEAT_BY_DOCTYPE[listview.doctype];
+			if (getHeat) $row.removeAttr("title");
+			if ($row.length && !isClosed(row, listview.doctype)) {
+				const heat = getHeat ? getHeat(row) : null;
+				const heatClass = getHeat
+					? heat?.heatClass
+					: listview.doctype === "Issue"
+					? getIssueUrgency(row)
+					: listview.doctype === "Asset"
+					? getAssetUrgency(row)
+					: getUrgencyClass(row[dateField]);
 				if (heatClass) $row.addClass(heatClass);
+				if (heat) $row.attr("title", heat.title);
 				if (listview.doctype === "Asset" && row.next_depreciation_date) {
 					$row.attr(
 						"title",
@@ -138,9 +214,10 @@ frappe.provide("erpnext.adhd");
 	function attachHeatMap(listview) {
 		if (observer) observer.disconnect();
 		observer = null;
-		if (!(frappe.boot && frappe.boot.adhd_mode) || !DATE_FIELD_MAP[listview && listview.doctype]) return;
-		// switched off: nothing watches the list, no field is added to it, and its rows lose their heat
-		if (!isHeatMapOn()) {
+		if (!DATE_FIELD_MAP[listview && listview.doctype]) return;
+		// switched off, in ADHD Settings or with ADHD mode itself: nothing watches the list, no field is added to
+		// it, and its rows lose their heat
+		if (!(frappe.boot && frappe.boot.adhd_mode) || !isHeatMapOn()) {
 			clearInterval(heatInterval);
 			heatInterval = null;
 			clearHeat(listview);
@@ -315,6 +392,13 @@ frappe.provide("erpnext.adhd");
 		});
 	}
 
+	// Switching ADHD mode itself on or off (the toggle, Alt+A) changes the list on screen at once too. onStateChange
+	// calls this once as it registers, when there is usually no list yet.
+	erpnext.adhd.onStateChange?.(async () => {
+		const listview = await getCurrentListView().catch(() => null);
+		if (listview) attachHeatMap(listview);
+	});
+
 	erpnext.adhd.DATE_FIELD_MAP = DATE_FIELD_MAP;
 	erpnext.adhd.hasListField = hasListField;
 	erpnext.adhd.ensureListField = ensureListField;
@@ -325,6 +409,10 @@ frappe.provide("erpnext.adhd");
 	erpnext.adhd.applyItemStockHealth = applyItemStockHealth;
 	erpnext.adhd.getIssueUrgency = getIssueUrgency;
 	erpnext.adhd.getAssetUrgency = getAssetUrgency;
+	erpnext.adhd.getQuotationHeat = getQuotationHeat;
+	erpnext.adhd.getStalenessHeat = getStalenessHeat;
+	erpnext.adhd.getDaysSinceModified = getDaysSinceModified;
+	erpnext.adhd.STALE_RED_DAYS = STALE_RED_DAYS;
 })();
 
 if (!$("#adhd-stock-health-styles").length) {

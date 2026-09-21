@@ -64,6 +64,8 @@ import "./adhd/adhd_form_wizard"; // Guided mandatory-field save
 import "./adhd/adhd_help"; // Keyboard shortcut reference
 import "./adhd/adhd_list_view"; // Due-date heat map
 import "./adhd/adhd_deadline_banner"; // Contextual deadline nudges
+import "./adhd/adhd_quotation"; // Quotation expiry banner
+import "./adhd/adhd_opportunity"; // Opportunity stale badge
 import "./adhd/adhd_bank_recon"; // Resumable reconciliation progress
 import "./adhd/adhd_payment_entry"; // Outstanding invoice shortlist
 import "./adhd/adhd_stock_entry"; // Stock impact and putaway explanations
