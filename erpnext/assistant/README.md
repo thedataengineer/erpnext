@@ -84,7 +84,11 @@ Two rules, both tested:
 
 Nothing here sends mail. The card leaves outgoing mail off, and replying stays a decision made in the form.
 
-Limits worth knowing: Gmail needs an app password (2-step verification on) or OAuth; Microsoft accounts
+Limits worth knowing: an IMAP folder nested under Inbox is named with its parent, and the separator depends on
+the server. Frappe only says "folder not found" and does not list what exists, so if a folder such as `ERP` is
+rejected try `INBOX.ERP`, then `INBOX/ERP` (Namecheap Private Email accepts `INBOX/ERP`). Point the account at
+a dedicated folder filled by a server-side rule when it is an alias into a personal mailbox: reading `INBOX`
+would import all of that mailbox's new mail. Gmail needs an app password (2-step verification on) or OAuth; Microsoft accounts
 usually need OAuth, which an administrator sets up once as a Connected App. A provider not in
 `mail.PROVIDERS` gets a guessed IMAP server, which the card says. The mail pipeline is tested on raw messages
 (`test_mail_sync.py`); no real mailbox has been connected to this repository's tests.
