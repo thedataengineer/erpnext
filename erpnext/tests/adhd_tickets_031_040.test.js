@@ -201,7 +201,8 @@ test("ADHD-035 deduplicates stock queries and uses stock-unit transfer quantity"
 		[
 			["Stores", -4, 6],
 			["Transit", 4, 7],
-			["Stores", -2, 8],
+			// the second Stores row starts from what the first one left (10 - 4), not from the bin's 10
+			["Stores", -2, 4],
 		],
 	);
 });

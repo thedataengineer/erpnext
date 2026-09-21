@@ -24,14 +24,12 @@ frappe.provide("erpnext.adhd");
 		const rows = batches
 			.map((batch) => {
 				const expired = Boolean(batch.expiry_date && batch.expiry_date < today);
-				const expiring = Boolean(
-					!expired && batch.expiry_date && batch.expiry_date <= expiringDate,
-				);
+				const expiring = Boolean(!expired && batch.expiry_date && batch.expiry_date <= expiringDate);
 				const batchName = frappe.utils.escape_html(batch.name);
 				const expiryText = batch.expiry_date
 					? `${frappe.utils.escape_html(batch.expiry_date)}${
 							expired ? ` ${__("⚠ Expired")}` : expiring ? ` ${__("⏳ Expiring soon")}` : ""
-						}`
+					  }`
 					: __("No expiry");
 				return `<tr class="${expired ? "adhd-batch-expired" : expiring ? "adhd-batch-expiring" : ""}">
 					<td><strong>${batchName}</strong></td>
@@ -50,8 +48,8 @@ frappe.provide("erpnext.adhd");
 				<tbody>${rows}</tbody>
 			</table>
 			<p class="text-muted adhd-batch-context">${__("Sorted by expiry date (FEFO).")} ${
-				warehouse ? __("Warehouse: {0}", [frappe.utils.escape_html(warehouse)]) : ""
-			}</p>
+			warehouse ? __("Warehouse: {0}", [frappe.utils.escape_html(warehouse)]) : ""
+		}</p>
 		`);
 		$body.on("click", ".adhd-batch-select-btn", (event) => {
 			control.set_value(event.currentTarget.dataset.batch);
@@ -78,11 +76,7 @@ frappe.provide("erpnext.adhd");
 	}
 
 	prototype.open_advanced_search = function (...args) {
-		if (
-			!frappe.boot?.adhd_mode ||
-			this.df?.fieldname !== "batch_no" ||
-			!this.grid_row?.doc
-		) {
+		if (!frappe.boot?.adhd_mode || this.df?.fieldname !== "batch_no" || !this.grid_row?.doc) {
 			return originalOpenAdvancedSearch.apply(this, args);
 		}
 		return openAdhdBatchPicker(this, this.grid_row.doc, args);
@@ -93,7 +87,7 @@ frappe.provide("erpnext.adhd");
 		$("<style>", {
 			id: "adhd-batch-picker-styles",
 			text: `.adhd-batch-expired{opacity:.5;text-decoration:line-through}
-				.adhd-batch-expiring{background:rgba(var(--yellow-rgb),.1)}
+				.adhd-batch-expiring{background:color-mix(in srgb,var(--yellow-500) 12%,transparent)}
 				.adhd-batch-table{font-size:.82rem}.adhd-batch-context{font-size:.75rem;margin-top:4px}`,
 		}).appendTo("head");
 	}

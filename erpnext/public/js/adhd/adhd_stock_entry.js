@@ -23,8 +23,11 @@ frappe.provide("erpnext.adhd");
 		return [...pairs.values()];
 	}
 
+	// Rows are applied in order, so a later row for the same item and warehouse starts from the
+	// quantity the earlier rows leave behind, not from the stock the warehouse holds today.
 	function buildPreviewRows(items, binMap) {
 		const rows = [];
+		const running = new Map();
 		(items || []).forEach((item) => {
 			if (!item.item_code) return;
 			const quantity = itemQuantity(item);
@@ -33,8 +36,10 @@ frappe.provide("erpnext.adhd");
 				[item.t_warehouse, 1],
 			]) {
 				if (!warehouse) continue;
-				const currentQty = Number(binMap[`${item.item_code}::${warehouse}`]) || 0;
+				const key = `${item.item_code}::${warehouse}`;
+				const currentQty = running.has(key) ? running.get(key) : Number(binMap[key]) || 0;
 				const change = direction * quantity;
+				running.set(key, currentQty + change);
 				rows.push({
 					item_code: item.item_code,
 					warehouse,
@@ -47,14 +52,31 @@ frappe.provide("erpnext.adhd");
 		return rows;
 	}
 
+	// The server rejects a request with more than 400 item and warehouse pairs.
+	const MAX_PAIRS_PER_REQUEST = 400;
+
+	function chunkPairs(pairs, size = MAX_PAIRS_PER_REQUEST) {
+		const chunks = [];
+		for (let start = 0; start < pairs.length; start += size) {
+			chunks.push(pairs.slice(start, start + size));
+		}
+		return chunks;
+	}
+
 	async function fetchBinQuantities(pairs) {
 		if (!pairs.length) return {};
-		const response = await frappe.call({
-			method: "erpnext.stock.adhd.get_bin_quantities",
-			args: { pairs },
-		});
-		return (response.message || []).reduce((map, row) => {
-			map[`${row.item_code}::${row.warehouse}`] = row.actual_qty || 0;
+		const responses = await Promise.all(
+			chunkPairs(pairs).map((chunk) =>
+				frappe.call({
+					method: "erpnext.stock.adhd.get_bin_quantities",
+					args: { pairs: chunk },
+				})
+			)
+		);
+		return responses.reduce((map, response) => {
+			(response.message || []).forEach((row) => {
+				map[`${row.item_code}::${row.warehouse}`] = row.actual_qty || 0;
+			});
 			return map;
 		}, {});
 	}
@@ -64,8 +86,8 @@ frappe.provide("erpnext.adhd");
 		const warning = warningCount
 			? `<div class="alert alert-danger adhd-stockout-warning">${__(
 					"⚠ Warning: {0} warehouse row(s) would go below zero after this entry.",
-					[warningCount],
-				)}</div>`
+					[warningCount]
+			  )}</div>`
 			: "";
 		const body = rows
 			.map((row) => {
@@ -129,7 +151,7 @@ frappe.provide("erpnext.adhd");
 				: "";
 			return __(
 				"This item-specific rule selected the warehouse using priority {0} and available capacity.{1}",
-				[rule.priority || 1, capacity],
+				[rule.priority || 1, capacity]
 			);
 		}
 		return __("The configured putaway rule selected this warehouse using its priority and capacity.");
@@ -154,16 +176,13 @@ frappe.provide("erpnext.adhd");
 		});
 		$(dialog.$wrapper.find(".modal-body")).html(`
 			<div class="adhd-putaway-explanation">
-				<p>${__(
-					"Putaway rule <strong>{0}</strong> assigned <strong>{1}</strong> as the target warehouse.",
-					[
-						frappe.utils.escape_html(row.putaway_rule),
-						frappe.utils.escape_html(row.t_warehouse || rule.warehouse || ""),
-					],
-				)}</p>
+				<p>${__("Putaway rule <strong>{0}</strong> assigned <strong>{1}</strong> as the target warehouse.", [
+					frappe.utils.escape_html(row.putaway_rule),
+					frappe.utils.escape_html(row.t_warehouse || rule.warehouse || ""),
+				])}</p>
 				<p>${buildPutawayExplanation(rule)}</p>
 				<p><a href="/app/putaway-rule/${encodeURIComponent(
-					row.putaway_rule,
+					row.putaway_rule
 				)}" target="_blank" rel="noopener noreferrer">${__("View Putaway Rule ›")}</a></p>
 			</div>
 		`);
@@ -176,9 +195,7 @@ frappe.provide("erpnext.adhd");
 		if (!$cell.length || $cell.find(".adhd-putaway-why").length) return;
 		const $icon = $(
 			`<button type="button" class="btn btn-link btn-xs adhd-putaway-why"
-				title="${__("Why was this warehouse assigned?")}" aria-label="${__(
-					"Explain putaway warehouse",
-				)}">ⓘ</button>`,
+				title="${__("Why was this warehouse assigned?")}" aria-label="${__("Explain putaway warehouse")}">ⓘ</button>`
 		);
 		$icon.on("click", (event) => {
 			event.preventDefault();
@@ -195,7 +212,7 @@ frappe.provide("erpnext.adhd");
 		const $grid = $(frm.fields_dict.items?.grid?.wrapper);
 		$grid.off("change.adhdPutaway").on(
 			"change.adhdPutaway",
-			frappe.utils.debounce(() => decoratePutawayRows(frm), 300),
+			frappe.utils.debounce(() => decoratePutawayRows(frm), 300)
 		);
 	}
 
@@ -220,7 +237,7 @@ frappe.provide("erpnext.adhd");
 			text: `.adhd-stock-preview{margin:8px 0;border:1px solid var(--border-color);border-radius:4px}
 				.adhd-preview-title{cursor:pointer;font-weight:600;padding:8px 12px;list-style:none}
 				.adhd-preview-table{font-size:.8rem;margin:0}.adhd-change-positive{color:var(--green-500);font-weight:600}
-				.adhd-change-negative{color:var(--red-500);font-weight:600}.adhd-row-stockout{background:rgba(var(--red-rgb),.1)}
+				.adhd-change-negative{color:var(--red-500);font-weight:600}.adhd-row-stockout{background:color-mix(in srgb,var(--red-500) 10%,transparent)}
 				.adhd-putaway-why{margin-left:4px}.adhd-putaway-explanation p{margin-bottom:8px;font-size:.9rem;line-height:1.5}`,
 		}).appendTo("head");
 	}
@@ -242,5 +259,7 @@ frappe.provide("erpnext.adhd");
 
 	erpnext.adhd.getItemWarehousePairs = getItemWarehousePairs;
 	erpnext.adhd.buildStockPreviewRows = buildPreviewRows;
+	erpnext.adhd.chunkStockPairs = chunkPairs;
+	erpnext.adhd.fetchBinQuantities = fetchBinQuantities;
 	erpnext.adhd.buildPutawayExplanation = buildPutawayExplanation;
 })();

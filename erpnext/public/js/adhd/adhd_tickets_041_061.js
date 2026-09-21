@@ -2,10 +2,28 @@
 frappe.provide("erpnext.adhd");
 
 (() => {
-	if (!(frappe.boot && frappe.boot.adhd_mode)) return;
+	// The mode can be switched on or off after this file loads, so every handler checks it when it runs.
+	const adhdOn = () => Boolean(frappe.boot && frappe.boot.adhd_mode);
 
 	const esc = (value) => frappe.utils.escape_html(String(value ?? ""));
-	const datetimeMs = (value) => new Date(String(value).replace(" ", "T")).getTime();
+	const SYSTEM_DATETIME_FORMAT = "YYYY-MM-DD HH:mm:ss";
+	const systemTimeZone = () => frappe.boot?.time_zone?.system;
+	// Datetime values on a document are in the system time zone, not the browser's.
+	const datetimeMs = (value) => {
+		const text = String(value);
+		const zone = systemTimeZone();
+		if (zone && typeof moment !== "undefined" && moment.tz) return moment.tz(text, zone).valueOf();
+		return new Date(text.replace(" ", "T")).getTime();
+	};
+	const systemDatetimeAt = (ms) => {
+		const zone = systemTimeZone();
+		const value = moment(ms);
+		return (zone && value.tz ? value.tz(zone) : value).format(SYSTEM_DATETIME_FORMAT);
+	};
+	const plainText = (value) =>
+		frappe.utils.strip_html
+			? frappe.utils.strip_html(value)
+			: String(value ?? "").replace(/<[^>]*>/g, " ");
 	const remove = (frm, selector) => $(frm.wrapper).find(selector).remove();
 	const prepend = (frm, node) => $(frm.wrapper).find(".form-layout").first().prepend(node);
 	const getCount = async (doctype, filters) => {
@@ -26,7 +44,7 @@ frappe.provide("erpnext.adhd");
 	// ADHD-041
 	async function renderBomAncestry(frm) {
 		remove(frm, ".adhd-bom-breadcrumb");
-		if (frm.is_new()) return;
+		if (!adhdOn() || frm.is_new()) return;
 		const response = await frappe.call({
 			method: "erpnext.manufacturing.services.adhd_bom_ancestry.get_bom_ancestry",
 			args: { bom_name: frm.doc.name, max_depth: 3 },
@@ -36,7 +54,7 @@ frappe.provide("erpnext.adhd");
 		const crumbs = ancestors
 			.map(
 				(row) =>
-					`<a href="/app/bom/${encodeURIComponent(row.bom)}">${esc(row.item_name || row.item)}</a>`,
+					`<a href="/app/bom/${encodeURIComponent(row.bom)}">${esc(row.item_name || row.item)}</a>`
 			)
 			.concat(`<strong>${esc(frm.doc.item_name || frm.doc.item || frm.doc.name)}</strong>`)
 			.join('<span class="adhd-separator">›</span>');
@@ -48,7 +66,7 @@ frappe.provide("erpnext.adhd");
 			"adhd-bom-breadcrumb",
 			`<div class="adhd-panel-heading"><span>📍 ${__("BOM hierarchy")}</span>
 				<button type="button" class="btn btn-xs btn-default adhd-toggle">${open ? __("Hide") : __("Show")}</button>
-			</div><div class="adhd-panel-body" ${open ? "" : 'style="display:none"'}>${body}</div>`,
+			</div><div class="adhd-panel-body" ${open ? "" : 'style="display:none"'}>${body}</div>`
 		);
 		$node.find(".adhd-toggle").on("click", function () {
 			const $body = $node.find(".adhd-panel-body");
@@ -62,12 +80,24 @@ frappe.provide("erpnext.adhd");
 
 	// ADHD-042
 	async function getJobCardCounts(workOrder) {
+		// Every status except Submitted, Completed and Cancelled still has work or a stock entry pending.
 		const [open, total] = await Promise.all([
 			getCount("Job Card", {
 				work_order: workOrder,
-				status: ["in", ["Open", "Work In Progress", "Partially Transferred", "Material Transferred"]],
+				docstatus: ["!=", 2],
+				status: [
+					"in",
+					[
+						"Open",
+						"Work In Progress",
+						"Partially Transferred",
+						"Material Transferred",
+						"On Hold",
+						"To Manufacture",
+					],
+				],
 			}),
-			getCount("Job Card", { work_order: workOrder }),
+			getCount("Job Card", { work_order: workOrder, docstatus: ["!=", 2] }),
 		]);
 		return { open, total };
 	}
@@ -78,19 +108,26 @@ frappe.provide("erpnext.adhd");
 			"adhd-work-order-next",
 			`<span>▶</span><span class="adhd-flex">${esc(message)}</span>${
 				label ? `<button type="button" class="btn btn-xs btn-primary">${esc(label)}</button>` : ""
-			}`,
+			}`
 		);
 		if (label) $node.find("button").on("click", action);
 	}
 
 	async function renderWorkOrderNext(frm) {
 		remove(frm, ".adhd-work-order-next");
+		if (!adhdOn()) return;
 		const status = frm.doc.status;
 		if (status === "Draft") {
 			showNextAction(frm, __("Submit this Work Order to start production."));
-		} else if (["Submitted", "Not Started"].includes(status) && !flt(frm.doc.produced_qty)) {
+		} else if (
+			["Submitted", "Not Started"].includes(status) &&
+			!flt(frm.doc.produced_qty) &&
+			// The standard Create Job Card button needs operations and a quantity not yet covered by Job Cards.
+			(frm.doc.operations || []).length &&
+			frm.doc.__onload?.show_create_job_card_button
+		) {
 			showNextAction(frm, __("Create Job Cards to begin operations."), __("Create Job Cards"), () =>
-				frm.trigger("make_job_card"),
+				frm.trigger("make_job_card")
 			);
 		} else if (status === "In Process") {
 			const { open, total } = await getJobCardCounts(frm.doc.name);
@@ -102,14 +139,14 @@ frappe.provide("erpnext.adhd");
 					() => {
 						frappe.route_options = { work_order: frm.doc.name };
 						frappe.set_route("List", "Job Card");
-					},
+					}
 				);
 			} else if (total) {
 				showNextAction(
 					frm,
 					__("All operations are complete. Create the manufacture entry to finish."),
 					__("Finish Work Order"),
-					() => erpnext.work_order.make_se(frm, "Manufacture"),
+					() => erpnext.work_order.make_se(frm, "Manufacture")
 				);
 			}
 		} else if (status === "Completed") {
@@ -120,7 +157,7 @@ frappe.provide("erpnext.adhd");
 				() => {
 					frappe.route_options = { work_order: frm.doc.name };
 					frappe.set_route("List", "Stock Entry");
-				},
+				}
 			);
 		}
 	}
@@ -138,10 +175,7 @@ frappe.provide("erpnext.adhd");
 		return {
 			count: new Set(all.map((row) => row.item_code).filter(Boolean)).size,
 			salesOrders: new Set(po.map((row) => row.sales_order).filter(Boolean)).size,
-			qty: all.reduce(
-				(sum, row) => sum + flt(row.planned_qty ?? row.quantity ?? row.qty),
-				0,
-			),
+			qty: all.reduce((sum, row) => sum + flt(row.planned_qty ?? row.quantity ?? row.qty), 0),
 			date: dates[0] || null,
 			rows: all.length,
 		};
@@ -149,19 +183,20 @@ frappe.provide("erpnext.adhd");
 
 	function renderProductionPlanSummary(frm) {
 		remove(frm, ".adhd-plan-summary");
+		if (!adhdOn()) return;
 		const summary = productionPlanSummary(frm.doc);
 		if (!summary.rows) return;
 		const source = summary.salesOrders
 			? __("{0} Sales Order(s)", [summary.salesOrders])
 			: (frm.doc.mr_items || []).length
-				? __("Material Requests")
-				: __("manual entry");
+			? __("Material Requests")
+			: __("manual entry");
 		const html = `<span>📦 <strong>${summary.count}</strong> ${__("item types")}</span>
 			<span>🛒 ${esc(source)}</span>
 			<span>🔢 ${__("Total qty")}: <strong>${format_number(summary.qty)}</strong></span>
 			<span>📅 ${__("Target start")}: <strong>${
-				summary.date ? esc(frappe.datetime.str_to_user(summary.date)) : "—"
-			}</strong></span>`;
+			summary.date ? esc(frappe.datetime.str_to_user(summary.date)) : "—"
+		}</strong></span>`;
 		const $target = $(frm.wrapper).find('[data-fieldname="po_items"]').first();
 		const $node = $(`<div class="adhd-plan-summary">${html}</div>`);
 		$target.length ? $target.before($node) : prepend(frm, $node);
@@ -186,9 +221,12 @@ frappe.provide("erpnext.adhd");
 	function renderJobCardTimer(frm) {
 		remove(frm, ".adhd-time-toggle");
 		clearInterval(frm._adhdTimerInterval);
+		frm._adhdTimerInterval = null;
+		if (!adhdOn()) return;
+		// Time is logged on a saved draft Job Card (docstatus 0); a submitted card locks its time logs.
 		if (
 			frm.is_new() ||
-			frm.doc.docstatus !== 1 ||
+			frm.doc.docstatus !== 0 ||
 			["Completed", "Submitted", "Cancelled"].includes(frm.doc.status)
 		) {
 			localStorage.removeItem(timerKey(frm.doc.name));
@@ -203,8 +241,10 @@ frappe.provide("erpnext.adhd");
 		const $node = panel(
 			frm,
 			`adhd-time-toggle${stored ? " adhd-time-toggle--running" : ""}`,
-			`<button type="button" class="btn btn-primary">${stored ? "⏹ " + __("Stop Work") : "▶ " + __("Start Work")}</button>
-			<span class="adhd-timer-elapsed"></span>`,
+			`<button type="button" class="btn btn-primary">${
+				stored ? "⏹ " + __("Stop Work") : "▶ " + __("Start Work")
+			}</button>
+				<span class="adhd-timer-elapsed"></span>`
 		);
 		const tick = () => {
 			const active = JSON.parse(localStorage.getItem(timerKey(frm.doc.name)) || "null");
@@ -213,14 +253,27 @@ frappe.provide("erpnext.adhd");
 			$node
 				.find(".adhd-timer-elapsed")
 				.text(
-					`${String(value.hours).padStart(2, "0")}:${String(value.minutes).padStart(2, "0")}:${String(
-						value.seconds,
-					).padStart(2, "0")}`,
+					`${String(value.hours).padStart(2, "0")}:${String(value.minutes).padStart(
+						2,
+						"0"
+					)}:${String(value.seconds).padStart(2, "0")}`
 				);
+		};
+		const stopTicking = () => {
+			clearInterval(frm._adhdTimerInterval);
+			frm._adhdTimerInterval = null;
+		};
+		const startTicking = () => {
+			stopTicking();
+			frm._adhdTimerInterval = setInterval(() => {
+				// A form page is hidden, not destroyed, on a route change, so stop when it is no longer shown.
+				if (!adhdOn() || !$(frm.wrapper).is(":visible")) return stopTicking();
+				tick();
+			}, 1000);
 		};
 		if (stored) {
 			tick();
-			frm._adhdTimerInterval = setInterval(tick, 1000);
+			startTicking();
 		}
 		$node.find("button").on("click", async function () {
 			const key = timerKey(frm.doc.name);
@@ -231,27 +284,33 @@ frappe.provide("erpnext.adhd");
 				$(this).text(`⏹ ${__("Stop Work")}`);
 				$node.addClass("adhd-time-toggle--running");
 				tick();
-				frm._adhdTimerInterval = setInterval(tick, 1000);
+				startTicking();
 				return;
 			}
 			localStorage.removeItem(key);
-			clearInterval(frm._adhdTimerInterval);
+			stopTicking();
 			const duration = elapsedParts(active.start).totalSeconds;
 			if (duration < 30) {
-				frappe.show_alert({ message: __("Session too short to log (under 30 seconds)."), indicator: "orange" });
+				frappe.show_alert({
+					message: __("Session too short to log (under 30 seconds)."),
+					indicator: "orange",
+				});
 				renderJobCardTimer(frm);
 				return;
 			}
-			const end = new Date().toISOString();
 			const row = frappe.model.add_child(frm.doc, "Job Card Time Log", "time_logs");
+			// Datetime fields hold "YYYY-MM-DD HH:mm:ss" in the system time zone, not an ISO UTC instant.
 			await frappe.model.set_value(row.doctype, row.name, {
-				from_time: active.start,
-				to_time: end,
+				from_time: systemDatetimeAt(new Date(active.start).getTime()),
+				to_time: systemDatetimeAt(Date.now()),
 				time_in_mins: duration / 60,
 			});
 			frm.refresh_field("time_logs");
 			await frm.save();
-			frappe.show_alert({ message: __("Time logged: {0} minutes.", [Math.round(duration / 60)]), indicator: "green" });
+			frappe.show_alert({
+				message: __("Time logged: {0} minutes.", [Math.round(duration / 60)]),
+				indicator: "green",
+			});
 			renderJobCardTimer(frm);
 		});
 	}
@@ -266,7 +325,15 @@ frappe.provide("erpnext.adhd");
 	async function markBlockedShopFloor(shopFloor) {
 		const $cards = shopFloor.board_container?.find(".sf-wo-card[data-name]");
 		$cards?.removeClass("adhd-work-order-card--blocked").find(".adhd-blocked-badge").remove();
-		const names = [...new Set($cards?.map((_, card) => card.dataset.name).get().filter(Boolean) || [])];
+		if (!adhdOn()) return;
+		const names = [
+			...new Set(
+				$cards
+					?.map((_, card) => card.dataset.name)
+					.get()
+					.filter(Boolean) || []
+			),
+		];
 		if (!names.length) return;
 		const requestId = (shopFloor._adhdBlockedRequest || 0) + 1;
 		shopFloor._adhdBlockedRequest = requestId;
@@ -283,7 +350,9 @@ frappe.provide("erpnext.adhd");
 			},
 		});
 		if (requestId !== shopFloor._adhdBlockedRequest) return;
-		const blocked = new Set((response.message || []).filter(isBlockedJobCard).map((row) => row.work_order));
+		const blocked = new Set(
+			(response.message || []).filter(isBlockedJobCard).map((row) => row.work_order)
+		);
 		for (const workOrder of blocked) {
 			shopFloor.board_container
 				.find(".sf-wo-card[data-name]")
@@ -312,14 +381,25 @@ frappe.provide("erpnext.adhd");
 
 	async function renderProjectHealth(frm) {
 		remove(frm, ".adhd-project-health");
-		if (frm.is_new()) return;
+		if (!adhdOn() || frm.is_new()) return;
 		const today = frappe.datetime.get_today();
+		// One filter set drives both the number and the list it links to, so the two always agree.
+		const overdueFilters = {
+			project: frm.doc.name,
+			status: ["not in", ["Completed", "Cancelled"]],
+			exp_end_date: ["<", today],
+		};
+		const routeQuery = (filters) =>
+			Object.entries(filters)
+				.map(
+					([field, value]) =>
+						`${field}=${encodeURIComponent(
+							typeof value === "string" ? value : JSON.stringify(value)
+						)}`
+				)
+				.join("&");
 		const [overdue, unassigned] = await Promise.all([
-			getCount("Task", {
-				project: frm.doc.name,
-				status: ["not in", ["Completed", "Cancelled"]],
-				exp_end_date: ["<", today],
-			}),
+			getCount("Task", overdueFilters),
 			getCount("Task", {
 				project: frm.doc.name,
 				status: ["not in", ["Completed", "Cancelled"]],
@@ -328,9 +408,7 @@ frappe.provide("erpnext.adhd");
 		]);
 		const deadline = deadlineState(frm.doc.expected_end_date, today);
 		const metric = (label, value, tone = "", href = "") => {
-			const rendered = href
-				? `<a href="${href}">${esc(value)}</a>`
-				: esc(value);
+			const rendered = href ? `<a href="${href}">${esc(value)}</a>` : esc(value);
 			return `<div><small>${esc(label)}</small><strong class="${
 				tone ? `adhd-${tone}` : ""
 			}">${rendered}</strong></div>`;
@@ -340,11 +418,16 @@ frappe.provide("erpnext.adhd");
 			frm,
 			"adhd-project-health",
 			`<h5>🏥 ${__("Project Health")}</h5><div class="adhd-metric-grid">
-				${metric(__("Overdue Tasks"), overdue, overdue ? "danger" : "", `/app/task?project=${project}&status=Open`)}
-				${metric(__("Unassigned Tasks"), unassigned, unassigned ? "warning" : "", `/app/task?project=${project}&_assign=`)}
+				${metric(__("Overdue Tasks"), overdue, overdue ? "danger" : "", `/app/task?${routeQuery(overdueFilters)}`)}
+				${metric(
+					__("Unassigned Tasks"),
+					unassigned,
+					unassigned ? "warning" : "",
+					`/app/task?project=${project}&_assign=`
+				)}
 				${metric(__("% Complete"), `${Math.round(flt(frm.doc.percent_complete))}%`)}
 				${metric(__("Deadline"), deadline.text, deadline.tone)}
-			</div>`,
+			</div>`
 		);
 	}
 	frappe.ui.form.on("Project", { refresh: renderProjectHealth });
@@ -352,17 +435,19 @@ frappe.provide("erpnext.adhd");
 	// ADHD-047
 	const LAST_ACTIVITY_KEY = "adhd_last_activity_type";
 	function persistTimesheetActivity(frm) {
+		if (!adhdOn()) return;
 		const row = (frm.doc.time_logs || []).find((item) => item.activity_type);
 		if (row) localStorage.setItem(LAST_ACTIVITY_KEY, row.activity_type);
 	}
 	async function prefillTimesheet(frm) {
-		if (!frm.is_new()) return;
+		if (!adhdOn() || !frm.is_new()) return;
 		if (!(frm.doc.time_logs || []).length) {
 			frappe.model.add_child(frm.doc, "Timesheet Detail", "time_logs");
 		}
 		const row = frm.doc.time_logs[0];
 		const last = localStorage.getItem(LAST_ACTIVITY_KEY);
-		if (last && !row.activity_type) await frappe.model.set_value(row.doctype, row.name, "activity_type", last);
+		if (last && !row.activity_type)
+			await frappe.model.set_value(row.doctype, row.name, "activity_type", last);
 		const previous = (frappe.route_history || []).at(-2);
 		if (previous?.[0] === "Form" && previous[1] === "Task" && previous[2] && !row.task) {
 			const result = await frappe.db.get_value("Task", previous[2], ["project", "subject"]);
@@ -375,7 +460,9 @@ frappe.provide("erpnext.adhd");
 		frm.refresh_field("time_logs");
 		window.setTimeout(() => {
 			const $row = frm.fields_dict.time_logs?.grid?.grid_rows_by_docname?.[row.name]?.$row;
-			$row?.find('[data-fieldname="activity_type"],[data-fieldname="task"],[data-fieldname="project"]').addClass("adhd-prefilled");
+			$row?.find(
+				'[data-fieldname="activity_type"],[data-fieldname="task"],[data-fieldname="project"]'
+			).addClass("adhd-prefilled");
 		}, 0);
 	}
 	frappe.ui.form.on("Timesheet", {
@@ -388,7 +475,17 @@ frappe.provide("erpnext.adhd");
 		/\b(will|i['’]ll|i will|send|call back|follow[- ]?up|schedule|by\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday|tomorrow|next week|eod|end of day|end of week|\d{1,2}[/-]\d{1,2}))\b/i;
 	const DATE_REGEX =
 		/\b(tomorrow|(?:next|by)\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday|week)|(\d{1,2})[/-](\d{1,2})(?:[/-](\d{2,4}))?|(?:by\s+)?(eod|end of day|end of week))\b/i;
-	function resolvePromiseDate(phrase, today = frappe.datetime.get_today()) {
+	// Numeric dates follow the user's date format: day first for dd-mm-yyyy style, month first otherwise.
+	function userDateIsDayFirst() {
+		const format = String(frappe.datetime?.get_user_date_fmt?.() || "").toLowerCase();
+		const day = format.indexOf("dd");
+		return day !== -1 && (format.indexOf("mm") === -1 || day < format.indexOf("mm"));
+	}
+	function resolvePromiseDate(
+		phrase,
+		today = frappe.datetime.get_today(),
+		dayFirst = userDateIsDayFirst()
+	) {
 		if (!phrase) return null;
 		const lower = phrase.toLowerCase().replace(/^by\s+/, "");
 		if (lower === "tomorrow") return frappe.datetime.add_days(today, 1);
@@ -408,9 +505,22 @@ frappe.provide("erpnext.adhd");
 		}
 		const numeric = /(\d{1,2})[/-](\d{1,2})(?:[/-](\d{2,4}))?/.exec(lower);
 		if (!numeric) return null;
+		const [dayOfMonth, month] = dayFirst
+			? [Number(numeric[1]), Number(numeric[2])]
+			: [Number(numeric[2]), Number(numeric[1])];
 		let year = numeric[3] || today.slice(0, 4);
 		if (year.length === 2) year = `20${year}`;
-		return `${year}-${numeric[1].padStart(2, "0")}-${numeric[2].padStart(2, "0")}`;
+		if (year.length !== 4) return null;
+		// Reject impossible dates such as 25/12 read as month/day, or 31/02, instead of building an invalid one.
+		const date = new Date(Date.UTC(Number(year), month - 1, dayOfMonth));
+		if (
+			date.getUTCFullYear() !== Number(year) ||
+			date.getUTCMonth() !== month - 1 ||
+			date.getUTCDate() !== dayOfMonth
+		) {
+			return null;
+		}
+		return `${year}-${String(month).padStart(2, "0")}-${String(dayOfMonth).padStart(2, "0")}`;
 	}
 	function extractCommitment(note) {
 		const promise = PROMISE_REGEX.exec(note || "");
@@ -424,16 +534,13 @@ frappe.provide("erpnext.adhd");
 		return { description, date: resolvePromiseDate(dateMatch?.[0]) };
 	}
 	function attachCommitmentDetector(dialog, frm) {
-		if (!dialog || !frm) return;
+		if (!adhdOn() || !dialog || !frm) return;
 		const field = dialog.get_field("note");
 		if (!field?.$wrapper) return;
 		const render = () => {
 			dialog.$wrapper.find(".adhd-commitment-banner").remove();
-			const value = field.get_value?.() || "";
-			const plainText = frappe.utils.strip_html
-				? frappe.utils.strip_html(value)
-				: String(value).replace(/<[^>]*>/g, " ");
-			const commitment = extractCommitment(plainText);
+			if (!adhdOn()) return;
+			const commitment = extractCommitment(plainText(field.get_value?.() || ""));
 			if (!commitment) return;
 			const $node = $(`<div class="adhd-commitment-banner">
 				<span class="adhd-flex">🤝 ${__("Commitment detected. Create a follow-up ToDo?")}</span>
@@ -442,7 +549,8 @@ frappe.provide("erpnext.adhd");
 			</div>`);
 			field.$wrapper.after($node);
 			$node.find(".btn-primary").on("click", async () => {
-				if (frm.is_new()) return frappe.msgprint(__("Save this document before creating its follow-up."));
+				if (frm.is_new())
+					return frappe.msgprint(__("Save this document before creating its follow-up."));
 				const todo = await frappe.db.insert({
 					doctype: "ToDo",
 					description: commitment.description,
@@ -465,14 +573,16 @@ frappe.provide("erpnext.adhd");
 	}
 	function renderCommitment(frm, row) {
 		remove(frm, ".adhd-commitment-banner");
-		const commitment = extractCommitment(row.note);
+		if (!adhdOn()) return;
+		// The note is a Text Editor field, so it holds HTML that must not end up in the ToDo description.
+		const commitment = extractCommitment(plainText(row.note));
 		if (!commitment) return;
 		const $node = panel(
 			frm,
 			"adhd-commitment-banner",
 			`<span class="adhd-flex">🤝 ${__("Commitment detected. Create a follow-up ToDo?")}</span>
 			<button class="btn btn-xs btn-primary">${__("Create ToDo")}</button>
-			<button class="btn btn-xs btn-default adhd-dismiss">${__("Dismiss")}</button>`,
+			<button class="btn btn-xs btn-default adhd-dismiss">${__("Dismiss")}</button>`
 		);
 		$node.find(".btn-primary").on("click", async () => {
 			if (frm.is_new()) return frappe.msgprint(__("Save this document before creating its follow-up."));
@@ -502,20 +612,20 @@ frappe.provide("erpnext.adhd");
 		{ label: __("Prospect"), status: "Open" },
 		{ label: __("Qualified"), status: "Replied" },
 		{ label: __("Proposal"), status: "Quotation" },
-		{ label: __("Negotiation"), status: "Closed" },
 		{ label: __("Closed Won"), status: "Converted", terminal: "won" },
 		{ label: __("Closed Lost"), status: "Lost", terminal: "lost" },
 	];
 	function renderOpportunityPipeline(frm) {
 		remove(frm, ".adhd-pipeline");
+		if (!adhdOn()) return;
 		const current = OPPORTUNITY_STAGES.findIndex((stage) => stage.status === frm.doc.status);
 		const buttons = OPPORTUNITY_STAGES.map((stage, index) => {
 			const state =
 				index === current
 					? stage.terminal || "current"
 					: current >= 0 && index < current
-						? "done"
-						: "pending";
+					? "done"
+					: "pending";
 			return `<button type="button" class="adhd-pipeline-stage adhd-pipeline-stage--${state}" data-status="${
 				stage.status
 			}">${state === "done" ? "✓ " : ""}${esc(stage.label)}</button>`;
@@ -531,12 +641,15 @@ frappe.provide("erpnext.adhd");
 			});
 		});
 	}
-	frappe.ui.form.on("Opportunity", { refresh: renderOpportunityPipeline, status: renderOpportunityPipeline });
+	frappe.ui.form.on("Opportunity", {
+		refresh: renderOpportunityPipeline,
+		status: renderOpportunityPipeline,
+	});
 
 	// ADHD-050
 	async function renderTaskBlockers(frm) {
 		remove(frm, ".adhd-blocked-by");
-		if (frm.is_new()) return;
+		if (!adhdOn() || frm.is_new()) return;
 		const names = [...new Set((frm.doc.depends_on || []).map((row) => row.task).filter(Boolean))];
 		if (!names.length) return;
 		const tasks = await frappe.db.get_list("Task", {
@@ -551,133 +664,106 @@ frappe.provide("erpnext.adhd");
 		const links = tasks
 			.map(
 				(task) =>
-					`<a target="_blank" rel="noopener" href="/app/task/${encodeURIComponent(task.name)}">${esc(
-						task.subject || task.name,
-					)}</a>`,
+					`<a target="_blank" rel="noopener" href="/app/task/${encodeURIComponent(
+						task.name
+					)}">${esc(task.subject || task.name)}</a>`
 			)
 			.join("");
 		panel(
 			frm,
 			"adhd-blocked-by",
-			`<strong>🚧 ${__("Blocked by {0} incomplete task(s)", [tasks.length])}</strong><div>${links}</div>`,
+			`<strong>🚧 ${__("Blocked by {0} incomplete task(s)", [
+				tasks.length,
+			])}</strong><div>${links}</div>`
 		);
 	}
 	frappe.ui.form.on("Task", { refresh: renderTaskBlockers, after_save: renderTaskBlockers });
 
 	// ADHD-051 and ADHD-053
 	function slaState(doc, now = Date.now()) {
+		// A resolved, closed or fulfilled Issue has nothing left to count down to.
+		if (["Resolved", "Closed"].includes(doc.status) || doc.agreement_status === "Fulfilled") return null;
 		const target = !doc.first_responded_on && doc.response_by ? doc.response_by : doc.sla_resolution_by;
 		if (!target) return null;
 		const targetMs = datetimeMs(target);
+		if (!Number.isFinite(targetMs)) return null;
 		const creationMs = datetimeMs(doc.creation);
 		const remaining = targetMs - now;
 		const windowMs = Math.max(targetMs - creationMs, 1);
-		return { target, remaining, tone: remaining < 0 ? "red" : remaining / windowMs <= 0.25 ? "amber" : "green" };
+		return {
+			target,
+			remaining,
+			tone: remaining < 0 ? "red" : remaining / windowMs <= 0.25 ? "amber" : "green",
+		};
 	}
 	function formatSla(ms) {
 		const absolute = Math.abs(ms);
 		const hours = Math.floor(absolute / 3600000);
 		const minutes = Math.floor((absolute % 3600000) / 60000);
-		return ms < 0 ? __("BREACHED {0}h {1}m ago", [hours, minutes]) : __("{0}h {1}m remaining", [hours, minutes]);
+		return ms < 0
+			? __("BREACHED {0}h {1}m ago", [hours, minutes])
+			: __("{0}h {1}m remaining", [hours, minutes]);
 	}
 	function renderIssueSla(frm) {
 		remove(frm, "#adhd-sla-countdown");
 		clearInterval(frm._adhdSlaInterval);
+		if (!adhdOn()) return;
 		const update = () => {
-			const state = slaState(frm.doc);
 			const $existing = $(frm.wrapper).find("#adhd-sla-countdown");
+			if (!adhdOn()) {
+				clearInterval(frm._adhdSlaInterval);
+				return $existing.remove();
+			}
+			const state = slaState(frm.doc);
 			if (!state) return $existing.remove();
-			const html = `SLA: ${esc(formatSla(state.remaining))}`;
+			const label = `SLA: ${formatSla(state.remaining)}`;
 			if ($existing.length) {
-				$existing.attr("class", `adhd-sla-badge adhd-sla-${state.tone}`).text(html);
+				// .text() escapes on its own, so it takes the raw label.
+				$existing.attr("class", `adhd-sla-badge adhd-sla-${state.tone}`).text(label);
 			} else {
-				prepend(frm, $(`<div id="adhd-sla-countdown" class="adhd-sla-badge adhd-sla-${state.tone}">${html}</div>`));
+				prepend(
+					frm,
+					$(
+						`<div id="adhd-sla-countdown" class="adhd-sla-badge adhd-sla-${state.tone}">${esc(
+							label
+						)}</div>`
+					)
+				);
 			}
 		};
 		update();
 		frm._adhdSlaInterval = setInterval(update, 60000);
 	}
 
-	function findReplyTextarea(frm) {
-		return $(frm.wrapper).find(".reply-area textarea, .communication-box textarea").first();
-	}
-	function initIssueDraft(frm) {
-		clearInterval(frm._adhdReplyAutosaveInterval);
-		frm._adhdReplyObserver?.disconnect();
-		remove(frm, "#adhd-reply-restore");
-		const key = `adhd_issue_reply_${frm.doc.name}`;
-		let draft;
-		try {
-			draft = JSON.parse(localStorage.getItem(key) || "null");
-		} catch {
-			localStorage.removeItem(key);
-		}
-		const attach = () => {
-			const $textarea = findReplyTextarea(frm);
-			if (!$textarea.length || frm._adhdReplyAutosaveInterval) return;
-			if (frm._adhdPendingReplyDraft) {
-				$textarea.val(frm._adhdPendingReplyDraft).trigger("input");
-				frm._adhdPendingReplyDraft = null;
-				localStorage.removeItem(key);
-				remove(frm, "#adhd-reply-restore");
-			}
-			frm._adhdReplyAutosaveInterval = setInterval(() => {
-				const text = $textarea.val();
-				if (text?.trim()) localStorage.setItem(key, JSON.stringify({ text, savedAt: new Date().toISOString() }));
-				else localStorage.removeItem(key);
-			}, 20000);
-		};
-		if (draft?.text) {
-			const $banner = $(
-				`<div id="adhd-reply-restore" class="adhd-reply-restore">📝 ${__("Unsaved reply draft found.")}
-				<button class="btn btn-xs btn-primary adhd-restore">${__("Restore")}</button>
-				<button class="btn btn-xs btn-default adhd-discard">${__("Discard")}</button></div>`,
-			);
-			prepend(frm, $banner);
-			$banner.find(".adhd-restore").on("click", () => {
-				const $textarea = findReplyTextarea(frm);
-				if (!$textarea.length) {
-					frm._adhdPendingReplyDraft = draft.text;
-					frappe.show_alert({ message: __("Open the Reply composer to restore the draft."), indicator: "blue" });
-					return;
-				}
-				$textarea.val(draft.text).trigger("input");
-				localStorage.removeItem(key);
-				$banner.remove();
-			});
-			$banner.find(".adhd-discard").on("click", () => {
-				localStorage.removeItem(key);
-				$banner.remove();
-			});
-		}
-		attach();
-		frm._adhdReplyObserver = new MutationObserver(attach);
-		frm._adhdReplyObserver.observe(frm.wrapper, { childList: true, subtree: true });
-	}
+	// ADHD-053 needs no code here: the standard email composer already saves its draft (IndexedDB, per
+	// document) as you type and restores it when the composer reopens. The composer is a body-level
+	// dialog, so a form-level textarea autosave could never find it.
 	frappe.ui.form.on("Issue", {
-		refresh(frm) {
-			renderIssueSla(frm);
-			initIssueDraft(frm);
-		},
+		refresh: renderIssueSla,
 		before_load(frm) {
 			clearInterval(frm._adhdSlaInterval);
-			clearInterval(frm._adhdReplyAutosaveInterval);
-			frm._adhdReplyObserver?.disconnect();
 		},
 	});
 
 	// ADHD-052
 	function renderWarranty(frm) {
 		remove(frm, "#adhd-warranty-banner");
+		if (!adhdOn()) return;
 		if (!frm.doc.complaint_date || !frm.doc.warranty_expiry_date) return;
 		const difference = frappe.datetime.get_diff(frm.doc.complaint_date, frm.doc.warranty_expiry_date);
 		const valid = difference <= 0;
 		const text = valid
-			? `✓ ${__("Warranty valid until {0}, COVERED", [frappe.datetime.str_to_user(frm.doc.warranty_expiry_date)])}`
+			? `✓ ${__("Warranty valid until {0}, COVERED", [
+					frappe.datetime.str_to_user(frm.doc.warranty_expiry_date),
+			  ])}`
 			: `✗ ${__("Warranty expired {0} days before this complaint, NOT COVERED", [difference])}`;
 		prepend(
 			frm,
-			$(`<div id="adhd-warranty-banner" class="adhd-warranty-${valid ? "valid" : "expired"}">${esc(text)}</div>`),
+			$(
+				`<div id="adhd-warranty-banner" class="adhd-warranty-${valid ? "valid" : "expired"}">${esc(
+					text
+				)}</div>`
+			)
 		);
 	}
 	frappe.ui.form.on("Warranty Claim", {
@@ -690,12 +776,14 @@ frappe.provide("erpnext.adhd");
 	// ADHD-054
 	async function renderAssetPrompt(frm) {
 		remove(frm, "#adhd-asset-prompt");
-		if (frm.doc.docstatus !== 1) return;
+		if (!adhdOn() || frm.doc.docstatus !== 1) return;
 		const rows = (frm.doc.items || []).filter((row) => cint(row.is_fixed_asset));
 		if (!rows.length) return;
 		const existing = await getCount("Asset", { purchase_invoice: frm.doc.name, docstatus: ["!=", 2] });
 		if (existing) return;
 		const names = rows.map((row) => row.item_name || row.item_code).join(", ");
+		// Refresh and after_save can overlap; whichever finishes last must not leave a second banner.
+		remove(frm, "#adhd-asset-prompt");
 		const $node = $(`<div id="adhd-asset-prompt" class="adhd-asset-banner">🏗️
 			<span class="adhd-flex">${__("Create Asset records for {0}.", [esc(names)])}</span>
 			<button class="btn btn-xs btn-primary">${__("Create Asset")}</button>
@@ -726,7 +814,7 @@ frappe.provide("erpnext.adhd");
 		remove(frm, "#adhd-cap-wizard");
 		$(frm.wrapper).removeClass("adhd-cap-wizard-mode");
 		$(frm.wrapper).find(".form-section").show();
-		if (!frm.is_new()) return;
+		if (!adhdOn() || !frm.is_new()) return;
 		frm._adhdCapStep ||= 1;
 		const table = frm._adhdCapTable;
 		const rows = table ? frm.doc[table] || [] : [];
@@ -738,17 +826,19 @@ frappe.provide("erpnext.adhd");
 		const choices = Object.entries(CAP_TABLES)
 			.map(
 				([field, label]) =>
-					`<button type="button" class="adhd-cap-choice ${table === field ? "selected" : ""}" data-table="${field}">${esc(
-						label,
-					)}</button>`,
+					`<button type="button" class="adhd-cap-choice ${
+						table === field ? "selected" : ""
+					}" data-table="${field}">${esc(label)}</button>`
 			)
 			.join("");
 		const content =
 			frm._adhdCapStep === 1
 				? choices
 				: frm._adhdCapStep === 2
-					? `<p>${__("Use the standard table below to add {0}, then select a Target Asset.", [CAP_TABLES[table]])}</p>`
-					: summary;
+				? `<p>${__("Use the standard table below to add {0}, then select a Target Asset.", [
+						CAP_TABLES[table],
+				  ])}</p>`
+				: summary;
 		const $wizard = $(`<div id="adhd-cap-wizard">
 			<div class="adhd-step-bar">${[1, 2, 3]
 				.map((step) => `<span class="${step === frm._adhdCapStep ? "active" : ""}">${step}</span>`)
@@ -757,11 +847,7 @@ frappe.provide("erpnext.adhd");
 			<div class="adhd-wizard-footer">
 				<button class="btn btn-default adhd-back" ${frm._adhdCapStep === 1 ? "disabled" : ""}>${__("Back")}</button>
 				<button class="btn btn-primary adhd-next">${frm._adhdCapStep === 3 ? __("Save Draft") : __("Next")}</button>
-				${
-					frm._adhdCapStep === 3
-						? `<button class="btn btn-primary adhd-submit">${__("Submit")}</button>`
-						: ""
-				}
+				${frm._adhdCapStep === 3 ? `<button class="btn btn-primary adhd-submit">${__("Submit")}</button>` : ""}
 				<button class="btn btn-default adhd-full">${__("Show full form")}</button>
 			</div></div>`);
 		$(frm.wrapper).addClass("adhd-cap-wizard-mode");
@@ -781,10 +867,12 @@ frappe.provide("erpnext.adhd");
 			renderCapitalizationWizard(frm);
 		});
 		$wizard.find(".adhd-next").on("click", async () => {
-			if (frm._adhdCapStep === 1 && !frm._adhdCapTable) return frappe.msgprint(__("Select a capitalization source."));
+			if (frm._adhdCapStep === 1 && !frm._adhdCapTable)
+				return frappe.msgprint(__("Select a capitalization source."));
 			if (frm._adhdCapStep === 2) {
 				if (!frm.doc.target_asset) return frappe.msgprint(__("Select a Target Asset."));
-				if (!(frm.doc[frm._adhdCapTable] || []).length) return frappe.msgprint(__("Add at least one item."));
+				if (!(frm.doc[frm._adhdCapTable] || []).length)
+					return frappe.msgprint(__("Add at least one item."));
 			}
 			if (frm._adhdCapStep === 3) return frm.save();
 			frm._adhdCapStep += 1;
@@ -798,11 +886,19 @@ frappe.provide("erpnext.adhd");
 		$wizard.find(".adhd-submit").on("click", () => frm.savesubmit());
 	}
 	frappe.ui.form.on("Asset Capitalization", { refresh: renderCapitalizationWizard });
+	// The wizard hides every form section, so it has to go the moment the mode is switched off.
+	erpnext.adhd.onStateChange?.(() => {
+		const frm = window.cur_frm;
+		if (frm?.doctype === "Asset Capitalization" && frm.doc) renderCapitalizationWizard(frm);
+	});
 
 	// ADHD-060
 	async function renderQualityBanner(frm) {
 		remove(frm, "#adhd-qi-banner");
-		const names = [...new Set((frm.doc.items || []).map((row) => row.quality_inspection).filter(Boolean))];
+		if (!adhdOn()) return;
+		const names = [
+			...new Set((frm.doc.items || []).map((row) => row.quality_inspection).filter(Boolean)),
+		];
 		if (!names.length) return;
 		const response = await frappe.call({
 			method: "erpnext.stock.adhd_quality.get_quality_inspection_summaries",
@@ -814,15 +910,16 @@ frappe.provide("erpnext.adhd");
 		const pending =
 			inspections.length < names.length ||
 			inspections.some(
-				(row) => cint(row.docstatus) === 0 || !["Accepted", "Rejected"].includes(row.status),
+				(row) => cint(row.docstatus) === 0 || !["Accepted", "Rejected"].includes(row.status)
 			);
 		const state = rejected.length ? "fail" : pending ? "pending" : "pass";
 		const text =
 			state === "fail"
 				? `✗ ${__("QI: FAILED, {0} reading(s) out of spec", [rejectedReadings])}`
 				: state === "pending"
-					? `⏳ ${__("QI: Pending inspection")}`
-					: `✓ ${__("QI: PASSED")}`;
+				? `⏳ ${__("QI: Pending inspection")}`
+				: `✓ ${__("QI: PASSED")}`;
+		remove(frm, "#adhd-qi-banner");
 		prepend(frm, $(`<div id="adhd-qi-banner" class="adhd-qi-${state}">${esc(text)}</div>`));
 	}
 	for (const doctype of ["Purchase Receipt", "Delivery Note", "Stock Entry"]) {
@@ -834,7 +931,7 @@ frappe.provide("erpnext.adhd");
 		const required = (doc.supplied_items || []).reduce((sum, row) => sum + flt(row.required_qty), 0);
 		const supplied = (doc.supplied_items || []).reduce(
 			(sum, row) => sum + flt(row.total_supplied_qty ?? row.supplied_qty),
-			0,
+			0
 		);
 		const sentPercent = required ? (supplied / required) * 100 : 0;
 		if (["Closed", "Completed"].includes(doc.status) || flt(doc.per_received) >= 100) {
@@ -847,27 +944,41 @@ frappe.provide("erpnext.adhd");
 	}
 	async function renderSubcontractingChain(frm) {
 		remove(frm, "#adhd-subcon-chain");
-		if (frm.doc.docstatus !== 1) return;
-		const receiptCount = await getCount("Subcontracting Receipt", {
-			subcontracting_order: frm.doc.name,
-			docstatus: ["!=", 2],
-		});
+		if (!adhdOn() || frm.doc.docstatus !== 1) return;
+		// subcontracting_order lives on the Subcontracting Receipt Item child table, not on the receipt itself.
+		const receiptCount = await getCount("Subcontracting Receipt", [
+			["Subcontracting Receipt Item", "subcontracting_order", "=", frm.doc.name],
+			["docstatus", "!=", 2],
+		]);
 		const state = subcontractingState(frm.doc, receiptCount);
-		const labels = [__("Order Created"), __("Materials Sent"), __("Work in Progress"), __("Receipt Pending"), __("Closed")];
+		const labels = [
+			__("Order Created"),
+			__("Materials Sent"),
+			__("Work in Progress"),
+			__("Receipt Pending"),
+			__("Closed"),
+		];
 		const steps = labels
 			.map(
 				(label, index) =>
-					`<span class="${index < state.index ? "done" : index === state.index ? "active" : "upcoming"}">${esc(
-						label,
-					)}</span>`,
+					`<span class="${
+						index < state.index ? "done" : index === state.index ? "active" : "upcoming"
+					}">${esc(label)}</span>`
 			)
 			.join("<i>›</i>");
-		const $node = $(`<div id="adhd-subcon-chain" class="adhd-subcon-chain"><div>${steps}</div><div class="adhd-action"></div></div>`);
+		const $node = $(
+			`<div id="adhd-subcon-chain" class="adhd-subcon-chain"><div>${steps}</div><div class="adhd-action"></div></div>`
+		);
+		remove(frm, "#adhd-subcon-chain");
 		prepend(frm, $node);
 		const $action = $node.find(".adhd-action");
 		if (state.index === 4) return $action.text(`✓ ${__("Complete")}`);
 		const receipt = state.sentPercent >= 100;
-		const label = receipt ? __("Create Receipt") : state.sentPercent ? __("Send Remaining Materials") : __("Send Materials");
+		const label = receipt
+			? __("Create Receipt")
+			: state.sentPercent
+			? __("Send Remaining Materials")
+			: __("Send Materials");
 		$action.append(`<button type="button" class="btn btn-primary btn-xs">${esc(label)}</button>`);
 		$action.find("button").on("click", () => {
 			if (receipt) {
@@ -889,6 +1000,8 @@ frappe.provide("erpnext.adhd");
 	}
 	frappe.ui.form.on("Subcontracting Order", { refresh: renderSubcontractingChain });
 
+	erpnext.adhd.datetimeMs = datetimeMs;
+	erpnext.adhd.systemDatetimeAt = systemDatetimeAt;
 	erpnext.adhd.productionPlanSummary = productionPlanSummary;
 	erpnext.adhd.elapsedParts = elapsedParts;
 	erpnext.adhd.isBlockedJobCard = isBlockedJobCard;
