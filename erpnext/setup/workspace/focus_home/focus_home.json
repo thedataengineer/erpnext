@@ -12,7 +12,7 @@
  "is_hidden": 0,
  "label": "Focus Home",
  "links": [],
- "modified": "2026-09-21 21:30:00.000000",
+ "modified": "2026-09-21 22:30:00.000000",
  "modified_by": "Administrator",
  "module": "Setup",
  "name": "Focus Home",
@@ -34,7 +34,7 @@
    "doc_view": "",
    "format": "",
    "label": "Open Focus Inbox",
-   "link_to": "adhd-inbox",
+   "link_to": "focus-inbox",
    "stats_filter": "[]",
    "type": "Page"
   },
@@ -43,7 +43,7 @@
    "doc_view": "",
    "format": "",
    "label": "Open Focus Task Board",
-   "link_to": "adhd-task-board",
+   "link_to": "focus-task-board",
    "stats_filter": "[]",
    "type": "Page"
   }

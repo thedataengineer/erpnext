@@ -454,6 +454,6 @@ erpnext.adhd.TaskKanban = class TaskKanban {
 	}
 };
 
-// The page itself lives in erpnext/setup/page/adhd_task_board/. Frappe builds it from that
+// The page itself lives in erpnext/setup/page/focus_task_board/. Frappe builds it from that
 // standard Page record and calls on_page_load/on_page_show there; nothing may be assigned to
-// frappe.pages["adhd-task-board"] here, or Frappe treats the page as already created.
+// frappe.pages["focus-task-board"] here, or Frappe treats the page as already created.

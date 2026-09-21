@@ -10,12 +10,12 @@
  "letter_head": null,
  "modified": "2026-09-20 00:00:00",
  "modified_by": "Administrator",
- "module": "ADHD Usage Log",
- "name": "ADHD Usage Summary",
+ "module": "Focus Usage Log",
+ "name": "Focus Usage Summary",
  "owner": "Administrator",
  "prepared_report": 0,
- "ref_doctype": "ADHD Usage Log",
- "report_name": "ADHD Usage Summary",
+ "ref_doctype": "Focus Usage Log",
+ "report_name": "Focus Usage Summary",
  "report_type": "Script Report",
  "roles": [
   {

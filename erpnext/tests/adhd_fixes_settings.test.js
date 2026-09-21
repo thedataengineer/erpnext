@@ -6,7 +6,7 @@ const vm = require("node:vm");
 
 const appRoot = path.resolve(__dirname, "..");
 const jsRoot = path.join(appRoot, "public/js/adhd");
-const pageRoot = path.join(appRoot, "setup/page/adhd_task_board");
+const pageRoot = path.join(appRoot, "setup/page/focus_task_board");
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // The ADHD Settings panel has a switch for each feature below; these are the six that the features named
@@ -278,8 +278,8 @@ function loadTaskBoardPage({ mode = true, ...initial } = {}) {
 		window: { ADHDSettings: env.settings },
 		frappe: {
 			boot: { adhd_mode: mode },
-			pages: { "adhd-task-board": {} },
-			get_route_str: () => "adhd-task-board",
+			pages: { "focus-task-board": {} },
+			get_route_str: () => "focus-task-board",
 			ui: { make_app_page: () => ({ body: { empty() {} } }) },
 		},
 		erpnext: {
@@ -298,8 +298,8 @@ function loadTaskBoardPage({ mode = true, ...initial } = {}) {
 			},
 		},
 	};
-	run("adhd_task_board.js", sandbox, pageRoot);
-	const page = sandbox.frappe.pages["adhd-task-board"];
+	run("focus_task_board.js", sandbox, pageRoot);
+	const page = sandbox.frappe.pages["focus-task-board"];
 	page.on_page_load({});
 	page.on_page_show();
 	return { env, sandbox, state, page };

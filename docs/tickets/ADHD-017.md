@@ -3,7 +3,7 @@
 ## Current implementation record
 
 - **Status:** Implemented.
-- **Implementation:** `erpnext/public/js/adhd/adhd_telemetry.js`, `erpnext/adhd_usage_log/doctype/adhd_usage_log/`, and its report.
+- **Implementation:** `erpnext/public/js/adhd/adhd_telemetry.js`, `erpnext/focus_usage_log/doctype/focus_usage_log/` (renamed from `ADHD Usage Log`), and its report `Focus Usage Summary`.
 - **Verification:** `node --test erpnext/tests/adhd_tickets_011_020.test.js` provides structural coverage; site behavior remains unverified.
 - **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
 

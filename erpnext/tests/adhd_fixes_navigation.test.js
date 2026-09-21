@@ -229,7 +229,7 @@ test("Create Next Step on a Quotation hands the mapper the Sales Order name", as
 test("task board asks for limit_page_length and does not register itself as a page", async () => {
 	const { sandbox } = makeSandbox();
 	run(sandbox, "task_kanban.js");
-	assert.equal(sandbox.frappe.pages["adhd-task-board"], undefined);
+	assert.equal(sandbox.frappe.pages["focus-task-board"], undefined);
 
 	const calls = [];
 	sandbox.frappe.call = async (options) => {
@@ -253,8 +253,8 @@ function loadTaskBoardPage({ active }) {
 	const state = { enabled: 0, built: 0, refreshed: 0, texts: [], stateChange: null };
 	const { sandbox } = makeSandbox();
 	sandbox.frappe.boot.adhd_mode = active;
-	sandbox.frappe.pages["adhd-task-board"] = {};
-	sandbox.frappe.get_route_str = () => "adhd-task-board";
+	sandbox.frappe.pages["focus-task-board"] = {};
+	sandbox.frappe.get_route_str = () => "focus-task-board";
 	const body = { empty() {} };
 	sandbox.frappe.ui.make_app_page = () => ({ body });
 	const chain = () => {
@@ -285,8 +285,8 @@ function loadTaskBoardPage({ active }) {
 			state.refreshed += 1;
 		}
 	};
-	run(sandbox, "adhd_task_board.js", path.join(appRoot, "setup/page/adhd_task_board"));
-	return { state, sandbox, page: sandbox.frappe.pages["adhd-task-board"] };
+	run(sandbox, "focus_task_board.js", path.join(appRoot, "setup/page/focus_task_board"));
+	return { state, sandbox, page: sandbox.frappe.pages["focus-task-board"] };
 }
 
 test("the task board page shows a how-to when ADHD mode is off and never enables it", () => {
@@ -310,9 +310,9 @@ test("the task board page builds the board once and refreshes it on later visits
 });
 
 test("the task board page json is a standard Setup page for Desk User", () => {
-	const dir = path.join(appRoot, "setup/page/adhd_task_board");
-	const page = JSON.parse(fs.readFileSync(path.join(dir, "adhd_task_board.json"), "utf8"));
-	assert.equal(page.name, "adhd-task-board");
+	const dir = path.join(appRoot, "setup/page/focus_task_board");
+	const page = JSON.parse(fs.readFileSync(path.join(dir, "focus_task_board.json"), "utf8"));
+	assert.equal(page.name, "focus-task-board");
 	assert.equal(page.module, "Setup");
 	assert.equal(page.standard, "Yes");
 	assert.deepEqual(
@@ -320,7 +320,7 @@ test("the task board page json is a standard Setup page for Desk User", () => {
 		["Desk User"]
 	);
 	assert.ok(fs.existsSync(path.join(dir, "__init__.py")));
-	assert.ok(fs.existsSync(path.join(dir, "adhd_task_board.py")));
+	assert.ok(fs.existsSync(path.join(dir, "focus_task_board.py")));
 });
 
 // ---- item 6: guided save -----------------------------------------------------------------

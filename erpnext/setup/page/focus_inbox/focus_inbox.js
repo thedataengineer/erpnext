@@ -10,7 +10,7 @@ function is_smart_inbox_enabled() {
 // every later visit). The page is always built here so a first visit with ADHD mode off still leaves
 // something for on_page_show to fill once the mode is on; the content, and its single fetch, come from
 // on_page_show.
-frappe.pages["adhd-inbox"].on_page_load = function (wrapper) {
+frappe.pages["focus-inbox"].on_page_load = function (wrapper) {
 	frappe.adhd_inbox_page = frappe.ui.make_app_page({
 		parent: wrapper,
 		title: __("Focus Inbox"),
@@ -18,7 +18,7 @@ frappe.pages["adhd-inbox"].on_page_load = function (wrapper) {
 	});
 };
 
-frappe.pages["adhd-inbox"].on_page_show = function () {
+frappe.pages["focus-inbox"].on_page_show = function () {
 	if (!is_smart_inbox_enabled()) {
 		frappe.set_route("Workspaces");
 		return;

@@ -11,7 +11,9 @@ Status meanings:
 
 ## Naming
 
-People see "Focus" everywhere: Focus Mode, Focus Settings, Focus Inbox, Focus Home, Focus Panel. "ADHD" is kept only where it is an internal name and nothing a person reads: ticket numbers (ADHD-0NN), file and module names, the `erpnext.adhd` JavaScript namespace, `frappe.boot.adhd_mode`, CSS classes, the `/desk/adhd-inbox` and `/desk/adhd-task-board` routes, and the `ADHD Usage Log` DocType, module and `ADHD Usage Summary` report (System Manager only). Renaming those needs data-migrating patches and is not done.
+People see "Focus" everywhere: Focus Mode, Focus Settings, Focus Inbox, Focus Home, Focus Panel, the `/desk/focus-inbox` and `/desk/focus-task-board` pages (the old `adhd-inbox` and `adhd-task-board` addresses still redirect), and the Focus Usage Log DocType, module and Focus Usage Summary report. "ADHD" is kept only as an internal name that no page shows: ticket numbers (ADHD-0NN), file names under `public/js/adhd/`, the `erpnext.adhd` JavaScript namespace, `frappe.boot.adhd_mode`, CSS classes, and the `adhd_telemetry_enabled` and `adhd_confirmed_installed` Custom Field names (renaming a field moves data, and nobody reads the field name).
+
+Sites created before the rename are moved by the patch `erpnext.patches.v17_0.rename_adhd_to_focus`, which runs before the model sync: the DocType and its table are renamed (rows kept), the usage-log module is replaced, and the old report and pages are removed.
 
 ## Runtime architecture
 
@@ -24,12 +26,12 @@ Server-backed features call whitelisted RPC modules:
 - Buying: `erpnext/buying/services/adhd_rfq_compare.py` and `adhd_receipt_diff.py`
 - Manufacturing: `erpnext/manufacturing/services/adhd_bom_ancestry.py`
 - Stock: `erpnext/stock/adhd.py` and `erpnext/stock/adhd_quality.py`
-- Telemetry: `erpnext/adhd_usage_log/doctype/adhd_usage_log/adhd_usage_log.py`
+- Telemetry: `erpnext/focus_usage_log/doctype/focus_usage_log/focus_usage_log.py`
 
 ## ADHD-001 through ADHD-020
 
 - **ADHD-001, Implemented:** Workflow document chain navigator, `adhd_chain_navigator.js`.
-- **ADHD-002, Implemented:** Smart Inbox, `adhd_smart_inbox.js` and `erpnext/setup/page/adhd_inbox/`. It opens at `/desk/adhd-inbox`; the Focus Home workspace (`erpnext/setup/workspace/focus_home/`) links to it and to the Task Board. The workspace is named so it does not share a slug with the page, which Frappe would resolve to the workspace first.
+- **ADHD-002, Implemented:** Smart Inbox, `adhd_smart_inbox.js` and `erpnext/setup/page/focus_inbox/`. It opens at `/desk/focus-inbox`; the Focus Home workspace (`erpnext/setup/workspace/focus_home/`) links to it and to the Task Board. The workspace is named so it does not share a slug with the page, which Frappe would resolve to the workspace first.
 - **ADHD-003, Implemented:** Mandatory-field guided save, `adhd_form_wizard.js`.
 - **ADHD-004, Implemented:** Assistant recipes for Task, Expense Claim, Material Request, and Timesheet, `erpnext/assistant/recipes.py`.
 - **ADHD-005, Implemented:** Keyboard shortcut reference, `adhd_help.js`.

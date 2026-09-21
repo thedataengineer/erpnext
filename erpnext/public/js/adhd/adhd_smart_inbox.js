@@ -413,7 +413,7 @@ frappe.provide("erpnext.adhd");
 	function setupRefreshInterval() {
 		clearRefreshInterval();
 		refreshInterval = setInterval(() => {
-			if (!isADHDModeActive() || frappe.get_route_str() !== "adhd-inbox") {
+			if (!isADHDModeActive() || frappe.get_route_str() !== "focus-inbox") {
 				clearRefreshInterval();
 				return;
 			}
@@ -467,11 +467,11 @@ frappe.provide("erpnext.adhd");
 
 	function shouldRedirectToInbox() {
 		if (!isADHDModeActive()) return false;
-		if (frappe.get_route_str && frappe.get_route_str() === "adhd-inbox") return false;
+		if (frappe.get_route_str && frappe.get_route_str() === "focus-inbox") return false;
 		if (sessionStorage.getItem("adhd_inbox_redirected") === "1") return false;
 
 		const homePage = frappe.boot && frappe.boot.desk_settings && frappe.boot.desk_settings.home_page;
-		return homePage !== "ADHD Inbox";
+		return homePage !== "focus-inbox";
 	}
 
 	function schedulePostLoginRedirect() {
@@ -492,8 +492,14 @@ frappe.provide("erpnext.adhd");
 			if (!isDeskLanding) return;
 
 			sessionStorage.setItem("adhd_inbox_redirected", "1");
-			frappe.set_route("adhd-inbox");
+			frappe.set_route("focus-inbox");
 		}, 600);
+	}
+
+	// Bookmarks, browser history and a Home Page setting from before these pages were renamed still open them.
+	if (frappe.re_route) {
+		frappe.re_route["adhd-inbox"] = "focus-inbox";
+		frappe.re_route["adhd-task-board"] = "focus-task-board";
 	}
 
 	frappe.router.on("change", () => {
@@ -503,7 +509,7 @@ frappe.provide("erpnext.adhd");
 			(module) => moduleSlug(module) === String(candidate || "").toLowerCase()
 		);
 		recordVisit(moduleName);
-		if (frappe.get_route_str && frappe.get_route_str() !== "adhd-inbox") {
+		if (frappe.get_route_str && frappe.get_route_str() !== "focus-inbox") {
 			clearRefreshInterval();
 		}
 	});

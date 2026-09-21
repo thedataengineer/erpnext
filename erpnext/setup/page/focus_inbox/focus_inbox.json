@@ -4,12 +4,12 @@
  "docstatus": 0,
  "doctype": "Page",
  "idx": 0,
- "modified": "2026-09-20 00:00:00.000000",
+ "modified": "2026-09-21 22:30:00.000000",
  "modified_by": "Administrator",
  "module": "Setup",
- "name": "adhd-task-board",
+ "name": "focus-inbox",
  "owner": "Administrator",
- "page_name": "adhd-task-board",
+ "page_name": "focus-inbox",
  "roles": [
   {
    "role": "Desk User"
@@ -19,5 +19,5 @@
  "standard": "Yes",
  "style": null,
  "system_page": 0,
- "title": "Task Board"
+ "title": "Focus Inbox"
 }

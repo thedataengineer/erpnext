@@ -23,7 +23,7 @@ def execute(filters=None):
 		"""
 		SELECT event_type, doctype_name, field_name, COUNT(*) AS count,
 			AVG(duration_ms) AS avg_duration_ms, session_date
-		FROM `tabADHD Usage Log`
+		FROM `tabFocus Usage Log`
 		GROUP BY event_type, doctype_name, field_name, session_date
 		ORDER BY session_date DESC, count DESC
 		""",

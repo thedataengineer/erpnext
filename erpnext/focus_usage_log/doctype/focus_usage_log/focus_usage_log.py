@@ -1,4 +1,4 @@
-"""Anonymous ADHD interaction signals."""
+"""Anonymous Focus interaction signals."""
 
 import re
 
@@ -23,20 +23,20 @@ def _intent(value):
 
 
 def _text(value):
-	"""A short plain string, or None. Anyone signed in can call log_adhd_event, so bound what it stores."""
+	"""A short plain string, or None. Anyone signed in can call log_focus_event, so bound what it stores."""
 	if value is None or value == "":
 		return None
 	return str(value)[:MAX_TEXT_LENGTH]
 
 
-class ADHDUsageLog(Document):
+class FocusUsageLog(Document):
 	def before_insert(self):
 		if self.event_type not in ALLOWED_EVENT_TYPES:
 			frappe.throw(_("Unknown Focus event type."), frappe.ValidationError)
 
 
 @frappe.whitelist()
-def log_adhd_event(
+def log_focus_event(
 	event_type,
 	doctype_name=None,
 	field_name=None,
@@ -49,7 +49,7 @@ def log_adhd_event(
 
 	log = frappe.get_doc(
 		{
-			"doctype": "ADHD Usage Log",
+			"doctype": "Focus Usage Log",
 			"event_type": _text(event_type),
 			"doctype_name": _text(doctype_name),
 			"field_name": _text(field_name),
@@ -60,7 +60,7 @@ def log_adhd_event(
 		}
 	).insert(ignore_permissions=True)
 	frappe.db.set_value(
-		"ADHD Usage Log",
+		"Focus Usage Log",
 		log.name,
 		{"owner": ANONYMOUS_USER, "modified_by": ANONYMOUS_USER},
 		update_modified=False,

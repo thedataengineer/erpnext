@@ -82,6 +82,7 @@ function loadSmartInbox({ user = "ann@example.com", modeOn = true } = {}) {
 			get_route_str: () => "",
 			set_route: (...args) => routes.push(args),
 			router: { on() {} },
+			re_route: {},
 			after_ajax: (fn) => afterAjax.push(fn),
 			datetime: { get_today: () => "2026-09-21", prettyDate: (value) => String(value) },
 			call: async () => ({ message: [] }),
@@ -94,10 +95,16 @@ function loadSmartInbox({ user = "ann@example.com", modeOn = true } = {}) {
 	return { sandbox, localStorage, routes, log, startUp: () => afterAjax.forEach((fn) => fn()) };
 }
 
-test("the post-login redirect opens the ADHD Inbox page by its route, not as a page named 'page'", () => {
+test("the post-login redirect opens the Focus Inbox page by its route, not as a page named 'page'", () => {
 	const { routes, startUp } = loadSmartInbox();
 	startUp();
-	assert.deepEqual(plain(routes), [["adhd-inbox"]]);
+	assert.deepEqual(plain(routes), [["focus-inbox"]]);
+});
+
+test("the old adhd-inbox and adhd-task-board routes still open the renamed pages", () => {
+	const { sandbox } = loadSmartInbox();
+	assert.equal(sandbox.frappe.re_route["adhd-inbox"], "focus-inbox");
+	assert.equal(sandbox.frappe.re_route["adhd-task-board"], "focus-task-board");
 });
 
 test("visiting a module is not recorded while ADHD mode is off", () => {
@@ -158,7 +165,7 @@ function loadInboxPage({ modeOn }) {
 		__: translate,
 		frappe: {
 			boot: { adhd_mode: modeOn },
-			pages: { "adhd-inbox": {} },
+			pages: { "focus-inbox": {} },
 			set_route: (...args) => calls.routes.push(args),
 			ui: {
 				make_app_page: () => {
@@ -183,8 +190,8 @@ function loadInboxPage({ modeOn }) {
 			},
 		},
 	};
-	run(read("setup/page/adhd_inbox/adhd_inbox.js"), sandbox, "adhd_inbox.js");
-	return { sandbox, calls, page: sandbox.frappe.pages["adhd-inbox"] };
+	run(read("setup/page/focus_inbox/focus_inbox.js"), sandbox, "focus_inbox.js");
+	return { sandbox, calls, page: sandbox.frappe.pages["focus-inbox"] };
 }
 
 test("the inbox page fetches once on the first visit, then refreshes on later visits", () => {

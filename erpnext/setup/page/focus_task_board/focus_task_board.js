@@ -83,7 +83,7 @@ function render_task_board(page) {
 // Frappe calls on_page_load once, when the page is created, and on_page_show straight after it
 // (and on every later visit). The page is always created here; what it shows comes from
 // render_task_board, which on_page_show and a mode change both call.
-frappe.pages["adhd-task-board"].on_page_load = function (wrapper) {
+frappe.pages["focus-task-board"].on_page_load = function (wrapper) {
 	const page = frappe.ui.make_app_page({
 		parent: wrapper,
 		title: __("Task Board"),
@@ -96,7 +96,7 @@ frappe.pages["adhd-task-board"].on_page_load = function (wrapper) {
 	let listening = false;
 	if (erpnext.adhd && erpnext.adhd.onStateChange) {
 		erpnext.adhd.onStateChange(() => {
-			if (listening && frappe.get_route_str() === "adhd-task-board") render_task_board(page);
+			if (listening && frappe.get_route_str() === "focus-task-board") render_task_board(page);
 		});
 	}
 	listening = true;
@@ -106,11 +106,11 @@ frappe.pages["adhd-task-board"].on_page_load = function (wrapper) {
 	if (typeof $ === "function") {
 		$(document).on?.("adhd_setting_changed adhd_settings_reset", (_event, detail) => {
 			if (detail && detail.key !== "task_kanban") return;
-			if (frappe.get_route_str() === "adhd-task-board") render_task_board(page);
+			if (frappe.get_route_str() === "focus-task-board") render_task_board(page);
 		});
 	}
 };
 
-frappe.pages["adhd-task-board"].on_page_show = function () {
+frappe.pages["focus-task-board"].on_page_show = function () {
 	if (frappe.adhd_task_board_page) render_task_board(frappe.adhd_task_board_page);
 };

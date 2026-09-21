@@ -17,7 +17,7 @@ from frappe import _dict
 
 from erpnext.accounts.services import adhd_month_end, adhd_payment_digest
 from erpnext.adhd import api as adhd_api
-from erpnext.adhd_usage_log.doctype.adhd_usage_log import adhd_usage_log
+from erpnext.focus_usage_log.doctype.focus_usage_log import focus_usage_log
 from erpnext.manufacturing.services import adhd_bom_ancestry
 from erpnext.stock import adhd as stock_adhd
 from erpnext.stock import adhd_quality
@@ -229,44 +229,44 @@ class TestUsageLog(AdhdServerTestCase):
 
 	def _rows(self):
 		return frappe.get_all(
-			"ADHD Usage Log",
+			"Focus Usage Log",
 			fields=["name", "event_type", "intent", "owner", "modified_by", "doctype_name"],
 			order_by="creation desc",
 			limit_page_length=5,
 		)
 
 	def test_nothing_is_stored_unless_switched_on(self):
-		before = frappe.db.count("ADHD Usage Log")
+		before = frappe.db.count("Focus Usage Log")
 		with self._switch(False):
-			adhd_usage_log.log_adhd_event("form_save", doctype_name="Lead")
-		self.assertEqual(frappe.db.count("ADHD Usage Log"), before)
+			focus_usage_log.log_focus_event("form_save", doctype_name="Lead")
+		self.assertEqual(frappe.db.count("Focus Usage Log"), before)
 
 	def test_a_stored_event_does_not_name_who_caused_it(self):
 		frappe.set_user("Administrator")
 		with self._switch(True):
-			adhd_usage_log.log_adhd_event("command_intent", intent="create_lead")
+			focus_usage_log.log_focus_event("command_intent", intent="create_lead")
 		row = self._rows()[0]
 		self.assertEqual(row.event_type, "command_intent")
 		self.assertEqual(row.intent, "create_lead")
-		self.assertEqual(row.owner, adhd_usage_log.ANONYMOUS_USER)
-		self.assertEqual(row.modified_by, adhd_usage_log.ANONYMOUS_USER)
+		self.assertEqual(row.owner, focus_usage_log.ANONYMOUS_USER)
+		self.assertEqual(row.modified_by, focus_usage_log.ANONYMOUS_USER)
 
 	def test_typed_text_never_reaches_the_log(self):
 		typed = json.dumps({"type": "start", "recipe": "create_lead", "values": {"email": "jo@acme.com"}})
 		for intent in (typed, "log a call with Jo at jo@acme.com", "x" * 500):
 			with self._switch(True):
-				adhd_usage_log.log_adhd_event("command_intent", intent=intent)
+				focus_usage_log.log_focus_event("command_intent", intent=intent)
 			self.assertIsNone(self._rows()[0].intent, intent[:30])
 
 	def test_free_text_is_cut_to_the_field_length(self):
 		with self._switch(True):
-			adhd_usage_log.log_adhd_event("form_save", doctype_name="D" * 400)
-		self.assertEqual(len(self._rows()[0].doctype_name), adhd_usage_log.MAX_TEXT_LENGTH)
+			focus_usage_log.log_focus_event("form_save", doctype_name="D" * 400)
+		self.assertEqual(len(self._rows()[0].doctype_name), focus_usage_log.MAX_TEXT_LENGTH)
 
 	def test_unknown_event_types_are_refused(self):
 		with self._switch(True):
 			with self.assertRaises(frappe.ValidationError):
-				adhd_usage_log.log_adhd_event("something_else")
+				focus_usage_log.log_focus_event("something_else")
 
 
 class TestSmartInbox(AdhdServerTestCase):

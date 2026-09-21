@@ -3,7 +3,7 @@
 ## Current implementation record
 
 - **Status:** Implemented.
-- **Implementation:** `erpnext/public/js/adhd/adhd_smart_inbox.js` and `erpnext/setup/page/adhd_inbox/`.
+- **Implementation:** `erpnext/public/js/adhd/adhd_smart_inbox.js` and `erpnext/setup/page/focus_inbox/` (route `focus-inbox`; it was `adhd-inbox`, and the old route still redirects).
 - **Verification:** No ticket-specific automated test; site and browser behavior remain unverified.
 - **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
 

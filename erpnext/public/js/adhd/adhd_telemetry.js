@@ -2,8 +2,8 @@
 
 frappe.provide("erpnext.adhd");
 
-const TELEMETRY_METHOD = "erpnext.adhd_usage_log.doctype.adhd_usage_log.adhd_usage_log.log_adhd_event";
-// The arguments log_adhd_event takes. An event carries these and nothing else.
+const TELEMETRY_METHOD = "erpnext.focus_usage_log.doctype.focus_usage_log.focus_usage_log.log_focus_event";
+// The arguments log_focus_event takes. An event carries these and nothing else.
 const TELEMETRY_FIELDS = ["event_type", "doctype_name", "field_name", "duration_ms", "step_index", "intent"];
 
 erpnext.adhd.ADHDTelemetry = {
