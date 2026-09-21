@@ -37,12 +37,13 @@ class FocusUsageLog(Document):
 
 @frappe.whitelist()
 def log_focus_event(
-	event_type,
-	doctype_name=None,
-	field_name=None,
-	duration_ms=None,
-	step_index=None,
-	intent=None,
+	event_type: str,
+	doctype_name: str | None = None,
+	field_name: str | None = None,
+	# a browser sends numbers as text or as a fraction of a millisecond, and cint() reads all of those
+	duration_ms: int | float | str | None = None,
+	step_index: int | float | str | None = None,
+	intent: str | None = None,
 ):
 	if not frappe.db.get_single_value("System Settings", "adhd_telemetry_enabled"):
 		return

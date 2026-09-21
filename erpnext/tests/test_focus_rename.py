@@ -69,3 +69,30 @@ class TestFocusNames(unittest.TestCase):
 		doc = json.loads((APP / "setup" / "workspace" / "focus_home" / "focus_home.json").read_text())
 		self.assertEqual(doc["name"], "Focus Home")
 		self.assertEqual({row["link_to"] for row in doc["shortcuts"]}, {"focus-inbox", "focus-task-board"})
+
+
+class TestWhitelistedMethodsAreAnnotated(unittest.TestCase):
+	"""hooks.py sets require_type_annotated_api_methods, so a whitelisted function with an unannotated argument
+	answers every real request with HTTP 417. Calling it from a test skips that check, which is how four of
+	them (the Smart Inbox, the payment digest and the telemetry call) shipped broken."""
+
+	def test_every_whitelisted_function_annotates_all_its_arguments(self):
+		import ast
+
+		hooks = (APP / "hooks.py").read_text()
+		self.assertIn("require_type_annotated_api_methods = True", hooks)
+
+		missing = []
+		for path in APP.rglob("*.py"):
+			if "tests" in path.parts or path.name.startswith("test_"):
+				continue
+			for node in ast.walk(ast.parse(path.read_text())):
+				if not isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+					continue
+				if not any("whitelist" in ast.unparse(d) for d in node.decorator_list):
+					continue
+				args = node.args
+				for index, arg in enumerate([*args.posonlyargs, *args.args, *args.kwonlyargs]):
+					if not arg.annotation and not (index == 0 and arg.arg in ("self", "cls")):
+						missing.append(f"{path.relative_to(APP)}:{node.lineno} {node.name}({arg.arg})")
+		self.assertEqual(missing, [])

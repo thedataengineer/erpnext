@@ -113,7 +113,7 @@ def _make_urgent_row(doctype, doc, due_field, title_field=None, counterparty_fie
 
 
 @frappe.whitelist()
-def get_urgent_items(user=None):
+def get_urgent_items(user: str | None = None):
 	"""Return overdue and due-today documents for the Smart Inbox."""
 	user = user or frappe.session.user
 	if user != frappe.session.user and "System Manager" not in frappe.get_roles(frappe.session.user):
@@ -216,7 +216,7 @@ def _make_action_row(row_type, doctype, name, title=None, status=None, timestamp
 
 
 @frappe.whitelist()
-def get_action_queue(user=None):
+def get_action_queue(user: str | None = None):
 	"""Return current user's ToDos, workflow actions, and HR leave approvals."""
 	user = user or frappe.session.user
 	if user != frappe.session.user and "System Manager" not in frappe.get_roles(frappe.session.user):

@@ -8,7 +8,7 @@ MAX_INVOICES = 2000
 
 
 @frappe.whitelist()
-def get_payment_digest(company=None):
+def get_payment_digest(company: str | None = None):
 	"""Return outstanding receivables grouped for the ADHD Focus Panel."""
 	company = company or frappe.defaults.get_user_default("Company")
 	if not company:
