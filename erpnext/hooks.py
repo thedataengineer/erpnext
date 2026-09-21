@@ -1,10 +1,2 @@
-// erpnext/hooks.py
-
-# app_include_js = [
-#     "adhd/adhd_form_wizard.js"
-# ]
-
-# Add the following to include the new JavaScript file
-app_include_js = [
-    "adhd/adhd_form_wizard.js"
-]
+# ADHD features are imported by erpnext/public/js/erpnext.bundle.js in dependency order.
+app_include_js = ["erpnext.bundle.js"]
