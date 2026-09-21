@@ -341,6 +341,10 @@ erpnext.assistant.Bar = class Bar {
 
 	_activate(row) {
 		if (!row) return;
+		window.ADHDTelemetry?.emit({
+			event_type: "command_intent",
+			intent: row.action || row.type,
+		});
 		if (row.type === "record" || row.type === "page") {
 			frappe.set_route(row.route);
 			this.close();

@@ -167,3 +167,18 @@ erpnext.adhd.onStateChange = (fn) => erpnext.adhd.mode.onStateChange(fn);
 erpnext.adhd.enable = () => erpnext.adhd.mode.enable();
 erpnext.adhd.disable = () => erpnext.adhd.mode.disable();
 erpnext.adhd.toggle = () => erpnext.adhd.mode.toggle();
+
+frappe.ui.form.on("*", {
+	before_save(frm) {
+		frm._adhdSaveStart = Date.now();
+	},
+	after_save(frm) {
+		if (!frm._adhdSaveStart) return;
+		window.ADHDTelemetry?.emit({
+			event_type: "form_save",
+			doctype_name: frm.doctype,
+			duration_ms: Date.now() - frm._adhdSaveStart,
+		});
+		delete frm._adhdSaveStart;
+	},
+});

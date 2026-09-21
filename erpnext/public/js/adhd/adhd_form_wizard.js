@@ -90,7 +90,16 @@ frappe.provide("erpnext.adhd");
 			wizardState.index += 1;
 			showStep();
 		};
-		$banner.find(".adhd-wizard-next, .adhd-wizard-skip").on("click", advance);
+		$banner.find(".adhd-wizard-next").on("click", advance);
+		$banner.find(".adhd-wizard-skip").on("click", () => {
+			window.ADHDTelemetry?.emit({
+				event_type: "wizard_skip",
+				doctype_name: frm.doctype,
+				field_name: item.fieldname,
+				step_index: index,
+			});
+			advance();
+		});
 		$banner.find(".adhd-wizard-cancel").on("click", cancelWizard);
 
 		const input = field.$input && field.$input[0];
