@@ -40,7 +40,7 @@ frappe.provide("erpnext.adhd");
 		if (!wizardState) return;
 		const { frm, input, changeHandler } = wizardState;
 		if (input && changeHandler) input.removeEventListener("change", changeHandler);
-		frm.layout.$wrapper.find(".adhd-wizard-banner").remove();
+		frm.layout.wrapper.find(".adhd-wizard-banner").remove();
 		wizardState = null;
 	}
 
@@ -90,7 +90,7 @@ frappe.provide("erpnext.adhd");
 		if (wizardState.input && wizardState.changeHandler) {
 			wizardState.input.removeEventListener("change", wizardState.changeHandler);
 		}
-		frm.layout.$wrapper.find(".adhd-wizard-banner").remove();
+		frm.layout.wrapper.find(".adhd-wizard-banner").remove();
 
 		const hint = window.ADHD_FIELD_HELP?.[frm.doctype]?.[item.fieldname] || item.label || item.fieldname;
 		const $banner = $(`
@@ -106,7 +106,7 @@ frappe.provide("erpnext.adhd");
 				</div>
 			</div>
 		`);
-		frm.layout.$wrapper.prepend($banner);
+		frm.layout.wrapper.prepend($banner);
 
 		const advance = () => {
 			if (!wizardState) return;

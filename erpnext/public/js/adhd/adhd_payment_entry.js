@@ -22,7 +22,7 @@ frappe.provide("erpnext.adhd");
 	}
 
 	function removeShortlist(frm) {
-		frm.layout?.$wrapper?.find("#adhd-invoice-shortlist").remove();
+		frm.layout?.wrapper?.find("#adhd-invoice-shortlist").remove();
 	}
 
 	// An invoice with payment terms comes back as one row per term, so the term is part of the identity.

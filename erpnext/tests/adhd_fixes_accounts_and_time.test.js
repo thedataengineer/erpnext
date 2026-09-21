@@ -105,7 +105,7 @@ function journalEntry(rows, extra = {}) {
 	const meter = makeMeter();
 	const frm = {
 		doc: { docstatus: 0, company_currency: "INR", accounts: rows, ...extra },
-		layout: { $wrapper: { find: () => meter } },
+		layout: { wrapper: { find: () => meter } },
 		// like a real Form: the indicator lives on frm.page (and frm.toolbar), never on frm itself
 		page: { set_indicator: (label, color) => indicators.push([label, color]) },
 		toolbar: { set_indicator: () => indicators.push(["native"]) },
@@ -354,7 +354,7 @@ function paymentEntryForm(extra = {}) {
 			posting_date: "2026-09-21",
 			...extra,
 		},
-		layout: { $wrapper: makeChain() },
+		layout: { wrapper: makeChain() },
 		fields_dict: {},
 		set_df_property() {},
 	};
@@ -425,7 +425,7 @@ test("bank reconciliation ticks survive rows leaving the DOM and only the reconc
 	const frm = {
 		doc: { bank_account: "Checking - EX", bank_statement_from_date: "2026-09-01" },
 		get_field: () => ({ wrapper: {} }),
-		layout: { $wrapper: makeChain() },
+		layout: { wrapper: makeChain() },
 		bank_reconciliation_data_table_manager: { transactions: [1, 2, 3] },
 	};
 	const key = adhd.bankReconStorageKey(frm);

@@ -110,7 +110,7 @@ frappe.provide("erpnext.adhd");
 	}
 
 	async function renderPreview(frm) {
-		frm.layout.$wrapper.find("#adhd-stock-preview").remove();
+		frm.layout.wrapper.find("#adhd-stock-preview").remove();
 		if (!isActive() || frm.doc.docstatus !== 0) return;
 		const pairs = getItemWarehousePairs(frm);
 		if (!pairs.length) return;
@@ -206,7 +206,7 @@ frappe.provide("erpnext.adhd");
 	}
 
 	function decoratePutawayRows(frm) {
-		frm.layout.$wrapper.find(".adhd-putaway-why").remove();
+		frm.layout.wrapper.find(".adhd-putaway-why").remove();
 		if (!isActive()) return;
 		(frm.doc.items || []).filter((row) => row.putaway_rule).forEach((row) => decorateSingleRow(frm, row));
 		const $grid = $(frm.fields_dict.items?.grid?.wrapper);
@@ -218,7 +218,7 @@ frappe.provide("erpnext.adhd");
 
 	function refreshFeatures(frm) {
 		if (!isActive() || frm.doc.docstatus !== 0) {
-			frm.layout.$wrapper.find("#adhd-stock-preview,.adhd-putaway-why").remove();
+			frm.layout.wrapper.find("#adhd-stock-preview,.adhd-putaway-why").remove();
 			return;
 		}
 		schedulePreviewRefresh(frm);

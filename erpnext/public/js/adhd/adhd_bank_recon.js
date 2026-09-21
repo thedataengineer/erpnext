@@ -71,7 +71,7 @@ frappe.provide("erpnext.adhd");
 	function showResumeBanner(frm, state, restored) {
 		const key = storageKey(frm);
 		const $wrapper = transactionWrapper(frm);
-		frm.layout.$wrapper.find("#adhd-recon-banner").remove();
+		frm.layout.wrapper.find("#adhd-recon-banner").remove();
 		if (!key || !restored || !$wrapper.length) return;
 
 		const savedTime = new Date(state.savedAt);
@@ -140,7 +140,7 @@ frappe.provide("erpnext.adhd");
 		if (!manager || manager._adhdProgressWrapped) return;
 		const original = manager.update_dt_cards;
 		manager.update_dt_cards = function (...args) {
-			frm.layout.$wrapper.find("#adhd-recon-banner").remove();
+			frm.layout.wrapper.find("#adhd-recon-banner").remove();
 			const result = original.apply(this, args);
 			forgetTransaction(frm, args[0]?.name);
 			setTimeout(() => decorateTransactions(frm), 0);
@@ -152,7 +152,7 @@ frappe.provide("erpnext.adhd");
 	function initialize(frm) {
 		const $wrapper = transactionWrapper(frm);
 		$wrapper.off("change.adhdBankRecon", CHECKBOX);
-		frm.layout.$wrapper.find("#adhd-recon-banner").remove();
+		frm.layout.wrapper.find("#adhd-recon-banner").remove();
 		frm._adhdReconObserver?.disconnect();
 		frm._adhdReconObserver = null;
 		if (!isActive()) {

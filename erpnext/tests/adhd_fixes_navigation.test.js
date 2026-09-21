@@ -350,7 +350,7 @@ function loadWizard() {
 	frm.doctype = "Task";
 	frm.doc = { name: "TASK-1" };
 	frm.meta = { fields: [{ fieldname: "subject", label: "Subject", reqd: 1 }] };
-	frm.layout = { $wrapper: { find: () => ({ remove() {} }), prepend() {} } };
+	frm.layout = { wrapper: { find: () => ({ remove() {} }), prepend() {} } };
 	frm.get_field = () => ({ $input: null });
 	frm.scroll_to_field = () => {};
 	const save = (...args) => {

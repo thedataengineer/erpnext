@@ -28,7 +28,7 @@ frappe.provide("erpnext.adhd");
 	}
 
 	function clearVariance(frm) {
-		const $wrapper = frm.layout?.$wrapper;
+		const $wrapper = frm.layout?.wrapper;
 		$wrapper?.find("#adhd-variance-banner").remove();
 		$wrapper?.find(".adhd-variance-row").removeClass("adhd-variance-row");
 		$wrapper?.find(".adhd-variance-cell").remove();
@@ -48,7 +48,7 @@ frappe.provide("erpnext.adhd");
 	}
 
 	function renderVarianceSummaryBanner(frm, flaggedCount) {
-		const $existing = frm.layout.$wrapper.find("#adhd-variance-banner");
+		const $existing = frm.layout.wrapper.find("#adhd-variance-banner");
 		if (!flaggedCount) {
 			$existing.remove();
 			return;

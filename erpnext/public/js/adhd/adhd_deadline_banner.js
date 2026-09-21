@@ -57,7 +57,7 @@ frappe.provide("erpnext.adhd");
 	};
 
 	function renderDeadlineBanner(frm) {
-		frm.layout.$wrapper.find(".adhd-deadline-banner").remove();
+		frm.layout.wrapper.find(".adhd-deadline-banner").remove();
 		// the banner is gone by now, so switching the setting off removes it from the form it was on
 		if (!(frappe.boot && frappe.boot.adhd_mode) || !isBannerSettingOn() || frm.is_new()) return;
 		const config = DEADLINE_CONFIG[frm.doctype];
@@ -79,7 +79,7 @@ frappe.provide("erpnext.adhd");
 			sessionStorage.setItem(dismissKey, "1");
 			$banner.remove();
 		});
-		frm.layout.$wrapper.prepend($banner);
+		frm.layout.wrapper.prepend($banner);
 	}
 
 	Object.keys(DEADLINE_CONFIG).forEach((doctype) => {

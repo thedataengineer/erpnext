@@ -11,7 +11,7 @@ function isBalanceMeterEnabled() {
 function removeJournalEntryBalanceMeter(frm) {
 	const field = frm?.get_field?.("accounts");
 	field?.grid?.wrapper?.off(".adhdBalanceMeter");
-	frm?.layout?.$wrapper?.find("#adhd-balance-meter").remove();
+	frm?.layout?.wrapper?.find("#adhd-balance-meter").remove();
 }
 
 // The server balances a Journal Entry on the company-currency amounts (debit/credit), not on the
@@ -35,7 +35,7 @@ function setBalanceIndicator(frm, label, color) {
 }
 
 function updateJournalEntryBalanceMeter(frm) {
-	const $meter = frm?.layout?.$wrapper?.find("#adhd-balance-meter");
+	const $meter = frm?.layout?.wrapper?.find("#adhd-balance-meter");
 	if (!$meter?.length) return;
 
 	const totals = getJournalEntryTotals(frm.doc.accounts);

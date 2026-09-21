@@ -60,8 +60,8 @@ frappe.provide("erpnext.adhd");
 	}
 
 	async function renderRouteSummary(frm) {
-		frm.layout.$wrapper.find("#adhd-route-summary").remove();
-		frm.layout.$wrapper.find(".adhd-stop-badge").remove();
+		frm.layout.wrapper.find("#adhd-route-summary").remove();
+		frm.layout.wrapper.find(".adhd-stop-badge").remove();
 		if (!frappe.boot?.adhd_mode) return;
 		const requestId = (frm._adhdRouteRequest || 0) + 1;
 		frm._adhdRouteRequest = requestId;
@@ -94,7 +94,7 @@ frappe.provide("erpnext.adhd");
 	function refresh(frm) {
 		if (frappe.boot?.adhd_mode) scheduleRouteSummary(frm);
 		else {
-			frm.layout.$wrapper.find("#adhd-route-summary,.adhd-stop-badge").remove();
+			frm.layout.wrapper.find("#adhd-route-summary,.adhd-stop-badge").remove();
 			frm._adhdRouteObserver?.disconnect();
 			frm._adhdRouteObserver = null;
 		}

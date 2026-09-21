@@ -30,7 +30,7 @@ function timeboxWarningsOn() {
 }
 
 function renderTimeboxBanner(frm) {
-	frm.layout.$wrapper.find(".adhd-timebox-banner").remove();
+	frm.layout.wrapper.find(".adhd-timebox-banner").remove();
 	if (!(frappe.boot && frappe.boot.adhd_mode) || !timeboxWarningsOn() || frm.is_new()) return;
 	const dismissKey = `adhd_timebox_dismissed_${frm.doctype}_${frm.docname}`;
 	if (sessionStorage.getItem(dismissKey)) return;
@@ -56,7 +56,7 @@ function renderTimeboxBanner(frm) {
 		dismiss();
 	});
 	$banner.find(".adhd-timebox-dismiss").on("click", dismiss);
-	frm.layout.$wrapper.prepend($banner);
+	frm.layout.wrapper.prepend($banner);
 }
 
 erpnext.adhd.FormFocus = class FormFocus {

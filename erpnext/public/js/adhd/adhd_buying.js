@@ -54,7 +54,7 @@ async function addWaitingOn($panel, frm) {
 }
 
 function initPurchaseOrderStatusPanel(frm) {
-	frm.layout.$wrapper.find("#adhd-po-steps").remove();
+	frm.layout.wrapper.find("#adhd-po-steps").remove();
 	if (!erpnext.adhd?.isActive?.() || frm.doctype !== "Purchase Order") return;
 
 	const current = getPurchaseOrderStep(frm.doc);
@@ -105,8 +105,8 @@ function initPurchaseOrderStatusPanel(frm) {
 		);
 	}
 
-	const $target = frm.layout.$wrapper.find(".form-dashboard, .page-head").first();
-	$target.length ? $target.after($panel) : frm.layout.$wrapper.prepend($panel);
+	const $target = frm.layout.wrapper.find(".form-dashboard, .page-head").first();
+	$target.length ? $target.after($panel) : frm.layout.wrapper.prepend($panel);
 	addWaitingOn($panel, frm);
 }
 

@@ -350,7 +350,7 @@ function loadBuying() {
 		sandbox.erpnext.adhd.initPurchaseOrderStatusPanel({
 			doctype: "Purchase Order",
 			doc,
-			layout: { $wrapper: wrapper },
+			layout: { wrapper: wrapper },
 		});
 		return panels[0];
 	};

@@ -630,7 +630,7 @@ function loadBanners(initial) {
 		doc: { exp_end_date: "2026-09-22", status: "Open" },
 		is_new: () => false,
 		layout: {
-			$wrapper: {
+			wrapper: {
 				find: () => ({ remove: () => (state.removed += 1) }),
 				prepend: (banner) => state.prepended.push(banner),
 			},
@@ -711,7 +711,7 @@ function loadWizard(initial) {
 	frm.doc = { name: "TASK-1" };
 	frm.meta = { fields: [{ fieldname: "subject", label: "Subject", reqd: 1 }] };
 	frm.layout = {
-		$wrapper: { find: () => ({ remove: () => (state.removed += 1) }), prepend() {} },
+		wrapper: { find: () => ({ remove: () => (state.removed += 1) }), prepend() {} },
 	};
 	frm.get_field = () => ({ $input: null });
 	frm.scroll_to_field = () => {};
