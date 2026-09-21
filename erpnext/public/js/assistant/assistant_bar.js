@@ -341,9 +341,11 @@ erpnext.assistant.Bar = class Bar {
 
 	_activate(row) {
 		if (!row) return;
+		// Only the kind of action goes into the usage log ("create_lead"), never what the person typed:
+		// row.action also carries the values extracted from their sentence (names, emails, notes).
 		window.ADHDTelemetry?.emit({
 			event_type: "command_intent",
-			intent: row.action || row.type,
+			intent: (row.action && (row.action.recipe || row.action.type)) || row.type,
 		});
 		if (row.type === "record" || row.type === "page") {
 			frappe.set_route(row.route);

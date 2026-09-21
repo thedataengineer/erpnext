@@ -4,6 +4,8 @@ import frappe
 from frappe import _
 from frappe.utils import add_days, flt, getdate, today
 
+MAX_INVOICES = 2000
+
 
 @frappe.whitelist()
 def get_payment_digest(company=None):
@@ -15,11 +17,19 @@ def get_payment_digest(company=None):
 	invoices = frappe.get_list(
 		"Sales Invoice",
 		filters={"company": company, "docstatus": 1, "outstanding_amount": (">", 0)},
-		fields=["name", "customer", "outstanding_amount", "due_date", "currency"],
-		limit_page_length=500,
+		fields=["name", "customer", "outstanding_amount", "conversion_rate", "due_date"],
+		order_by="due_date asc",
+		limit_page_length=MAX_INVOICES + 1,
 	)
+	truncated = len(invoices) > MAX_INVOICES
+	invoices = invoices[:MAX_INVOICES]
 	start = getdate(today())
 	week_end = getdate(add_days(start, 7))
+
+	def outstanding(invoice):
+		# outstanding_amount is in the invoice's own currency; the panel shows one company currency,
+		# so convert, otherwise USD and EUR invoices would simply be added together
+		return flt(invoice.outstanding_amount) * (flt(invoice.conversion_rate) or 1)
 
 	def group_by_customer(rows):
 		grouped = {}
@@ -28,7 +38,7 @@ def get_payment_digest(company=None):
 				invoice.customer,
 				{"customer": invoice.customer, "total": 0.0, "invoices": []},
 			)
-			entry["total"] = flt(entry["total"]) + flt(invoice.outstanding_amount)
+			entry["total"] = flt(entry["total"]) + outstanding(invoice)
 			entry["invoices"].append(invoice.name)
 		return sorted(grouped.values(), key=lambda item: item["total"], reverse=True)
 
@@ -46,7 +56,9 @@ def get_payment_digest(company=None):
 	return {
 		"company": company,
 		"currency": frappe.get_cached_value("Company", company, "default_currency"),
-		"total_outstanding": sum(flt(invoice.outstanding_amount) for invoice in invoices),
+		"total_outstanding": sum(outstanding(invoice) for invoice in invoices),
 		"overdue": group_by_customer(overdue),
 		"due_this_week": group_by_customer(due_this_week),
+		# the oldest MAX_INVOICES were used; say so instead of quietly understating the total
+		"truncated": truncated,
 	}

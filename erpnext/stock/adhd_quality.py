@@ -5,6 +5,8 @@ import json
 import frappe
 from frappe import _
 
+MAX_NAMES = 200
+
 
 @frappe.whitelist()
 def get_quality_inspection_summaries(names: str | list[str]) -> list[dict]:
@@ -14,6 +16,8 @@ def get_quality_inspection_summaries(names: str | list[str]) -> list[dict]:
 	names = list(dict.fromkeys(name for name in (names or []) if name))
 	if not names:
 		return []
+	if len(names) > MAX_NAMES:
+		frappe.throw(_("Provide no more than {0} Quality Inspections.").format(MAX_NAMES))
 
 	for name in names:
 		if not frappe.has_permission("Quality Inspection", "read", doc=name):

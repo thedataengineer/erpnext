@@ -5,7 +5,6 @@ import frappe
 from frappe import _
 from frappe.utils import date_diff, getdate, now_datetime, today
 
-
 MAX_URGENT_ITEMS = 20
 MAX_ACTION_ITEMS = 30
 
@@ -123,7 +122,9 @@ def get_urgent_items(user=None):
 		)
 	)
 
-	purchase_order_due_field = "schedule_date" if _has_field("Purchase Order", "schedule_date") else "transaction_date"
+	purchase_order_due_field = (
+		"schedule_date" if _has_field("Purchase Order", "schedule_date") else "transaction_date"
+	)
 	items.extend(
 		_make_urgent_row("Purchase Order", doc, purchase_order_due_field, counterparty_field="supplier")
 		for doc in _get_list(
@@ -182,7 +183,6 @@ def _make_action_row(row_type, doctype, name, title=None, status=None, timestamp
 		"status": status,
 		"timestamp": timestamp,
 	}
-
 
 
 @frappe.whitelist()

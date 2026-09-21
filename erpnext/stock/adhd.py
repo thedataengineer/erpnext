@@ -2,7 +2,11 @@
 
 import frappe
 from frappe import _
+from frappe.query_builder.functions import Sum
 from frappe.utils import cint, flt
+
+# how many of an item's batches are read before ordering them first-expired-first-out
+MAX_BATCHES_SCANNED = 500
 
 
 def _permitted_items(item_codes: list[str]) -> list[str]:
@@ -44,12 +48,16 @@ def get_bin_quantities(pairs: list[dict] | str) -> list[dict]:
 
 	item_codes = _permitted_items(sorted({item_code for item_code, _warehouse in requested}))
 	warehouses = _permitted_warehouses(sorted({warehouse for _item_code, warehouse in requested}))
+	if not item_codes or not warehouses:
+		return []
 
+	# The two IN filters select every item/warehouse combination, not only the requested pairs, and there is
+	# at most one Bin per combination. The limit has to cover all of them or requested pairs get cut off.
 	rows = frappe.get_all(
 		"Bin",
 		filters={"item_code": ["in", item_codes], "warehouse": ["in", warehouses]},
 		fields=["item_code", "warehouse", "actual_qty"],
-		limit_page_length=min(len(requested) * 2, 800),
+		limit_page_length=len(item_codes) * len(warehouses),
 	)
 	return [row for row in rows if (row.item_code, row.warehouse) in requested]
 
@@ -72,11 +80,14 @@ def get_item_stock_health(item_codes: list[str] | str, warehouse: str) -> list[d
 		fields=["item_code", "actual_qty"],
 		limit_page_length=len(item_codes),
 	)
+	# only this warehouse's rows: an item can have reorder levels for many warehouses, and a flat limit
+	# over all of them could cut off the one that matters
 	reorder_rows = frappe.get_all(
 		"Item Reorder",
 		filters={"parent": ["in", item_codes]},
+		or_filters=[["warehouse", "=", warehouse], ["warehouse_group", "=", warehouse]],
 		fields=["parent", "warehouse", "warehouse_group", "warehouse_reorder_level"],
-		limit_page_length=len(item_codes) * 10,
+		limit_page_length=len(item_codes) * 4,
 	)
 	reorder_by_item = {}
 	for row in reorder_rows:
@@ -109,16 +120,22 @@ def get_available_batches(item_code: str, warehouse: str | None = None, limit: i
 	batches = frappe.get_list(
 		"Batch",
 		filters={"item": item_code, "disabled": 0},
-		fields=["name", "manufacturing_date", "expiry_date"],
+		fields=["name", "manufacturing_date", "expiry_date", "creation"],
 		order_by="expiry_date asc, creation asc",
-		limit_page_length=limit,
+		limit_page_length=MAX_BATCHES_SCANNED,
 	)
+	# First-expired-first-out: batches with no expiry date go last. MariaDB sorts NULLs first, so order here,
+	# before applying the limit.
+	batches.sort(key=lambda batch: (batch.expiry_date is None, batch.expiry_date or "", batch.creation))
+	batches = batches[:limit]
+
 	qty_rows = (
 		get_batch_qty(item_code=item_code, warehouse=warehouse, for_stock_levels=True) if warehouse else []
 	)
 	qty_by_batch = {row.batch_no: row.qty for row in qty_rows}
 	for batch in batches:
 		batch["available_qty"] = qty_by_batch.get(batch.name, 0)
+		del batch["creation"]
 	return batches
 
 
@@ -136,10 +153,9 @@ def get_delivery_note_package_qty(delivery_notes: list[str] | str) -> float:
 	)
 	if not allowed:
 		return 0
-	rows = frappe.get_all(
-		"Delivery Note Item",
-		filters={"parent": ["in", allowed]},
-		fields=["sum(qty) as total_qty"],
-		limit_page_length=1,
-	)
-	return flt(rows[0].total_qty) if rows else 0
+
+	# Frappe v17 rejects SQL functions written as strings in `fields` ("sum(qty) as total_qty"), which made
+	# this endpoint raise for any real Delivery Note, so aggregate with the query builder instead.
+	item = frappe.qb.DocType("Delivery Note Item")
+	total = frappe.qb.from_(item).select(Sum(item.qty)).where(item.parent.isin(allowed)).run()
+	return flt(total[0][0]) if total else 0

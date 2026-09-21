@@ -11,6 +11,8 @@ def is_period_closed(month_str: str, company: str) -> bool:
 	"""Return whether a submitted closing voucher ends in ``YYYY-MM``."""
 	if not month_str or not company:
 		return False
+	if not frappe.has_permission("Period Closing Voucher", "read"):
+		frappe.throw(frappe._("Not permitted to read Period Closing Vouchers."), frappe.PermissionError)
 
 	try:
 		year, month = (int(part) for part in month_str.replace("_", "-").split("-", 1))

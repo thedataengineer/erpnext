@@ -34,7 +34,8 @@ def get_bom_ancestry(bom_name: str, max_depth: int = 3) -> list[dict]:
 			["name", "item", "item_name"],
 			as_dict=True,
 		)
-		if not parent_bom:
+		# the caller may read the BOM they opened, but not necessarily every BOM above it
+		if not parent_bom or not frappe.has_permission("BOM", "read", doc=parent):
 			break
 
 		visited.add(parent)
