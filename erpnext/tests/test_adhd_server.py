@@ -110,35 +110,55 @@ class TestStockEndpoints(AdhdServerTestCase):
 
 class TestFinanceEndpoints(AdhdServerTestCase):
 	def _invoices(self, rows):
+		# (name, outstanding, invoice currency, receivable account currency, rate to company currency, due)
 		return [
-			_dict(name=name, customer=customer, outstanding_amount=amount, conversion_rate=rate, due_date=due)
-			for name, customer, amount, rate, due in rows
+			_dict(
+				name=name,
+				customer="Acme",
+				outstanding_amount=amount,
+				currency=currency,
+				party_account_currency=account_currency,
+				conversion_rate=rate,
+				due_date=due,
+			)
+			for name, amount, currency, account_currency, rate, due in rows
 		]
 
-	def test_payment_digest_totals_are_in_company_currency(self):
-		overdue = frappe.utils.add_days(frappe.utils.today(), -3)
-		invoices = self._invoices([("A", "Acme", 100, 1, overdue), ("B", "Acme", 100, 1.1, overdue)])
+	def _digest(self, invoices):
 		with (
 			patch("frappe.get_list", return_value=invoices),
 			patch("frappe.get_cached_value", return_value="USD"),
 		):
-			digest = adhd_payment_digest.get_payment_digest("Any Company")
+			return adhd_payment_digest.get_payment_digest("Any Company")
 
-		self.assertAlmostEqual(digest["total_outstanding"], 210.0)
-		self.assertAlmostEqual(digest["overdue"][0]["total"], 210.0)
+	def test_outstanding_in_a_foreign_receivable_account_is_converted(self):
+		# EUR invoice on a EUR receivable account: outstanding_amount is in EUR, the panel shows USD
+		overdue = frappe.utils.add_days(frappe.utils.today(), -3)
+		digest = self._digest(self._invoices([("A", 100, "EUR", "EUR", 1.1, overdue)]))
+		self.assertAlmostEqual(digest["total_outstanding"], 110.0)
+
+	def test_outstanding_in_the_company_receivable_account_is_not_converted_again(self):
+		# EUR invoice on a USD receivable account: outstanding_amount is already in USD
+		overdue = frappe.utils.add_days(frappe.utils.today(), -3)
+		digest = self._digest(self._invoices([("A", 110, "EUR", "USD", 1.1, overdue)]))
+		self.assertAlmostEqual(digest["total_outstanding"], 110.0)
+
+	def test_payment_digest_groups_and_totals_by_customer(self):
+		overdue = frappe.utils.add_days(frappe.utils.today(), -3)
+		digest = self._digest(
+			self._invoices([("A", 100, "USD", "USD", 1, overdue), ("B", 50, "USD", "USD", 1, overdue)])
+		)
+		self.assertAlmostEqual(digest["total_outstanding"], 150.0)
+		self.assertAlmostEqual(digest["overdue"][0]["total"], 150.0)
 		self.assertEqual(digest["overdue"][0]["invoices"], ["A", "B"])
 		self.assertFalse(digest["truncated"])
 
 	def test_payment_digest_says_when_it_did_not_see_everything(self):
 		overdue = frappe.utils.add_days(frappe.utils.today(), -1)
 		invoices = self._invoices(
-			[(f"INV-{i}", "Acme", 1, 1, overdue) for i in range(adhd_payment_digest.MAX_INVOICES + 1)]
+			[(f"INV-{i}", 1, "USD", "USD", 1, overdue) for i in range(adhd_payment_digest.MAX_INVOICES + 1)]
 		)
-		with (
-			patch("frappe.get_list", return_value=invoices),
-			patch("frappe.get_cached_value", return_value="USD"),
-		):
-			digest = adhd_payment_digest.get_payment_digest("Any Company")
+		digest = self._digest(invoices)
 
 		self.assertTrue(digest["truncated"])
 		self.assertEqual(digest["total_outstanding"], adhd_payment_digest.MAX_INVOICES)

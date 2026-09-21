@@ -17,7 +17,15 @@ def get_payment_digest(company=None):
 	invoices = frappe.get_list(
 		"Sales Invoice",
 		filters={"company": company, "docstatus": 1, "outstanding_amount": (">", 0)},
-		fields=["name", "customer", "outstanding_amount", "conversion_rate", "due_date"],
+		fields=[
+			"name",
+			"customer",
+			"outstanding_amount",
+			"currency",
+			"party_account_currency",
+			"conversion_rate",
+			"due_date",
+		],
 		order_by="due_date asc",
 		limit_page_length=MAX_INVOICES + 1,
 	)
@@ -25,11 +33,17 @@ def get_payment_digest(company=None):
 	invoices = invoices[:MAX_INVOICES]
 	start = getdate(today())
 	week_end = getdate(add_days(start, 7))
+	company_currency = frappe.get_cached_value("Company", company, "default_currency")
 
 	def outstanding(invoice):
-		# outstanding_amount is in the invoice's own currency; the panel shows one company currency,
-		# so convert, otherwise USD and EUR invoices would simply be added together
-		return flt(invoice.outstanding_amount) * (flt(invoice.conversion_rate) or 1)
+		# outstanding_amount is in the currency of the customer's receivable account (see
+		# calculate_outstanding_amount in taxes_and_totals.py): the invoice's own currency only when the
+		# account is in that currency, otherwise already the company's. Only the first case needs
+		# converting; converting the second would inflate the total by the exchange rate.
+		amount = flt(invoice.outstanding_amount)
+		if invoice.party_account_currency == invoice.currency != company_currency:
+			return amount * (flt(invoice.conversion_rate) or 1)
+		return amount
 
 	def group_by_customer(rows):
 		grouped = {}
@@ -55,7 +69,7 @@ def get_payment_digest(company=None):
 
 	return {
 		"company": company,
-		"currency": frappe.get_cached_value("Company", company, "default_currency"),
+		"currency": company_currency,
 		"total_outstanding": sum(outstanding(invoice) for invoice in invoices),
 		"overdue": group_by_customer(overdue),
 		"due_this_week": group_by_customer(due_this_week),
