@@ -266,9 +266,22 @@ frappe.ui.form.on("*", {
 	},
 });
 
-TIMEBOX_DOCTYPES.forEach((doctype) => {
+const timeboxRegistered = new Set();
+function registerTimeboxHandlers(doctype) {
+	if (timeboxRegistered.has(doctype)) return;
+	timeboxRegistered.add(doctype);
 	frappe.ui.form.on(doctype, { refresh: renderTimeboxBanner });
-});
+}
+TIMEBOX_DOCTYPES.forEach(registerTimeboxHandlers);
+
+// Another app (Hubble, the HR app) names a form that is easy to lose an hour in.
+function registerTimebox(doctype) {
+	if (!doctype) return false;
+	if (!TIMEBOX_DOCTYPES.includes(doctype)) TIMEBOX_DOCTYPES.push(doctype);
+	registerTimeboxHandlers(doctype);
+	return true;
+}
+erpnext.adhd.registerTimebox = registerTimebox;
 
 document.addEventListener("focuspanel:timercomplete", (event) => {
 	// a finished break is not "time's up" on the form you were working in

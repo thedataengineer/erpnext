@@ -17,6 +17,16 @@ erpnext.adhd.ADHD_FEATURES = [
 	{ key: "done_well", label: __('"Done Well" Confirmations'), defaultOn: true },
 ];
 
+// Another app (Hubble, the HR app) adds a switch of its own; one with the same key is left as it is.
+erpnext.adhd.registerFeature = function registerFeature(feature) {
+	const valid = feature && typeof feature.key === "string" && feature.key && feature.label;
+	if (!valid) return false;
+	const features = erpnext.adhd.ADHD_FEATURES;
+	if (features.some((existing) => existing.key === feature.key)) return false;
+	features.push({ key: feature.key, label: feature.label, defaultOn: Boolean(feature.defaultOn) });
+	return true;
+};
+
 const STORAGE_PREFIX = "adhd_setting_";
 
 function getFeature(key) {

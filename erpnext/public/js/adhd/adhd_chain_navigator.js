@@ -137,7 +137,7 @@ const CHAIN_MAP = {
 const PAYMENT_REFERENCE_DOCTYPES = ["Sales Order", "Sales Invoice", "Purchase Order", "Purchase Invoice"];
 const LINKED_DOC_CACHE = {};
 const DOCSTATUS_CACHE = {};
-const REGISTERED_DOCTYPES = Object.keys(CHAIN_MAP);
+const REGISTERED_DOCTYPES = new Set();
 
 function isADHDModeActive() {
 	return Boolean(frappe.boot && frappe.boot.adhd_mode);
@@ -548,7 +548,9 @@ async function renderChainNav(frm) {
 	insertChainNav(frm, $nav);
 }
 
-REGISTERED_DOCTYPES.forEach((doctype) => {
+function registerChainHandlers(doctype) {
+	if (REGISTERED_DOCTYPES.has(doctype)) return;
+	REGISTERED_DOCTYPES.add(doctype);
 	frappe.ui.form.on(doctype, {
 		refresh(frm) {
 			invalidateChainCaches(frm);
@@ -567,8 +569,20 @@ REGISTERED_DOCTYPES.forEach((doctype) => {
 			renderChainNav(frm);
 		},
 	});
-});
+}
 
+Object.keys(CHAIN_MAP).forEach(registerChainHandlers);
+
+// Another app (Hubble, the HR app) adds its own document chains: the steps are the same objects as above, the first
+// being the doctype itself.
+function registerChain(doctype, steps) {
+	if (!doctype || !Array.isArray(steps) || !steps.length) return false;
+	CHAIN_MAP[doctype] = steps;
+	registerChainHandlers(doctype);
+	return true;
+}
+
+erpnext.adhd.registerChain = registerChain;
 erpnext.adhd.CHAIN_MAP = CHAIN_MAP;
 erpnext.adhd.renderChainNav = renderChainNav;
 erpnext.adhd.invalidateChainCaches = invalidateChainCaches;

@@ -82,12 +82,32 @@ frappe.provide("erpnext.adhd");
 		frm.layout.wrapper.prepend($banner);
 	}
 
-	Object.keys(DEADLINE_CONFIG).forEach((doctype) => {
+	const registered = new Set();
+	function registerDeadlineHandlers(doctype) {
+		if (registered.has(doctype)) return;
+		registered.add(doctype);
 		frappe.ui.form.on(doctype, {
 			refresh: renderDeadlineBanner,
 			after_save: renderDeadlineBanner,
 		});
-	});
+	}
+	Object.keys(DEADLINE_CONFIG).forEach(registerDeadlineHandlers);
+
+	// Another app (Hubble, the HR app) adds a banner for one of its doctypes: `dateField`, `message(days)` and
+	// `showWhen(doc)` as above.
+	function registerDeadline(doctype, config) {
+		const valid =
+			doctype &&
+			config &&
+			config.dateField &&
+			typeof config.message === "function" &&
+			typeof config.showWhen === "function";
+		if (!valid) return false;
+		DEADLINE_CONFIG[doctype] = config;
+		registerDeadlineHandlers(doctype);
+		return true;
+	}
+	erpnext.adhd.registerDeadline = registerDeadline;
 
 	// Switching the banners on or off in ADHD Settings changes the form on screen at once. `detail` is
 	// { key, value } for one switch and undefined for a reset, which can change all of them.

@@ -399,6 +399,14 @@ frappe.provide("erpnext.adhd");
 		if (listview) attachHeatMap(listview);
 	});
 
+	// Another app (Hubble, the HR app) says which date field makes a row urgent, and which statuses mean it is over.
+	function registerListDate(doctype, dateField, closedStatuses) {
+		if (!doctype || typeof dateField !== "string" || !dateField) return false;
+		DATE_FIELD_MAP[doctype] = dateField;
+		if (Array.isArray(closedStatuses)) CLOSED_STATUSES[doctype] = closedStatuses;
+		return true;
+	}
+	erpnext.adhd.registerListDate = registerListDate;
 	erpnext.adhd.DATE_FIELD_MAP = DATE_FIELD_MAP;
 	erpnext.adhd.hasListField = hasListField;
 	erpnext.adhd.ensureListField = ensureListField;

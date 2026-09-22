@@ -520,6 +520,13 @@ frappe.provide("erpnext.adhd");
 		schedulePostLoginRedirect();
 	});
 
+	// Another app (Hubble, the HR app) adds a module to the ones ranked by how often you visit them.
+	erpnext.adhd.registerInboxModule = function registerInboxModule(moduleName) {
+		if (typeof moduleName !== "string" || !moduleName) return false;
+		if (!MODULES.includes(moduleName)) MODULES.push(moduleName);
+		return true;
+	};
+
 	erpnext.adhd.renderSmartInbox = renderSmartInbox;
 	erpnext.adhd.smartInbox = {
 		loadUrgentItems,

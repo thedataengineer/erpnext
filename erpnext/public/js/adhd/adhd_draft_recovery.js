@@ -412,7 +412,7 @@ frappe.provide("erpnext.adhd");
 	function hasUserContent(config, content) {
 		return (
 			config.party.some((field) => hasValue(content.scalars[field])) ||
-			(content.childTables.items || []).length > 0
+			(config.contentTables || ["items"]).some((table) => (content.childTables[table] || []).length > 0)
 		);
 	}
 
@@ -791,7 +791,10 @@ frappe.provide("erpnext.adhd");
 		}
 	}
 
-	RECOVERY_DOCTYPES.forEach((doctype) => {
+	const handled = new Set();
+	function registerRecoveryHandlers(doctype) {
+		if (handled.has(doctype)) return;
+		handled.add(doctype);
 		frappe.ui.form.on(doctype, {
 			refresh(frm) {
 				guarded(() => {
@@ -830,7 +833,42 @@ frappe.provide("erpnext.adhd");
 				});
 			},
 		});
-	});
+	}
+	RECOVERY_DOCTYPES.forEach(registerRecoveryHandlers);
+
+	// A field or table name from another app is only ever used as a key into the document, so anything that could
+	// reach past that (a prototype key) or is not a plain name is refused.
+	const PLAIN_NAME = /^[a-z][a-z0-9_]*$/;
+	const plainNames = (value) =>
+		Array.isArray(value) && value.every((name) => PLAIN_NAME.test(String(name)));
+
+	// Another app (Hubble, the HR app) says which fields of one of its forms are snapshotted, in the shape of
+	// SNAPSHOT_FIELDS above: `party` (fields that show the form is being worked on), `scalars` (restored in order,
+	// before the tables), `lateScalars`, `tables` ({table: {doctype, identity, fields}}) and, when the rows that
+	// count as work are not called `items`, `contentTables`.
+	function registerDraftRecovery(doctype, config) {
+		const valid =
+			doctype &&
+			config &&
+			plainNames(config.party) &&
+			plainNames(config.scalars) &&
+			plainNames(config.lateScalars || []) &&
+			plainNames(config.contentTables || []) &&
+			config.tables &&
+			Object.entries(config.tables).every(
+				([table, spec]) =>
+					PLAIN_NAME.test(table) &&
+					spec &&
+					spec.doctype &&
+					plainNames(spec.identity) &&
+					plainNames(spec.fields)
+			);
+		if (!valid || hasOwn(SNAPSHOT_FIELDS, doctype)) return false;
+		SNAPSHOT_FIELDS[doctype] = { lateScalars: [], ...config };
+		if (!RECOVERY_DOCTYPES.includes(doctype)) RECOVERY_DOCTYPES.push(doctype);
+		registerRecoveryHandlers(doctype);
+		return true;
+	}
 
 	// The mode can be switched off while a form is open: stop at once, and drop the banner.
 	if (erpnext.adhd.onStateChange) {
@@ -860,7 +898,9 @@ frappe.provide("erpnext.adhd");
 		});
 	}
 
+	erpnext.adhd.registerDraftRecovery = registerDraftRecovery;
 	erpnext.adhd.draftRecovery = {
+		registerDraftRecovery,
 		RECOVERY_DOCTYPES,
 		SNAPSHOT_FIELDS,
 		NEW_DOC_NAME,
