@@ -16,7 +16,7 @@ import frappe
 from frappe import _
 from rapidfuzz import fuzz
 
-from erpnext.assistant import engine
+from erpnext.assistant import engine, hr
 from erpnext.assistant.parsing import clean_text
 from erpnext.assistant.records import CRM_KINDS, Kind, fetch, readable_kinds
 
@@ -42,12 +42,13 @@ class Do:
 
 
 def catalogue() -> list[Do]:
-	"""Everything the bar can start, CRM first. Built per call so labels follow the user's language."""
+	"""Everything the bar can start, CRM first. Built per call so labels follow the user's language and so
+	Hubble (HR) actions only appear once Hubble is installed."""
 
 	def start(recipe: str, **values: Any) -> dict[str, Any]:
 		return {"type": "start", "recipe": recipe, "values": values}
 
-	return [
+	items = [
 		Do(
 			_("New lead"),
 			_("A person or company who might buy"),
@@ -145,6 +146,26 @@ def catalogue() -> list[Do]:
 			crm=False,
 		),
 	]
+	if hr.hr_installed():
+		items += [
+			Do(
+				_("My leave balance"),
+				_("How much leave you have left, by type"),
+				("leave balance", "my leave", "leave", "time off"),
+				{"type": "query", "name": "leave_balance"},
+				("Leave Application", "read"),
+				crm=False,
+			),
+			Do(
+				_("Who is out"),
+				_("Who is on leave today"),
+				("who is out", "who's out", "out today", "on leave"),
+				{"type": "query", "name": "who_is_out"},
+				("Leave Application", "read"),
+				crm=False,
+			),
+		]
+	return items
 
 
 def _typed_score(query: str, do: Do) -> float:

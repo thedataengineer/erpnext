@@ -26,8 +26,8 @@ from frappe.utils import getdate, nowdate, strip_html
 from rapidfuzz import fuzz, process
 from rapidfuzz import utils as fuzz_utils
 
+from erpnext.assistant import hr, mail
 from erpnext.assistant import llm as llm_module
-from erpnext.assistant import mail
 from erpnext.assistant.parsing import (
 	clean_text,
 	find_amount,
@@ -69,6 +69,14 @@ QUERY_CUES = {
 	"pipeline": re.compile(
 		r"\b(pipeline|open (deals|opportunities)|(deals|opportunities) (are )?open|the funnel)\b"
 	),
+	# Hubble (HR) questions: distinct vocabulary from the CRM and email cues above, so order among
+	# themselves does not matter, but each degrades gracefully (hr.py) if Hubble is not installed.
+	"leave_balance": hr.LEAVE_BALANCE_CUE,
+	"who_is_out": hr.WHO_IS_OUT_CUE,
+	"upcoming_holidays": hr.HOLIDAYS_CUE,
+	"my_payslip": hr.PAYSLIP_CUE,
+	"my_attendance": hr.ATTENDANCE_CUE,
+	"pending_my_approval": hr.PENDING_APPROVAL_CUE,
 }
 # A message that opens like this is a new request, not a reply to our question
 NEW_REQUEST = re.compile(
@@ -132,11 +140,18 @@ def _classify_prompt() -> str:
 		"- create_expense_claim: add an employee expense claim\n"
 		"- create_material_request: request stock or materials\n"
 		"- create_timesheet_detail: log time against a specific task or project\n"
+		"- request_leave: ask for time off, book a holiday, request leave\n"
 		f"- my_day: {QUERIES['my_day']}\n"
 		f"- hours_summary: {QUERIES['hours_summary']}\n"
 		f"- pipeline: {QUERIES['pipeline']}\n"
 		f"- emails: {QUERIES['emails']}\n"
 		f"- connect_email: {QUERIES['connect_email']}\n"
+		f"- leave_balance: {QUERIES['leave_balance']}\n"
+		f"- who_is_out: {QUERIES['who_is_out']}\n"
+		f"- upcoming_holidays: {QUERIES['upcoming_holidays']}\n"
+		f"- my_payslip: {QUERIES['my_payslip']}\n"
+		f"- my_attendance: {QUERIES['my_attendance']}\n"
+		f"- pending_my_approval: {QUERIES['pending_my_approval']}\n"
 		"- help: anything else, greetings, or unclear\n"
 		"Examples:\n"
 		'"2h on the acme rollout" -> log_time\n'
@@ -150,9 +165,16 @@ def _classify_prompt() -> str:
 		'"log expense 850 for travel" -> create_expense_claim\n'
 		'"request 50 units of item RM-001 for next week" -> create_material_request\n'
 		'"log time on task TASK-0032 1.5h" -> create_timesheet_detail\n'
+		'"I need next friday off, sick leave" -> request_leave\n'
 		'"what should I work on" -> my_day\n'
 		'"how many hours this week" -> hours_summary\n'
-		'"how is my pipeline" -> pipeline'
+		'"how is my pipeline" -> pipeline\n'
+		'"what\'s my leave balance" -> leave_balance\n'
+		'"who is out this week" -> who_is_out\n'
+		'"when is the next holiday" -> upcoming_holidays\n'
+		'"what was my net pay" -> my_payslip\n'
+		'"was I marked present today" -> my_attendance\n'
+		'"anything pending my approval" -> pending_my_approval'
 	)
 
 
@@ -883,12 +905,54 @@ def connect_email(state: dict[str, Any], today: date, message: str = "") -> dict
 	return _response(state, answer["reply"], card=answer["card"], items=answer["items"])
 
 
+def leave_balance(state: dict[str, Any], today: date, message: str = "") -> dict[str, Any]:
+	"""The signed-in person's own leave balance, by type. Built entirely by code (see hr.py)."""
+	answer = hr.leave_balance_answer()
+	return _response(state, answer["reply"], items=answer["items"])
+
+
+def who_is_out(state: dict[str, Any], today: date, message: str = "") -> dict[str, Any]:
+	"""Who is on approved leave today or this week, only among records the person may read."""
+	answer = hr.who_is_out_answer(message)
+	return _response(state, answer["reply"], items=answer["items"])
+
+
+def upcoming_holidays(state: dict[str, Any], today: date, message: str = "") -> dict[str, Any]:
+	"""The next public holidays on the signed-in person's own holiday list."""
+	answer = hr.holidays_answer()
+	return _response(state, answer["reply"], items=answer["items"])
+
+
+def my_payslip(state: dict[str, Any], today: date, message: str = "") -> dict[str, Any]:
+	"""The signed-in person's own latest payslip. Never any other person's pay (see hr.py)."""
+	answer = hr.payslip_answer()
+	return _response(state, answer["reply"], items=answer["items"])
+
+
+def my_attendance(state: dict[str, Any], today: date, message: str = "") -> dict[str, Any]:
+	"""The signed-in person's own attendance this month."""
+	answer = hr.attendance_answer()
+	return _response(state, answer["reply"], items=answer["items"])
+
+
+def pending_my_approval(state: dict[str, Any], today: date, message: str = "") -> dict[str, Any]:
+	"""Leave applications and expense claims waiting on the signed-in person, if they approve any."""
+	answer = hr.pending_approval_answer()
+	return _response(state, answer["reply"], items=answer["items"])
+
+
 QUERY_HANDLERS = {
 	"my_day": my_day,
 	"hours_summary": hours_summary,
 	"pipeline": pipeline,
 	"emails": emails,
 	"connect_email": connect_email,
+	"leave_balance": leave_balance,
+	"who_is_out": who_is_out,
+	"upcoming_holidays": upcoming_holidays,
+	"my_payslip": my_payslip,
+	"my_attendance": my_attendance,
+	"pending_my_approval": pending_my_approval,
 }
 
 
@@ -939,7 +1003,12 @@ def _mid_draft(
 		result["reply"] += " " + _("Your {0} is still open: {1}").format(_(ev.recipe.noun), question)
 		return result
 
-	if intent in RECIPES and intent != state["recipe"] and NEW_REQUEST.match(lowered):
+	if (
+		intent in RECIPES
+		and intent != state["recipe"]
+		and NEW_REQUEST.match(lowered)
+		and not RECIPES[intent].guard()
+	):
 		if len(state["stack"]) < MAX_STACK:
 			state["stack"].append({"recipe": state["recipe"], "values": state["values"]})
 		state.update(recipe=intent, values={}, asking=None)
@@ -971,6 +1040,8 @@ def _apply_action(
 		state["values"].update(values)
 		state["asking"] = None
 	elif kind == "start" and action.get("recipe") in RECIPES:
+		if blocked := RECIPES[action["recipe"]].guard():
+			return _response(state, blocked, chips=_menu_chips())
 		if action.get("push") and state["recipe"] and len(state["stack"]) < MAX_STACK:
 			state["stack"].append({"recipe": state["recipe"], "values": state["values"]})
 		state["recipe"], state["values"] = _clean_draft(action["recipe"], action.get("values"))
@@ -1033,6 +1104,8 @@ def respond(
 				return QUERY_HANDLERS[intent](state, today, message)
 			if intent not in RECIPES:
 				return _help(state, confused=True)
+			if blocked := RECIPES[intent].guard():
+				return _response(state, blocked, chips=_menu_chips())
 			state.update(recipe=intent, values={}, asking=None)
 			_seed_context(state, context)
 

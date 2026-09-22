@@ -17,6 +17,7 @@ import frappe
 from frappe.query_builder.functions import Sum
 from frappe.utils import escape_html, getdate, nowdate
 
+from erpnext.assistant import hr
 from erpnext.assistant.records import split_ref
 
 
@@ -56,6 +57,7 @@ class Recipe:
 	any_of: tuple[str, ...] = ()  # at least one of these must be given, though none is required on its own
 	subject_fields: tuple[str, ...] = ()  # the first of these that has a value names the record in {subject}
 	short: str = ""  # what to call one in a sentence ("time entry"); `what` is written for the model
+	guard: Callable[[], str | None] = lambda: None  # a message that blocks starting this recipe, if any
 
 	@property
 	def noun(self) -> str:
@@ -193,6 +195,25 @@ def _build_customer(v: dict[str, Any]) -> dict[str, Any]:
 		"customer_name": v.get("customer_name"),
 		"customer_type": v.get("customer_type"),
 	}
+
+
+def _build_leave_request(v: dict[str, Any]) -> dict[str, Any]:
+	"""Everything Hubble itself checks (dates, overlap, balance, block days) runs when this is validated:
+	nothing here re-implements it, it only gathers what the person said."""
+	half_day = 1 if str(v.get("half_day") or "No").strip().casefold() == "yes" else 0
+	employee = _employee_for_user()
+	doc = {
+		"doctype": "Leave Application",
+		"employee": employee,
+		"leave_type": v.get("leave_type"),
+		"from_date": v.get("from_date"),
+		"to_date": v.get("to_date"),
+		"half_day": half_day,
+		"description": v.get("reason"),
+	}
+	if employee:
+		doc["leave_approver"] = hr.leave_approver_for(employee)
+	return doc
 
 
 def _ref(value: str | None) -> tuple[str | None, str | None]:
@@ -688,6 +709,58 @@ RECIPES: dict[str, Recipe] = {
 			defaults=lambda today: {"customer_type": "Company"},
 			done="Client added: {customer_name}.",
 		),
+		Recipe(
+			key="request_leave",
+			short="leave request",
+			label="Request leave",
+			what="a leave request (time off)",
+			doctype="Leave Application",
+			fields=(
+				Field(
+					"leave_type",
+					"Leave type",
+					"link",
+					required=True,
+					hint="the kind of leave (e.g. Casual Leave, Sick Leave, Earned Leave), if named",
+					link_doctype="Leave Type",
+					link_label="leave_type_name",
+					ask="Which type of leave?",
+				),
+				Field(
+					"from_date",
+					"From",
+					"date",
+					required=True,
+					prefer="future",
+					hint="the first day off, the date words exactly as said (monday, Oct 1, tomorrow); "
+					"null if not said",
+					ask="When does it start?",
+				),
+				Field(
+					"to_date",
+					"To",
+					"date",
+					required=True,
+					prefer="future",
+					hint="the last day off, the date words exactly as said; if only one day off is meant, "
+					"repeat the same date as the first day; null if not said",
+					ask="When does it end?",
+				),
+				Field(
+					"half_day",
+					"Half day",
+					"choice",
+					choices=("Yes", "No"),
+					hint="Yes if the user says it is a half day, No otherwise; null if not said",
+				),
+				Field("reason", "Reason", hint="why, in a few words, only if stated"),
+			),
+			defaults=lambda today: {"half_day": "No"},
+			subject_fields=("leave_type",),
+			build=_build_leave_request,
+			done="Leave requested: {leave_type}, {from_date} to {to_date}.",
+			guard=lambda: None if hr.hr_installed() else hr.not_set_up_message(),
+		),
 	)
 }
 
@@ -698,6 +771,12 @@ QUERIES = {
 	"pipeline": "my sales pipeline, open deals or opportunities, what is in the funnel",
 	"emails": "recent emails I received, what someone wrote or said, whether someone replied",
 	"connect_email": "connect or set up my email inbox so it syncs, sync my mail",
+	"leave_balance": "how much leave I have left, my leave balance by type",
+	"who_is_out": "who is out of office or on leave today or this week",
+	"upcoming_holidays": "upcoming public holidays, the next holiday",
+	"my_payslip": "my latest payslip, my last pay, how much I was paid, my net pay",
+	"my_attendance": "my attendance this month, days I was present or absent",
+	"pending_my_approval": "leave applications or expense claims waiting for my approval",
 }
 
 # What to offer when a name does not match anything: link doctype -> (recipe to start, its name field, noun)

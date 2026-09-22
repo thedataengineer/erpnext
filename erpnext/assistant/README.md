@@ -93,6 +93,33 @@ usually need OAuth, which an administrator sets up once as a Connected App. A pr
 `mail.PROVIDERS` gets a guessed IMAP server, which the card says. The mail pipeline is tested on raw messages
 (`test_mail_sync.py`); no real mailbox has been connected to this repository's tests.
 
+## HR (Hubble)
+
+When Hubble (the HR app, the `hrms` package) is installed, the bar also answers the questions a person asks
+about themself, from their own Employee record (`hr.py`):
+
+| Ask | Answer |
+| --- | --- |
+| "what's my leave balance", "how much leave do I have" | remaining days per leave type, from Hubble's own balance function |
+| "who is out", "who's off this week" | approved leave today or this week, only applications the person may read |
+| "upcoming holidays", "when is the next holiday" | the next holidays on the person's own holiday list |
+| "my payslip", "how much was I paid" | status, period and net pay of the person's own latest payslip |
+| "my attendance" | days marked present, absent, on leave this month |
+| "pending my approval", "anything to approve" | leave applications and expense claims waiting on the person as approver |
+
+And one action: **"I need next friday off"** (`request_leave`) makes a draft Leave Application card (type,
+from, to, half day, reason) that Hubble itself validates (dates, overlap, balance, block days, approver)
+before the person presses **Create**. Three rules, all tested (`test_hr.py`):
+
+1. **Pay is personal.** The payslip and attendance answers never take an employee as an argument: they look
+   up the signed-in person's own record, so there is no way to ask for anyone else's numbers. "Who is out"
+   and "pending my approval" show a name, the leave type and the dates, never anyone's reason text.
+2. **The model is never asked.** Each question is recognised by a whole-phrase cue (`hr.*_CUE`), so a note
+   that merely says "book leave for the offsite" is a note. Answers are built by code from real rows with the
+   person's own permissions.
+3. **Nothing without Hubble.** Without the `hrms` app, or without an Employee record for the user, every
+   answer is one plain sentence, the recipe refuses to start, and the search bar hides the HR actions.
+
 ## Configuration (site config, all optional)
 
 | Key | Default |
@@ -130,6 +157,7 @@ bench --site <test-site> run-tests --module erpnext.assistant.test_crm
 bench --site <test-site> run-tests --module erpnext.assistant.test_recipes_extended
 bench --site <test-site> run-tests --module erpnext.assistant.test_mail
 bench --site <test-site> run-tests --module erpnext.assistant.test_mail_sync
+bench --site <test-site> run-tests --module erpnext.assistant.test_hr
 ```
 
 These need a working bench with its database and Redis running. The expense-claim, material-request and
