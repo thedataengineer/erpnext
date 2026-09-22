@@ -2,10 +2,10 @@
 
 ## Current implementation record
 
-- **Status:** Blocked.
-- **Implementation:** HRMS is absent from this repository, including the payroll, leave, and expense doctypes and APIs required by this ticket. No application code was added.
-- **Verification:** No implementation or acceptance test exists. Implement and verify in the HRMS repository.
-- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+- **Status:** Implemented in Hubble (the HR app), 2026-09-21.
+- **Implementation:** `hrms/public/js/adhd/adhd_expense_claim.js`: a summary of how many expense rows still lack a receipt, from the claim's own attachments, cached per document and refreshed on save; display only, gone when Focus Mode goes off.
+- **Verification:** `hrms/tests/adhd_leave_expense.test.js` and `hrms/tests/test_adhd_leave_expense.py`, shared with ADHD-058.
+- **Acceptance:** Not yet seen in a logged-in browser.
 
 ## Summary
 On an Expense Claim form in ADHD mode, display a "📎 No receipt" badge on each expense row lacking an attachment and a summary line showing how many expenses have receipts, preventing rejection-by-missing-receipt.

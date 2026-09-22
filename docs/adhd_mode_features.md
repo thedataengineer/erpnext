@@ -45,7 +45,7 @@ Server-backed features call whitelisted RPC modules:
 - **ADHD-011, Implemented:** Journal Entry balance meter, `adhd_accounts.js`. It called `frm.set_indicator`, which does not exist on a Form, and threw on every balanced entry; it now uses the page indicator and sums company-currency debit/credit.
 - **ADHD-012, Implemented:** Month-end close checklist, `adhd_month_end.js` and its whitelisted service.
 - **ADHD-013, Implemented:** Purchase Order lifecycle panel, `adhd_buying.js`. The step follows `status_updater.py` (a fully billed order that has not been received is still "To Receive").
-- **ADHD-014, Blocked:** Employee onboarding wizard depends on HRMS doctypes and workspace files absent from this repository.
+- **ADHD-014, Implemented in Hubble:** Employee onboarding wizard, page `employee-onboarding-wizard` in the HR app (`hrms/hr/page/employee_onboarding_wizard/`, service `hrms/hr/services/adhd_employee_onboarding.py`). Nothing is created until the review step is confirmed; then one call creates everything under a savepoint. Salary and leave can be skipped (a ToDo reminds); education is the Employee's own child table and leave goes through a Leave Policy Assignment.
 - **ADHD-015, Implemented:** Eight-DocType, 80-entry field-help catalog, `adhd_field_help.js`.
 - **ADHD-016, Implemented:** Per-feature settings, `adhd_settings.js`. Eleven switches, each read by its feature and applied without a reload; the settings are stored per browser, not per user. Defaults follow the ticket: everything on except Auto Time-Log Prompt and Daily Payment Digest, so those two sections stay hidden until switched on.
 - **ADHD-017, Implemented:** Opt-in friction telemetry and usage report.
@@ -103,11 +103,34 @@ Most client behavior is consolidated in `erpnext/public/js/adhd/adhd_tickets_041
 - **ADHD-054, Implemented:** Fixed-asset creation prompt from Purchase Invoice.
 - **ADHD-055, Implemented:** Asset depreciation urgency in list view. Depends on the list-view fix under ADHD-006.
 - **ADHD-056, Implemented:** Asset Capitalization guided steps.
-- **ADHD-057 through ADHD-059, Blocked:** Payroll checklist, leave balance, and Expense Claim receipt checks require HRMS, which is absent. No application code was added.
+- **ADHD-057, Implemented in Hubble:** Payroll cycle checklist, page `focus-payroll-checklist` (`hrms/payroll/services/adhd_payroll_cycle.py`). Six real steps detected from the documents themselves, mirroring Payroll Entry's own checks; the bank entry is a Journal Entry, not a Payment Entry as the ticket assumed.
+- **ADHD-058, Implemented in Hubble:** Leave balance at a glance on the Leave Application form (`hrms/public/js/adhd/adhd_leave_application.js`, `hrms/hr/services/adhd_leave_balance.py`), coloured by the same balance check the doctype runs on save.
+- **ADHD-059, Implemented in Hubble:** Receipt check on the Expense Claim form (`hrms/public/js/adhd/adhd_expense_claim.js`): how many rows still lack a receipt.
 - **ADHD-060, Implemented:** Batched Quality Inspection status on source documents.
 - **ADHD-061, Implemented:** Subcontracting Order material-flow status and standard mapping actions.
 
 There is no `docs/tickets/ADHD-062.md`. ADHD-061 is the highest existing ticket.
+
+## Other apps: Hubble (the HR app)
+
+Built 2026-09-21. The Focus layer knew only RTB's own doctypes; another app can now plug its forms and lists
+in without touching this repository, and Hubble does (`hrms/public/js/adhd/adhd_focus_registrations.js`,
+`docs/hubble/focus-aids.md` in the HR repository).
+
+- **Client registration functions** on `erpnext.adhd`, each registering a doctype's form handlers once however
+  often it is called and refusing an incomplete registration (`erpnext/tests/adhd_focus_extensions.test.js`):
+  `registerChain(doctype, steps)` for the chain navigator, `registerDeadline(doctype, {dateField, message,
+  showWhen})` for the deadline banner, `registerTimebox(doctype)` for the time-box banner,
+  `registerFeature({key, label, defaultOn})` for a switch in Focus Settings, `registerListDate(doctype,
+  dateField, closedStatuses)` for the list heat map, `registerInboxModule(name)` for the Smart Inbox's visit
+  ranking, and `registerDraftRecovery(doctype, config)` for draft snapshots (names are checked to be plain
+  field names, and a built-in form cannot be redefined).
+- **Server hook `focus_urgent_items`** (`erpnext/adhd/api.py`): each entry names a function
+  `(user, current_day) -> list[dict]` whose rows carry `doctype`, `name`, `due_date` and optionally `title`
+  and `counterparty`. The source does its own permission checks; the inbox keeps only well-formed rows due
+  today or overdue, bounds them like its own, ranks them with the rest, and skips a source that raises.
+  Hubble's `hrms.hr.focus.urgent_items` adds leave and claims waiting on the approver and the person's
+  pending interviews.
 
 ## Demo organisation
 

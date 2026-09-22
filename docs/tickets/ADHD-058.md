@@ -2,10 +2,10 @@
 
 ## Current implementation record
 
-- **Status:** Blocked.
-- **Implementation:** HRMS is absent from this repository, including the payroll, leave, and expense doctypes and APIs required by this ticket. No application code was added.
-- **Verification:** No implementation or acceptance test exists. Implement and verify in the HRMS repository.
-- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+- **Status:** Implemented in Hubble (the HR app), 2026-09-21.
+- **Implementation:** `hrms/public/js/adhd/adhd_leave_application.js` over `hrms/hr/services/adhd_leave_balance.py`, which wraps Hubble's own leave functions (`get_leave_details`, `get_leave_balance_on`, `get_number_of_leave_days`) and the exact insufficient-balance rule the doctype applies on save. The card shows entitlement, used, remaining and this application's days as soon as employee, type and from date are in; debounced, permission-checked per employee, display only, removed the moment Focus Mode goes off.
+- **Verification:** `hrms/tests/adhd_leave_expense.test.js` and `hrms/tests/test_adhd_leave_expense.py` (16, rolled back), shared with ADHD-059.
+- **Acceptance:** Not yet seen in a logged-in browser.
 
 ## Summary
 Inject a compact leave balance card on the Leave Application form that shows entitlement, used, remaining, and the impact of the current application, so the user always knows their balance before submitting.

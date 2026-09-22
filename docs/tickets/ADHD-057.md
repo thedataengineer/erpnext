@@ -2,10 +2,10 @@
 
 ## Current implementation record
 
-- **Status:** Blocked.
-- **Implementation:** HRMS is absent from this repository, including the payroll, leave, and expense doctypes and APIs required by this ticket. No application code was added.
-- **Verification:** No implementation or acceptance test exists. Implement and verify in the HRMS repository.
-- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+- **Status:** Implemented in Hubble (the HR app), 2026-09-21.
+- **Implementation:** Page `focus-payroll-checklist` (`hrms/payroll/page/focus_payroll_checklist/`, `hrms/public/js/adhd/adhd_payroll_checklist.js`) over `hrms/payroll/services/adhd_payroll_cycle.py`. Six real steps (attendance marked, leave settled, additions, Payroll Entry submitted, slips generated and submitted, bank entry) detected from the documents, mirroring Payroll Entry's own checks. Deviations: the bank entry is a Journal Entry (per `payroll_entry.py`), not a Payment Entry; only a step the code cannot see gets a manual tick, kept per user and period in the browser like the month-end checklist.
+- **Verification:** `hrms/tests/adhd_payroll_checklist.test.js` (18) and `hrms/tests/test_adhd_payroll_cycle.py` (34, rolled back); 15 deliberate breakages each caught.
+- **Acceptance:** Not yet seen in a logged-in browser.
 
 ## Summary
 A "Run Payroll" step-by-step checklist accessible from the HR workspace that guides ADHD users through the complete payroll cycle, auto-detecting completed steps where possible and persisting progress per payroll period.

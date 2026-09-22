@@ -2,10 +2,10 @@
 
 ## Current implementation record
 
-- **Status:** Blocked.
-- **Implementation:** ERPNext no longer contains the HR/Payroll doctypes and workspace assumed by this ticket; HRMS is absent from this repository.
-- **Verification:** No implementation or acceptance test was run. Implement in the HRMS repository or add HRMS as a tested dependency.
-- **Acceptance:** Site-level acceptance has not been recorded; the original business intent and criteria below remain authoritative.
+- **Status:** Implemented in Hubble (the HR app), 2026-09-21.
+- **Implementation:** Page `employee-onboarding-wizard` in `hrms/hr/page/employee_onboarding_wizard/` with the service `hrms/hr/services/adhd_employee_onboarding.py`. One screen at a time (person, contact, address, education, salary, leave, review); nothing is sent until the review is confirmed, then one call creates everything under a savepoint and rolls back completely on any failure. Deviations: education is the Employee's own child table, leave goes through a Leave Policy Assignment (its `on_submit` makes the allocation), salary and leave are skippable with a 7-day ToDo reminder, and the atomic create replaces the ticket's per-step inserts and rollback dialog.
+- **Verification:** `hrms/tests/adhd_employee_onboarding.test.js` (34) and `hrms/tests/test_adhd_employee_onboarding.py` (20, rolled back), Prettier 3.1.0 and ruff clean; 18 deliberate breakages each caught by a test.
+- **Acceptance:** Not yet seen in a logged-in browser.
 
 ## Summary
 A guided multi-step wizard that creates all required HR documents for a new employee in sequence, so users never have to figure out the correct order or navigate between five separate forms.

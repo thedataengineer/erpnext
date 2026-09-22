@@ -93,7 +93,6 @@ Known constraints:
 - ADHD-038 cannot activate reliably because the current Stock Entry Detail schema lacks the assumed `putaway_rule` field.
 - ADHD-045 cannot reach the ticket's Plant Floor card structure in this ERPNext version.
 - ADHD-048 uses the parent CRM form because CRM Note is a child DocType.
-- ADHD-057 through ADHD-059 cannot run because HRMS is absent.
-- ADHD-014 has the same HRMS dependency and remains blocked.
+- ADHD-014 and ADHD-057 through ADHD-059 live in Hubble (the HR app, the `hrms` repository): their Node suites are `hrms/tests/adhd_*.test.js` and their Python suites `hrms/tests/test_adhd_*.py`, run the same rollback-only way.
 
 No site-level acceptance evidence is stored in this repository as of 2026-09-21.
