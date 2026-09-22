@@ -337,3 +337,87 @@ class TestSmartInbox(AdhdServerTestCase):
 		# _assign is a JSON list; %a@b.com% would also match "aa@b.com"
 		_rows, filters_seen = self._urgent_task_rows('["a@b.com"]')
 		self.assertEqual(filters_seen[0]["_assign"], ("like", f'%"{frappe.session.user}"%'))
+
+
+# --- what another app can add to the inbox (the `focus_urgent_items` hook) ---------------------------------
+
+
+def _hr_source(user, current_day):
+	"""A source the way Hubble writes one: rows waiting on `user`, due today or before."""
+	return [
+		{
+			"doctype": "ToDo",
+			"name": "HR-LEAVE-1",
+			"title": "Casual Leave: Ash",
+			"counterparty": "Ash",
+			"due_date": frappe.utils.add_days(current_day, -3),
+		},
+		{"doctype": "ToDo", "name": "HR-CLAIM-1", "due_date": current_day},
+		# not due yet: left out, like every built-in source only lists what is due today or overdue
+		{"doctype": "ToDo", "name": "HR-LATER", "due_date": frappe.utils.add_days(current_day, 2)},
+		# malformed rows are dropped, never shown half-built
+		{"doctype": "Not A DocType", "name": "X", "due_date": current_day},
+		{"name": "no-doctype", "due_date": current_day},
+		{"doctype": "ToDo", "name": "HR-NO-DATE"},
+		{"doctype": "ToDo", "name": "HR-BAD-DATE", "due_date": "yesterday-ish"},
+		{"doctype": "ToDo", "name": 42, "due_date": current_day},
+		"not a row",
+	]
+
+
+def _broken_source(user, current_day):
+	raise RuntimeError("boom")
+
+
+def _flood_source(user, current_day):
+	return [{"doctype": "ToDo", "name": f"HR-FLOOD-{i}", "due_date": current_day} for i in range(60)]
+
+
+class TestHookedUrgentItems(AdhdServerTestCase):
+	"""Hubble (the HR app) adds leave, claims and interviews waiting on the person through a hook; the
+	inbox trusts a source for its permission checks and nothing else."""
+
+	def _urgent(self, sources):
+		real_get_hooks = frappe.get_hooks
+
+		def fake_get_hooks(hook=None, *args, **kwargs):
+			if hook == "focus_urgent_items":
+				return [f"{__name__}.{source}" for source in sources]
+			return real_get_hooks(hook, *args, **kwargs)
+
+		with (
+			patch.object(adhd_api, "_get_list", return_value=[]),
+			patch("frappe.get_hooks", side_effect=fake_get_hooks),
+			patch("frappe.log_error") as log_error,
+		):
+			return adhd_api.get_urgent_items(), log_error
+
+	def test_rows_from_a_hooked_source_are_ranked_with_the_rest(self):
+		rows, _log = self._urgent(["_hr_source"])
+		self.assertEqual([row["name"] for row in rows], ["HR-LEAVE-1", "HR-CLAIM-1"])
+		leave, claim = rows
+		self.assertEqual(leave["doctype"], "ToDo")
+		self.assertEqual(leave["title"], "Casual Leave: Ash")
+		self.assertEqual(leave["counterparty"], "Ash")
+		self.assertEqual(leave["urgency"], "overdue")
+		self.assertEqual(leave["urgency_score"], 13)
+		# no title given: the name stands in, and nothing is invented for the counterparty
+		self.assertEqual(claim["title"], "HR-CLAIM-1")
+		self.assertIsNone(claim["counterparty"])
+		self.assertEqual(claim["urgency"], "today")
+
+	def test_a_source_that_raises_is_logged_and_skipped(self):
+		rows, log_error = self._urgent(["_broken_source", "_hr_source"])
+		self.assertEqual([row["name"] for row in rows], ["HR-LEAVE-1", "HR-CLAIM-1"])
+		self.assertEqual(log_error.call_count, 1)
+		self.assertIn("_broken_source", log_error.call_args.kwargs["title"])
+
+	def test_a_flood_from_one_source_is_bounded(self):
+		rows, _log = self._urgent(["_flood_source", "_hr_source"])
+		self.assertEqual(len(rows), adhd_api.MAX_URGENT_ITEMS)
+		# the overdue leave outranks the flood of due-today rows
+		self.assertEqual(rows[0]["name"], "HR-LEAVE-1")
+
+	def test_without_a_hook_nothing_changes(self):
+		rows, _log = self._urgent([])
+		self.assertEqual(rows, [])

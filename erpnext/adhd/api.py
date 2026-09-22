@@ -199,9 +199,57 @@ def get_urgent_items(user: str | None = None):
 			)
 		)
 
+	items.extend(_hooked_urgent_items(user, current_day))
+
 	items = [item for item in items if item.get("urgency_score")]
 	items.sort(key=lambda item: item.get("urgency_score", 0), reverse=True)
 	return items[:MAX_URGENT_ITEMS]
+
+
+def _hooked_urgent_items(user, current_day):
+	"""Rows from other apps. Each `focus_urgent_items` hook (Hubble, the HR app, has one) names a function
+	`(user, current_day) -> list[dict]`; a row carries `doctype`, `name` and `due_date`, and may carry `title`
+	and `counterparty`. The function does its own permission checks (`frappe.get_list`), this side keeps only
+	well-formed rows that are due today or overdue, bounds them like the built-in sources, and skips a source
+	that raises rather than break the whole inbox."""
+	rows = []
+	for source in frappe.get_hooks("focus_urgent_items") or []:
+		try:
+			found = frappe.get_attr(source)(user, current_day) or []
+		except Exception:
+			frappe.log_error(title=_("Focus inbox source failed: {0}").format(source))
+			continue
+		for row in list(found)[:MAX_URGENT_ITEMS]:
+			cleaned = _clean_hooked_row(row, current_day)
+			if cleaned:
+				rows.append(cleaned)
+	return rows
+
+
+def _clean_hooked_row(row, current_day):
+	if not isinstance(row, dict):
+		return None
+	doctype, name = row.get("doctype"), row.get("name")
+	if not (isinstance(doctype, str) and isinstance(name, str) and doctype and name):
+		return None
+	if not _doctype_exists(doctype):
+		return None
+	try:
+		due = getdate(row.get("due_date")) if row.get("due_date") else None
+	except Exception:
+		return None
+	if not due or due > getdate(current_day):
+		return None
+	counterparty = row.get("counterparty")
+	return {
+		"doctype": doctype,
+		"name": name,
+		"title": str(row.get("title") or name),
+		"counterparty": str(counterparty) if counterparty else None,
+		"due_date": due,
+		"urgency_score": _urgency_score(due),
+		"urgency": _urgency_badge(due),
+	}
 
 
 def _make_action_row(row_type, doctype, name, title=None, status=None, timestamp=None):
