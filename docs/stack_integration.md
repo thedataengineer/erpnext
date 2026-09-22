@@ -16,6 +16,57 @@ runs on and is the contract below made executable.
 | `suite` | Frappe Suite | drive, mail, calendar, meet, sheets, writer, slides |
 | `raven` | Raven | chat, with channels per department and document notifications |
 
+## The picture
+
+Seven apps run inside one Frappe site behind one desk. RTB and Hubble are joined most tightly; Learning,
+Payments, Suite and Raven sit beside them; every app hooks into the same platform services, on one
+database.
+
+```mermaid
+flowchart TB
+  desk["The desk everyone signs into
+  app switcher, Cmd+K assistant, Focus Mode, module sidebars"]
+  subgraph frappe["Frappe framework: one site, one login"]
+    RTB["RTB (erpnext)
+    selling, buying, stock, accounts, projects, CRM, assistant, Focus Mode"]
+    Hubble["Hubble (hrms)
+    leave, payroll, hiring, reviews, Journeys, Skills cloud, Focus aids"]
+    Learning["Learning (lms)
+    courses, batches, certificates"]
+    Payments["Payments
+    gateways"]
+    Suite["Suite
+    drive, mail, calendar, meet, sheets, writer, slides"]
+    Raven["Raven
+    chat, a channel per department, document alerts"]
+    Platform["Platform services all apps hook into
+    users and roles, files, email, hooks, scheduler, sidebars, search"]
+  end
+  DB[("MariaDB: one shared schema")]
+  Redis[("Redis: cache and queue")]
+  Ollama["Ollama: local model for the assistant"]
+  Mail["Mailbox: IMAP in, SMTP out"]
+
+  desk --> frappe
+  Hubble -- "built on RTB: 275 link fields (Employee, Company, ledger, projects)" --> RTB
+  RTB -- "the assistant answers HR questions with Hubble's leave functions" --> Hubble
+  Hubble -- "Focus aids: Hubble's forms and lists register with RTB's" --> RTB
+  Hubble -- "focus_urgent_items: Hubble's rows in RTB's Focus inbox" --> RTB
+  Raven -- "a channel per department, members follow transfers" --> Hubble
+  Raven -- "document alerts on any doctype" --> RTB
+  Learning -- "paid courses" --> Payments
+  RTB --> Platform
+  Hubble --> Platform
+  Learning --> Platform
+  Payments --> Platform
+  Suite --> Platform
+  Raven --> Platform
+  Platform --> DB
+  Platform --> Redis
+  Platform --> Mail
+  RTB --> Ollama
+```
+
 ## Code level
 
 Every app ships hooks Frappe merges at boot, and an app extends another by hanging a handler on that
