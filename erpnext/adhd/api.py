@@ -65,7 +65,9 @@ def _has_field(doctype, fieldname):
 
 
 def _get_list(doctype, *, filters, fields, limit_page_length=None, order_by=None):
-	if not _doctype_exists(doctype):
+	"""Rows of `doctype` the caller may read, or none: a person whose work is HR or projects has no sales
+	permission, and the inbox shows them what they may see rather than failing on what they may not."""
+	if not _doctype_exists(doctype) or not frappe.has_permission(doctype, "read"):
 		return []
 
 	kwargs = {
@@ -78,7 +80,10 @@ def _get_list(doctype, *, filters, fields, limit_page_length=None, order_by=None
 	if order_by:
 		kwargs["order_by"] = order_by
 
-	return frappe.get_list(**kwargs)
+	try:
+		return frappe.get_list(**kwargs)
+	except frappe.PermissionError:
+		return []
 
 
 def _assigned_task_names(user):

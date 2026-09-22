@@ -421,3 +421,29 @@ class TestHookedUrgentItems(AdhdServerTestCase):
 	def test_without_a_hook_nothing_changes(self):
 		rows, _log = self._urgent([])
 		self.assertEqual(rows, [])
+
+
+class TestInboxForAPersonWithoutSalesAccess(AdhdServerTestCase):
+	"""Hubble's people have HR roles and no sales ones: the inbox must show them what they may see, not
+	fail on a Sales Order they may not."""
+
+	def test_a_user_with_only_hr_roles_gets_an_inbox_not_a_permission_error(self):
+		user = frappe.get_doc(
+			{
+				"doctype": "User",
+				"email": "focus-hr-only@example.com",
+				"first_name": "HR Only",
+				"send_welcome_email": 0,
+				"roles": [{"role": "HR User"}],
+			}
+		).insert(ignore_permissions=True)
+		frappe.set_user(user.name)
+		try:
+			self.assertFalse(frappe.has_permission("Sales Order", "read"))
+			rows = adhd_api.get_urgent_items()
+		finally:
+			frappe.set_user("Administrator")
+		self.assertIsInstance(rows, list)
+		self.assertFalse(
+			[row for row in rows if row["doctype"] in ("Sales Order", "Sales Invoice", "Purchase Order")]
+		)
